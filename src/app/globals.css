@@ -10,7 +10,16 @@
    ============================================ */
 
 :root {
-  /* Color Palette */
+  /* Core Brand Tokens (NB System) */
+  --nb-olive: #4f5b38;        /* primary olive */
+  --nb-olive-deep: #333b28;   /* deeper olive for surfaces */
+  --nb-gold: #d4af37;         /* main metal gold */
+  --nb-gold-soft: #b8960c;    /* darker gold / accents */
+  --nb-black: #060606;        /* near-black base */
+  --nb-cream: #f7f3ea;        /* soft light text/bg */
+  --nb-charcoal: #151515;     /* secondary dark surface */
+
+  /* Legacy Olive Scale (kept for flexibility / Tailwind) */
   --color-olive-50: #f7f7e6;
   --color-olive-100: #ebebcc;
   --color-olive-200: #d6d699;
@@ -22,6 +31,7 @@
   --color-olive-800: #333300;
   --color-olive-900: #1a1a00;
 
+  /* Legacy Gold Scale (for gradients & subtle UI) */
   --color-gold-50: #fffdf0;
   --color-gold-100: #fef9c3;
   --color-gold-200: #fef08a;
@@ -35,27 +45,33 @@
 
   --color-black: #000000;
   --color-white: #ffffff;
-  --color-cream: #faf9f6;
-  --color-charcoal: #1a1a1a;
+  --color-cream: var(--nb-cream);
+  --color-charcoal: var(--nb-charcoal);
 
   /* Typography */
   --font-heading: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-accent: 'Great Vibes', cursive;
 
-  /* Semantic Colors - DARK MODE */
-  --background: var(--color-charcoal);
-  --foreground: var(--color-cream);
-  --primary: var(--color-olive-400);
-  --primary-foreground: var(--color-black);
-  --secondary: var(--color-gold-500);
-  --secondary-foreground: var(--color-black);
-  --muted: var(--color-olive-900);
-  --muted-foreground: var(--color-olive-300);
-  --accent: var(--color-gold-500);
-  --border: var(--color-olive-700);
-  --card: #232323;
-  --card-foreground: var(--color-cream);
+  /* Semantic Colors - DARK MODE BASED ON NB BRAND */
+  --background: var(--nb-black);
+  --foreground: var(--nb-cream);
+
+  --primary: var(--nb-olive);
+  --primary-foreground: var(--nb-cream);
+
+  --secondary: var(--nb-gold);
+  --secondary-foreground: var(--nb-black);
+
+  --muted: var(--nb-olive-deep);
+  --muted-foreground: var(--color-olive-200);
+
+  --accent: var(--nb-gold-soft);
+  --accent-foreground: var(--nb-black);
+
+  --border: #2b2b2b;
+  --card: var(--nb-charcoal);
+  --card-foreground: var(--nb-cream);
 
   /* Spacing */
   --section-padding-sm: 4rem;
@@ -70,7 +86,16 @@
 
 /* Tailwind v4 Theme Configuration */
 @theme inline {
-  /* Colors */
+  /* Brand Colors */
+  --color-nb-olive: var(--nb-olive);
+  --color-nb-olive-deep: var(--nb-olive-deep);
+  --color-nb-gold: var(--nb-gold);
+  --color-nb-gold-soft: var(--nb-gold-soft);
+  --color-nb-black: var(--nb-black);
+  --color-nb-cream: var(--nb-cream);
+  --color-nb-charcoal: var(--nb-charcoal);
+
+  /* Legacy scales (still usable as bg-olive-500 etc.) */
   --color-olive-50: var(--color-olive-50);
   --color-olive-100: var(--color-olive-100);
   --color-olive-200: var(--color-olive-200);
@@ -150,7 +175,7 @@ p {
 
 /* Link Styles */
 a {
-  color: var(--color-gold-400);
+  color: var(--nb-gold);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
@@ -161,13 +186,13 @@ a:hover {
 
 /* Selection */
 ::selection {
-  background: var(--color-gold-500);
-  color: var(--color-black);
+  background: var(--nb-gold);
+  color: var(--nb-black);
 }
 
 /* Focus States - Accessibility */
 :focus-visible {
-  outline: 2px solid var(--color-olive-500);
+  outline: 2px solid var(--nb-olive);
   outline-offset: 2px;
 }
 
@@ -177,16 +202,16 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-charcoal);
+  background: var(--nb-charcoal);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-olive-600);
+  background: var(--nb-olive-deep);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-olive-500);
+  background: var(--nb-olive);
 }
 
 /* Utility Classes */
@@ -222,7 +247,7 @@ a:hover {
 .gold-line {
   width: 60px;
   height: 2px;
-  background: linear-gradient(90deg, var(--color-gold-400), var(--color-gold-600));
+  background: linear-gradient(90deg, var(--nb-gold), var(--nb-gold-soft));
 }
 
 /* Elegant Divider */
@@ -237,12 +262,17 @@ a:hover {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-olive-300), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-olive-300),
+    transparent
+  );
 }
 
 /* Text Gradient */
 .text-gradient-gold {
-  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
+  background: linear-gradient(135deg, var(--nb-gold), var(--nb-gold-soft));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -310,3 +340,15 @@ a:hover {
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
 .stagger-5 { animation-delay: 0.5s; }
+
+/* NB Logo Helpers */
+.nb-logo-mark {
+  aspect-ratio: 1 / 1;
+  width: clamp(3rem, 6vw, 4.5rem);
+}
+
+.nb-logo-crest {
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background-color: var(--nb-charcoal);
+}
