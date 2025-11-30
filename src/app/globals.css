@@ -20,16 +20,16 @@
 
 :root {
   /* Color Palette */
-  --color-olive-50: #f7f7e6;
-  --color-olive-100: #ebebcc;
-  --color-olive-200: #d6d699;
-  --color-olive-300: #c2c266;
-  --color-olive-400: #999933;
-  --color-olive-500: #808000;
-  --color-olive-600: #666600;
-  --color-olive-700: #4d4d00;
-  --color-olive-800: #333300;
-  --color-olive-900: #1a1a00;
+  --color-olive-50: #f4f6f2;
+  --color-olive-100: #e4e9e0;
+  --color-olive-200: #c5d0bc;
+  --color-olive-300: #a5b697;
+  --color-olive-400: #7c9469;
+  --color-olive-500: #536537;
+  --color-olive-600: #45532e;
+  --color-olive-700: #374225;
+  --color-olive-800: #28311b;
+  --color-olive-900: #1a2011;
 
   --color-gold-50: #fffdf0;
   --color-gold-100: #fef9c3;

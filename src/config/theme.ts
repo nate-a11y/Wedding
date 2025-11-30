@@ -1,6 +1,6 @@
 /**
  * Design System Theme Configuration
- * Colors: Olive Green (#808000), Black, White, Gold Accents
+ * Colors: Olive Green (#536537), Black, White, Gold Accents
  * Style: Elegant, Modern, Luxurious
  */
 
@@ -8,16 +8,16 @@ export const theme = {
   colors: {
     // Primary palette
     olive: {
-      50: '#f7f7e6',
-      100: '#ebebcc',
-      200: '#d6d699',
-      300: '#c2c266',
-      400: '#999933',
-      500: '#808000', // Main olive
-      600: '#666600',
-      700: '#4d4d00',
-      800: '#333300',
-      900: '#1a1a00',
+      50: '#f4f6f2',
+      100: '#e4e9e0',
+      200: '#c5d0bc',
+      300: '#a5b697',
+      400: '#7c9469',
+      500: '#536537', // Main olive
+      600: '#45532e',
+      700: '#374225',
+      800: '#28311b',
+      900: '#1a2011',
     },
     gold: {
       50: '#fffdf0',
