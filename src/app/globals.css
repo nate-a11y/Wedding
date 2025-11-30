@@ -1,0 +1,310 @@
+/* Custom Font Imports - Must come first */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Montserrat:wght@300;400;500;600;700&family=Great+Vibes&display=swap');
+
+@import "tailwindcss";
+
+/* ============================================
+   NATE & BLAKE WEDDING - DESIGN SYSTEM
+   Colors: Olive Green, Black, White, Gold
+   Style: Elegant, Modern, Luxurious
+   ============================================ */
+
+:root {
+  /* Color Palette */
+  --color-olive-50: #f7f7e6;
+  --color-olive-100: #ebebcc;
+  --color-olive-200: #d6d699;
+  --color-olive-300: #c2c266;
+  --color-olive-400: #999933;
+  --color-olive-500: #808000;
+  --color-olive-600: #666600;
+  --color-olive-700: #4d4d00;
+  --color-olive-800: #333300;
+  --color-olive-900: #1a1a00;
+
+  --color-gold-50: #fffdf0;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #b8960c;
+  --color-gold-700: #92750a;
+  --color-gold-800: #6b5607;
+  --color-gold-900: #453804;
+
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-cream: #faf9f6;
+  --color-charcoal: #1a1a1a;
+
+  /* Typography */
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-accent: 'Great Vibes', cursive;
+
+  /* Semantic Colors */
+  --background: var(--color-cream);
+  --foreground: var(--color-charcoal);
+  --primary: var(--color-olive-500);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-gold-500);
+  --secondary-foreground: var(--color-black);
+  --muted: var(--color-olive-100);
+  --muted-foreground: var(--color-olive-700);
+  --accent: var(--color-gold-500);
+  --border: var(--color-olive-200);
+
+  /* Spacing */
+  --section-padding-sm: 4rem;
+  --section-padding-md: 6rem;
+  --section-padding-lg: 8rem;
+
+  /* Animation */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+}
+
+/* Tailwind v4 Theme Configuration */
+@theme inline {
+  /* Colors */
+  --color-olive-50: var(--color-olive-50);
+  --color-olive-100: var(--color-olive-100);
+  --color-olive-200: var(--color-olive-200);
+  --color-olive-300: var(--color-olive-300);
+  --color-olive-400: var(--color-olive-400);
+  --color-olive-500: var(--color-olive-500);
+  --color-olive-600: var(--color-olive-600);
+  --color-olive-700: var(--color-olive-700);
+  --color-olive-800: var(--color-olive-800);
+  --color-olive-900: var(--color-olive-900);
+
+  --color-gold-50: var(--color-gold-50);
+  --color-gold-100: var(--color-gold-100);
+  --color-gold-200: var(--color-gold-200);
+  --color-gold-300: var(--color-gold-300);
+  --color-gold-400: var(--color-gold-400);
+  --color-gold-500: var(--color-gold-500);
+  --color-gold-600: var(--color-gold-600);
+  --color-gold-700: var(--color-gold-700);
+  --color-gold-800: var(--color-gold-800);
+  --color-gold-900: var(--color-gold-900);
+
+  --color-cream: var(--color-cream);
+  --color-charcoal: var(--color-charcoal);
+
+  /* Fonts */
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+  --font-accent: var(--font-accent);
+}
+
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography Defaults */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-charcoal);
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: 0.02em;
+}
+
+h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+/* Accent Text (Script Font) */
+.font-accent {
+  font-family: var(--font-accent);
+}
+
+/* Link Styles */
+a {
+  color: var(--color-olive-600);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-olive-500);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-olive-200);
+  color: var(--color-charcoal);
+}
+
+/* Focus States - Accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-olive-500);
+  outline-offset: 2px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-olive-300);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-olive-500);
+}
+
+/* Utility Classes */
+.section-padding {
+  padding-top: var(--section-padding-md);
+  padding-bottom: var(--section-padding-md);
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding-top: var(--section-padding-sm);
+    padding-bottom: var(--section-padding-sm);
+  }
+}
+
+.container-wedding {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .container-wedding {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Gold Accent Line */
+.gold-line {
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-gold-400), var(--color-gold-600));
+}
+
+/* Elegant Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-olive-300), transparent);
+}
+
+/* Text Gradient */
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--color-gold-400), var(--color-gold-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass Effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Subtle Shadow */
+.shadow-elegant {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s ease forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.6s ease forwards;
+}
+
+/* Stagger Animation Delays */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
