@@ -19,6 +19,15 @@
    ============================================ */
 
 :root {
+  /* NB Brand Colors */
+  --nb-olive: #536537;
+  --nb-olive-deep: #374225;
+  --nb-gold: #d4af37;
+  --nb-gold-soft: #facc15;
+  --nb-black: #000000;
+  --nb-cream: #faf9f6;
+  --nb-charcoal: #1a1a1a;
+
   /* Color Palette */
   --color-olive-50: #f4f6f2;
   --color-olive-100: #e4e9e0;
