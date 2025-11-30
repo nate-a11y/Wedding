@@ -32,7 +32,7 @@ const timeline = [
 
 export default function OurStoryPage() {
   return (
-    <div className="section-padding bg-cream">
+    <div className="section-padding bg-charcoal">
       <div className="container-wedding">
         {/* Header */}
         <motion.div
@@ -42,11 +42,11 @@ export default function OurStoryPage() {
           className="text-center mb-16"
         >
           <p className="font-accent text-3xl text-gold-500 mb-4">Our Story</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-charcoal mb-6">
+          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
             How It All Began
           </h1>
           <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-700 max-w-2xl mx-auto text-lg">
+          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
             Every love story is beautiful, but ours is our favorite. Here&apos;s the tale of
             how {siteConfig.couple.person1.firstName} and {siteConfig.couple.person2.firstName} found each other.
           </p>
@@ -56,7 +56,7 @@ export default function OurStoryPage() {
         <div className="max-w-3xl mx-auto">
           <div className="relative">
             {/* Timeline Line */}
-            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gold-400 via-olive-300 to-gold-400" />
+            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gold-400 via-olive-600 to-gold-400" />
 
             {timeline.map((event, index) => (
               <motion.div
@@ -70,7 +70,7 @@ export default function OurStoryPage() {
                 }`}
               >
                 {/* Timeline Node */}
-                <div className="absolute left-8 md:left-1/2 -translate-x-1/2 w-16 h-16 bg-white rounded-full shadow-elegant flex items-center justify-center text-2xl z-10 border-4 border-cream">
+                <div className="absolute left-8 md:left-1/2 -translate-x-1/2 w-16 h-16 bg-charcoal rounded-full shadow-elegant flex items-center justify-center text-2xl z-10 border-4 border-olive-700">
                   {event.icon}
                 </div>
 
@@ -78,14 +78,14 @@ export default function OurStoryPage() {
                 <div className={`ml-24 md:ml-0 md:w-[calc(50%-3rem)] ${
                   index % 2 === 0 ? 'md:pr-8 md:text-right' : 'md:pl-8 md:text-left'
                 }`}>
-                  <div className="bg-white rounded-lg shadow-elegant p-6">
-                    <span className="text-gold-500 font-medium text-sm uppercase tracking-wider">
+                  <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6">
+                    <span className="text-gold-400 font-medium text-sm uppercase tracking-wider">
                       {event.date}
                     </span>
-                    <h3 className="font-heading text-2xl text-charcoal mt-2 mb-3">
+                    <h3 className="font-heading text-2xl text-cream mt-2 mb-3">
                       {event.title}
                     </h3>
-                    <p className="text-olive-700">
+                    <p className="text-olive-300">
                       {event.description}
                     </p>
                   </div>
@@ -106,17 +106,17 @@ export default function OurStoryPage() {
           transition={{ duration: 0.6 }}
           className="mt-20 text-center"
         >
-          <div className="bg-white rounded-lg shadow-elegant p-12 max-w-2xl mx-auto">
-            <div className="w-full h-64 bg-olive-100 rounded-lg flex items-center justify-center mb-6">
+          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-12 max-w-2xl mx-auto">
+            <div className="w-full h-64 bg-olive-900/50 rounded-lg flex items-center justify-center mb-6">
               <div className="text-center">
                 <span className="text-6xl mb-4 block">📷</span>
-                <p className="text-olive-500">Our photos coming soon</p>
+                <p className="text-olive-400">Our photos coming soon</p>
               </div>
             </div>
             <p className="font-accent text-2xl text-gold-500">
               {siteConfig.couple.person1.firstName} & {siteConfig.couple.person2.firstName}
             </p>
-            <p className="text-olive-600 mt-2">Forever begins October 31, 2027</p>
+            <p className="text-olive-300 mt-2">Forever begins October 31, 2027</p>
           </div>
         </motion.div>
       </div>

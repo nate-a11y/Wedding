@@ -41,7 +41,7 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-cream px-4">
+    <div className="min-h-screen flex items-center justify-center bg-charcoal px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -61,7 +61,7 @@ export function LoginForm() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="font-heading text-3xl text-charcoal"
+            className="font-heading text-3xl text-cream"
           >
             Welcome
           </motion.h1>
@@ -77,9 +77,9 @@ export function LoginForm() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white rounded-lg shadow-elegant p-8"
+          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8"
         >
-          <p className="text-center text-olive-700 mb-6">
+          <p className="text-center text-olive-300 mb-6">
             Please enter the password to view our wedding website.
           </p>
 
@@ -87,7 +87,7 @@ export function LoginForm() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-charcoal mb-2"
+                className="block text-sm font-medium text-cream mb-2"
               >
                 Password
               </label>
@@ -96,7 +96,7 @@ export function LoginForm() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="flex h-11 w-full rounded-md border border-olive-200 bg-white px-4 py-2 text-base transition-colors placeholder:text-olive-400 focus:border-olive-500 focus:outline-none focus:ring-2 focus:ring-olive-500/20"
+                className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal px-4 py-2 text-base text-cream transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                 placeholder="Enter password"
                 required
                 autoFocus
@@ -105,7 +105,7 @@ export function LoginForm() {
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 text-sm text-red-600"
+                  className="mt-2 text-sm text-red-400"
                 >
                   {error}
                 </motion.p>
@@ -123,7 +123,7 @@ export function LoginForm() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-olive-500 mt-6">
+          <p className="text-center text-sm text-olive-400 mt-6">
             Hint: Ask Nate or Blake for the password
           </p>
         </motion.div>
@@ -132,7 +132,7 @@ export function LoginForm() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="text-center text-olive-600 mt-8 font-heading text-lg"
+          className="text-center text-olive-300 mt-8 font-heading text-lg"
         >
           October 31, 2027
         </motion.p>

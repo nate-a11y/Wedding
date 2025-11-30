@@ -18,7 +18,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-2 block text-sm font-medium text-charcoal"
+            className="mb-2 block text-sm font-medium text-cream"
           >
             {label}
           </label>
@@ -28,9 +28,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           ref={ref}
           className={cn(
-            'flex h-11 w-full rounded-md border border-olive-200 bg-white px-4 py-2 text-base transition-colors',
-            'placeholder:text-olive-400',
-            'focus:border-olive-500 focus:outline-none focus:ring-2 focus:ring-olive-500/20',
+            'flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors',
+            'placeholder:text-olive-500',
+            'focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className
@@ -40,12 +40,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p id={`${inputId}-error`} className="mt-1.5 text-sm text-red-600">
+          <p id={`${inputId}-error`} className="mt-1.5 text-sm text-red-400">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={`${inputId}-helper`} className="mt-1.5 text-sm text-olive-600">
+          <p id={`${inputId}-helper`} className="mt-1.5 text-sm text-olive-400">
             {helperText}
           </p>
         )}
