@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-cream">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-charcoal">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div
@@ -63,10 +63,10 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mb-12"
         >
-          <p className="font-heading text-2xl md:text-3xl text-charcoal tracking-wide">
+          <p className="font-heading text-2xl md:text-3xl text-cream tracking-wide">
             {siteConfig.wedding.displayDate}
           </p>
-          <p className="text-olive-600 mt-2">
+          <p className="text-olive-300 mt-2">
             Location to be announced
           </p>
         </motion.div>
@@ -110,9 +110,9 @@ export function Hero() {
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
-            className="w-6 h-10 border-2 border-olive-300 rounded-full flex items-start justify-center p-2"
+            className="w-6 h-10 border-2 border-olive-500 rounded-full flex items-start justify-center p-2"
           >
-            <motion.div className="w-1 h-2 bg-olive-400 rounded-full" />
+            <motion.div className="w-1 h-2 bg-gold-500 rounded-full" />
           </motion.div>
         </motion.div>
       </div>

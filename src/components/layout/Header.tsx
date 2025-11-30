@@ -31,8 +31,8 @@ export function Header() {
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-elegant py-3'
-          : 'bg-transparent py-5'
+          ? 'bg-charcoal shadow-elegant py-3'
+          : 'bg-charcoal/95 backdrop-blur-md py-5'
       )}
     >
       <nav className="container-wedding">
@@ -46,7 +46,7 @@ export function Header() {
               <span className="font-accent text-2xl md:text-3xl text-gold-500">
                 N & B
               </span>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-olive-600 font-medium">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-olive-300 font-medium">
                 10.31.27
               </span>
             </motion.div>
@@ -61,8 +61,8 @@ export function Header() {
                 className={cn(
                   'text-sm uppercase tracking-wider font-medium transition-colors',
                   pathname === item.href
-                    ? 'text-olive-500'
-                    : 'text-charcoal hover:text-olive-500'
+                    ? 'text-gold-400'
+                    : 'text-cream hover:text-gold-400'
                 )}
               >
                 {item.name}
@@ -87,15 +87,15 @@ export function Header() {
             <div className="w-6 h-5 flex flex-col justify-between">
               <motion.span
                 animate={isMobileMenuOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
-                className="w-full h-0.5 bg-charcoal block origin-left"
+                className="w-full h-0.5 bg-cream block origin-left"
               />
               <motion.span
                 animate={isMobileMenuOpen ? { opacity: 0 } : { opacity: 1 }}
-                className="w-full h-0.5 bg-charcoal block"
+                className="w-full h-0.5 bg-cream block"
               />
               <motion.span
                 animate={isMobileMenuOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
-                className="w-full h-0.5 bg-charcoal block origin-left"
+                className="w-full h-0.5 bg-cream block origin-left"
               />
             </div>
           </button>
@@ -111,7 +111,7 @@ export function Header() {
               transition={{ duration: 0.3 }}
               className="lg:hidden overflow-hidden"
             >
-              <div className="py-6 flex flex-col items-center gap-4">
+              <div className="py-6 flex flex-col items-center gap-4 bg-charcoal">
                 {siteConfig.navigation.map((item, index) => (
                   <motion.div
                     key={item.href}
@@ -124,8 +124,8 @@ export function Header() {
                       className={cn(
                         'text-lg font-heading transition-colors',
                         pathname === item.href
-                          ? 'text-olive-500'
-                          : 'text-charcoal hover:text-olive-500'
+                          ? 'text-gold-400'
+                          : 'text-cream hover:text-gold-400'
                       )}
                     >
                       {item.name}

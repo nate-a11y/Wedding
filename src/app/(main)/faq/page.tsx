@@ -97,11 +97,11 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         className="w-full py-4 flex items-center justify-between text-left"
         aria-expanded={isOpen}
       >
-        <span className="font-medium text-charcoal pr-4">{question}</span>
+        <span className="font-medium text-cream pr-4">{question}</span>
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-olive-500 flex-shrink-0"
+          className="text-olive-400 flex-shrink-0"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -117,7 +117,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="pb-4 text-olive-700">{answer}</p>
+            <p className="pb-4 text-olive-300">{answer}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -127,7 +127,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function FAQPage() {
   return (
-    <div className="section-padding bg-cream">
+    <div className="section-padding bg-charcoal">
       <div className="container-wedding">
         {/* Header */}
         <motion.div
@@ -137,11 +137,11 @@ export default function FAQPage() {
           className="text-center mb-16"
         >
           <p className="font-accent text-3xl text-gold-500 mb-4">FAQ</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-charcoal mb-6">
+          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
             Questions & Answers
           </h1>
           <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-700 max-w-2xl mx-auto text-lg">
+          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
             Find answers to commonly asked questions about our wedding. If you don&apos;t see
             your question here, feel free to reach out!
           </p>
@@ -156,9 +156,9 @@ export default function FAQPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
-              className="bg-white rounded-lg shadow-elegant overflow-hidden"
+              className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant overflow-hidden"
             >
-              <div className="bg-olive-500 px-6 py-3">
+              <div className="bg-olive-700 px-6 py-3">
                 <h2 className="font-heading text-xl text-white">{category.category}</h2>
               </div>
               <div className="px-6">
@@ -178,16 +178,16 @@ export default function FAQPage() {
           transition={{ duration: 0.6 }}
           className="mt-16 text-center"
         >
-          <div className="bg-white rounded-lg shadow-elegant p-8 max-w-2xl mx-auto">
-            <h3 className="font-heading text-2xl text-charcoal mb-4">
+          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 max-w-2xl mx-auto">
+            <h3 className="font-heading text-2xl text-cream mb-4">
               Still Have Questions?
             </h3>
-            <p className="text-olive-700 mb-6">
+            <p className="text-olive-300 mb-6">
               We&apos;re happy to help! Reach out to us directly and we&apos;ll get back to you as soon as possible.
             </p>
             <a
               href="mailto:hello@nateandblake.com"
-              className="inline-flex items-center gap-2 text-olive-600 hover:text-olive-500 font-medium"
+              className="inline-flex items-center gap-2 text-olive-300 hover:text-olive-400 font-medium"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />

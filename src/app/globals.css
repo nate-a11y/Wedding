@@ -43,17 +43,19 @@
   --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-accent: 'Great Vibes', cursive;
 
-  /* Semantic Colors */
-  --background: var(--color-cream);
-  --foreground: var(--color-charcoal);
-  --primary: var(--color-olive-500);
-  --primary-foreground: var(--color-white);
+  /* Semantic Colors - DARK MODE */
+  --background: var(--color-charcoal);
+  --foreground: var(--color-cream);
+  --primary: var(--color-olive-400);
+  --primary-foreground: var(--color-black);
   --secondary: var(--color-gold-500);
   --secondary-foreground: var(--color-black);
-  --muted: var(--color-olive-100);
-  --muted-foreground: var(--color-olive-700);
+  --muted: var(--color-olive-900);
+  --muted-foreground: var(--color-olive-300);
   --accent: var(--color-gold-500);
-  --border: var(--color-olive-200);
+  --border: var(--color-olive-700);
+  --card: #232323;
+  --card-foreground: var(--color-cream);
 
   /* Spacing */
   --section-padding-sm: 4rem;
@@ -120,7 +122,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 400;
   line-height: 1.2;
-  color: var(--color-charcoal);
+  color: var(--color-cream);
 }
 
 h1 {
@@ -148,19 +150,19 @@ p {
 
 /* Link Styles */
 a {
-  color: var(--color-olive-600);
+  color: var(--color-gold-400);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--color-olive-500);
+  color: var(--color-gold-300);
 }
 
 /* Selection */
 ::selection {
-  background: var(--color-olive-200);
-  color: var(--color-charcoal);
+  background: var(--color-gold-500);
+  color: var(--color-black);
 }
 
 /* Focus States - Accessibility */
@@ -175,11 +177,11 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-cream);
+  background: var(--color-charcoal);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-olive-300);
+  background: var(--color-olive-600);
   border-radius: 4px;
 }
 
@@ -246,16 +248,16 @@ a:hover {
   background-clip: text;
 }
 
-/* Glass Effect */
+/* Glass Effect - Dark Mode */
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
-/* Subtle Shadow */
+/* Subtle Shadow - Dark Mode */
 .shadow-elegant {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* Animation Classes */
