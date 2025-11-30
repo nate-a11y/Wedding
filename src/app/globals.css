@@ -180,6 +180,7 @@ p {
 /* Accent Text (Script Font) */
 .font-accent {
   font-family: var(--font-accent);
+  font-size: 0.8em; /* Scale down Rockybilly which renders larger than typical script fonts */
 }
 
 /* Link Styles */
