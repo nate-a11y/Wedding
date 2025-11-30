@@ -6,26 +6,26 @@ import { siteConfig } from '@/config/site';
 const timeline = [
   {
     date: 'October 31, 2023',
-    title: 'We Met',
-    description: 'On a Halloween night that would change our lives forever, our paths crossed for the first time. Little did we know that this spooky evening would be the beginning of our greatest adventure.',
+    title: 'A Halloween Night',
+    description: 'We met on Halloween night at The Wet Spot. It was by chance, it was random—but there was a connection unlike anything either of us had ever seen. Something deep.',
     icon: '💀',
   },
   {
     date: '2024',
-    title: 'Falling in Love',
-    description: 'Through countless dates, late-night conversations, and shared experiences, we discovered that we had found something truly special in each other.',
+    title: 'Late Night Talks & A Spark',
+    description: 'Over time, we bonded over late night talks. We had a spark that just kept growing. Through good times and bad times, we stayed by each other\'s side—partners, rocks, best friends.',
     icon: '❤️',
   },
   {
     date: 'October 31, 2025',
     title: 'The Proposal',
-    description: 'Exactly two years after we met, staying true to our Halloween tradition, the question was popped. The answer was an enthusiastic yes!',
+    description: 'Exactly two years after we met, staying true to our Halloween tradition, the question was popped. The answer was an enthusiastic yes! What we have is so precious.',
     icon: '💍',
   },
   {
     date: 'October 31, 2027',
     title: 'We Say "I Do"',
-    description: "Four years to the day since we first met, we'll exchange vows and begin our next chapter as a married couple.",
+    description: "Four years to the day since we first met, we'll exchange vows and begin our next chapter. Nobody's got it quite like us.",
     icon: '🎃',
   },
 ];
@@ -98,13 +98,39 @@ export default function OurStoryPage() {
           </div>
         </div>
 
-        {/* Photo Placeholder */}
+        {/* Our Song */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="mt-20 text-center"
+        >
+          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 max-w-2xl mx-auto">
+            <p className="font-accent text-2xl text-gold-500 mb-2">Our Song</p>
+            <h3 className="font-heading text-xl text-cream mb-4">&ldquo;Precious&rdquo;</h3>
+            <p className="text-olive-300 mb-6 text-sm italic">
+              Written by Nate for our first anniversary
+            </p>
+            <iframe
+              src="https://open.spotify.com/embed/track/0TSZyKRlyOa6zIaG32i8J3?utm_source=generator&theme=0"
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-lg"
+            />
+          </div>
+        </motion.div>
+
+        {/* Photo Placeholder */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mt-12 text-center"
         >
           <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-12 max-w-2xl mx-auto">
             <div className="w-full h-64 bg-olive-900/50 rounded-lg flex items-center justify-center mb-6">
