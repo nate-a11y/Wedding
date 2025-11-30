@@ -24,13 +24,29 @@ export default function RSVPPage() {
     e.preventDefault();
     setFormState({ status: 'loading' });
 
-    // Simulate form submission - will be connected to Supabase
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch('/api/rsvp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-    setFormState({
-      status: 'success',
-      message: 'Thank you for your RSVP! We\'ll be in touch soon.',
-    });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit RSVP');
+      }
+
+      setFormState({
+        status: 'success',
+        message: result.message || 'Thank you for your RSVP!',
+      });
+    } catch (error) {
+      setFormState({
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+      });
+    }
   };
 
   const handleChange = (
@@ -122,6 +138,19 @@ export default function RSVPPage() {
               </div>
               <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
               <p className="text-olive-300">{formState.message}</p>
+            </div>
+          ) : formState.status === 'error' ? (
+            <div className="bg-black/50 border border-red-700 rounded-lg shadow-elegant p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-900/50 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h2 className="font-heading text-2xl text-cream mb-2">Oops!</h2>
+              <p className="text-olive-300 mb-4">{formState.message}</p>
+              <Button variant="outline" onClick={() => setFormState({ status: 'idle' })}>
+                Try Again
+              </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
