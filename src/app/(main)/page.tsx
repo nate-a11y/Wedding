@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Hero } from '@/components/sections';
 
 export default function HomePage() {
@@ -74,8 +75,14 @@ export default function HomePage() {
           </h2>
           <div className="gold-line mx-auto mb-8" />
           <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-8">
-            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-olive-800 flex items-center justify-center">
-              <span className="text-4xl">🐕</span>
+            <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gold-500">
+              <Image
+                src="/20250119_000105.jpg"
+                alt="Honey - Our Flower Girl"
+                width={128}
+                height={128}
+                className="w-full h-full object-cover"
+              />
             </div>
             <h3 className="font-heading text-2xl text-cream mb-2">Honey</h3>
             <p className="text-gold-400 uppercase tracking-wider text-sm mb-4">Flower Girl</p>
