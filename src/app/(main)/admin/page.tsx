@@ -9,6 +9,8 @@ interface Stats {
     attending: number;
     notAttending: number;
     plusOnes: number;
+    additionalGuests?: number;
+    children?: number;
     totalGuests: number;
   };
   guestbook: number;
@@ -299,7 +301,7 @@ export default function AdminPage() {
                 </div>
                 <div className="text-olive-300">Total Guests</div>
                 <div className="text-olive-500 text-sm mt-1">
-                  {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.plusOnes || 0} plus ones
+                  {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.additionalGuests || stats?.rsvps.plusOnes || 0} guests
                 </div>
               </div>
 

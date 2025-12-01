@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+interface AdditionalGuest {
+  name: string;
+  mealChoice: string;
+  isChild: boolean;
+}
+
 export async function GET() {
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
@@ -10,17 +16,28 @@ export async function GET() {
   }
 
   try {
-    // Get RSVP stats
+    // Get RSVP stats - include additional_guests for accurate counting
     const { data: rsvps, error: rsvpError } = await supabase
       .from('rsvps')
-      .select('attending, plus_one');
+      .select('attending, additional_guests');
 
     if (rsvpError) throw rsvpError;
 
     const attending = rsvps?.filter(r => r.attending) || [];
     const notAttending = rsvps?.filter(r => !r.attending) || [];
-    const plusOnes = attending.filter(r => r.plus_one).length;
-    const totalGuests = attending.length + plusOnes;
+
+    // Count total additional guests from attending RSVPs
+    let additionalGuestsCount = 0;
+    let childrenCount = 0;
+
+    attending.forEach(rsvp => {
+      const guests: AdditionalGuest[] = rsvp.additional_guests || [];
+      additionalGuestsCount += guests.length;
+      childrenCount += guests.filter(g => g.isChild).length;
+    });
+
+    // Total guests = primary attendees + their additional guests
+    const totalGuests = attending.length + additionalGuestsCount;
 
     // Get guestbook count
     const { count: guestbookCount, error: gbError } = await supabase
@@ -41,8 +58,11 @@ export async function GET() {
         total: rsvps?.length || 0,
         attending: attending.length,
         notAttending: notAttending.length,
-        plusOnes,
+        additionalGuests: additionalGuestsCount,
+        children: childrenCount,
         totalGuests,
+        // Keep plusOnes for backwards compatibility (now represents additional guests)
+        plusOnes: additionalGuestsCount,
       },
       guestbook: guestbookCount || 0,
       photos: photoCount || 0,
