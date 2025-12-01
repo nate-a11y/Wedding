@@ -4,9 +4,12 @@ import crypto from 'crypto';
 
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
 
-// Resend webhook events
-interface ResendWebhookEvent {
-  type: 'email.sent' | 'email.delivered' | 'email.delivery_delayed' | 'email.complained' | 'email.bounced' | 'email.opened' | 'email.clicked';
+// Resend webhook event types
+type OutboundEventType = 'email.sent' | 'email.delivered' | 'email.delivery_delayed' | 'email.complained' | 'email.bounced' | 'email.opened' | 'email.clicked';
+type InboundEventType = 'email.received';
+
+interface OutboundWebhookEvent {
+  type: OutboundEventType;
   created_at: string;
   data: {
     email_id: string;
@@ -16,6 +19,22 @@ interface ResendWebhookEvent {
     created_at: string;
   };
 }
+
+interface InboundWebhookEvent {
+  type: InboundEventType;
+  created_at: string;
+  data: {
+    email_id: string;
+    from: string;
+    to: string;
+    subject: string;
+    text?: string;
+    html?: string;
+    created_at: string;
+  };
+}
+
+type ResendWebhookEvent = OutboundWebhookEvent | InboundWebhookEvent;
 
 // Verify webhook signature from Resend (uses Svix)
 function verifySignature(payload: string, headers: Headers): boolean {
@@ -79,6 +98,29 @@ export async function POST(request: NextRequest) {
 
     const event: ResendWebhookEvent = JSON.parse(payload);
 
+    // Handle inbound emails (received)
+    if (event.type === 'email.received') {
+      const inboundEvent = event as InboundWebhookEvent;
+      await supabase
+        .from('emails')
+        .insert({
+          resend_id: inboundEvent.data.email_id,
+          direction: 'inbound',
+          from_address: inboundEvent.data.from,
+          to_address: inboundEvent.data.to,
+          subject: inboundEvent.data.subject || '(No subject)',
+          status: 'received',
+          email_type: 'guest_reply',
+          created_at: inboundEvent.data.created_at,
+        });
+
+      console.log('Inbound email received from:', inboundEvent.data.from);
+      return NextResponse.json({ received: true });
+    }
+
+    // Handle outbound email status updates
+    const outboundEvent = event as OutboundWebhookEvent;
+
     // Map Resend event types to our status
     const statusMap: Record<string, string> = {
       'email.sent': 'sent',
@@ -91,7 +133,7 @@ export async function POST(request: NextRequest) {
     };
 
     const status = statusMap[event.type] || 'unknown';
-    const resendId = event.data.email_id;
+    const resendId = outboundEvent.data.email_id;
 
     // Check if email already exists in our database
     const { data: existing } = await supabase
@@ -113,11 +155,11 @@ export async function POST(request: NextRequest) {
         .insert({
           resend_id: resendId,
           direction: 'outbound',
-          from_address: event.data.from,
-          to_address: event.data.to[0],
-          subject: event.data.subject,
+          from_address: outboundEvent.data.from,
+          to_address: outboundEvent.data.to[0],
+          subject: outboundEvent.data.subject,
           status: status,
-          created_at: event.data.created_at,
+          created_at: outboundEvent.data.created_at,
         });
     }
 
