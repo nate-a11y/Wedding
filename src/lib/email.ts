@@ -1,16 +1,54 @@
-import { Resend } from 'resend';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const apiKey = process.env.RESEND_API_KEY;
-const resend = apiKey ? new Resend(apiKey) : null;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 // Debug: Log if API key is present (not the actual key)
 if (typeof window === 'undefined') {
-  console.log('Resend API configured:', !!apiKey, apiKey ? `Key starts with: ${apiKey.substring(0, 6)}...` : 'No key');
+  console.log('Resend API configured:', !!RESEND_API_KEY, RESEND_API_KEY ? `Key starts with: ${RESEND_API_KEY.substring(0, 6)}...` : 'No key');
 }
 
 export function isEmailConfigured(): boolean {
-  return resend !== null;
+  return !!RESEND_API_KEY;
+}
+
+// Send email using Resend REST API directly (more reliable than SDK on Vercel)
+async function sendEmail(options: {
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+}): Promise<{ id?: string; error?: string }> {
+  if (!RESEND_API_KEY) {
+    return { error: 'API key not configured' };
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: options.from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Resend API error:', data);
+      return { error: data.message || 'Failed to send email' };
+    }
+
+    return { id: data.id };
+  } catch (error) {
+    console.error('Fetch error sending email:', error);
+    return { error: error instanceof Error ? error.message : 'Network error' };
+  }
 }
 
 // Log email to database
@@ -55,7 +93,7 @@ interface RSVPEmailData {
 }
 
 export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean> {
-  if (!resend) {
+  if (!isEmailConfigured()) {
     console.log('Email not configured, skipping confirmation email');
     return false;
   }
@@ -119,45 +157,38 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
 
   const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject: subject,
-      html: attending ? attendingHtml : notAttendingHtml,
-    });
+  const result = await sendEmail({
+    from: fromAddress,
+    to: [to],
+    subject: subject,
+    html: attending ? attendingHtml : notAttendingHtml,
+  });
 
-    if (error) {
-      console.error('Failed to send email:', error);
-      // Log failed email
-      await logEmail({
-        direction: 'outbound',
-        from: fromAddress,
-        to: to,
-        subject: subject,
-        status: 'failed',
-        emailType: 'rsvp_confirmation',
-      });
-      return false;
-    }
-
-    // Log successful email
+  if (result.error) {
+    console.error('Failed to send email:', result.error);
     await logEmail({
-      resendId: data?.id,
       direction: 'outbound',
       from: fromAddress,
       to: to,
       subject: subject,
-      status: 'sent',
+      status: 'failed',
       emailType: 'rsvp_confirmation',
     });
-
-    console.log('Confirmation email sent to:', to);
-    return true;
-  } catch (error) {
-    console.error('Email error:', error);
     return false;
   }
+
+  await logEmail({
+    resendId: result.id,
+    direction: 'outbound',
+    from: fromAddress,
+    to: to,
+    subject: subject,
+    status: 'sent',
+    emailType: 'rsvp_confirmation',
+  });
+
+  console.log('Confirmation email sent to:', to);
+  return true;
 }
 
 interface GuestbookEmailData {
@@ -167,7 +198,7 @@ interface GuestbookEmailData {
 }
 
 export async function sendGuestbookThankYou(data: GuestbookEmailData): Promise<boolean> {
-  if (!resend) {
+  if (!isEmailConfigured()) {
     console.log('Email not configured, skipping guestbook thank you email');
     return false;
   }
@@ -204,41 +235,36 @@ export async function sendGuestbookThankYou(data: GuestbookEmailData): Promise<b
 
   const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
 
-  try {
-    const { data: emailData, error } = await resend.emails.send({
-      from: fromAddress,
-      to: [to],
-      subject: subject,
-      html: html,
-    });
+  const result = await sendEmail({
+    from: fromAddress,
+    to: [to],
+    subject: subject,
+    html: html,
+  });
 
-    if (error) {
-      console.error('Failed to send guestbook email:', error);
-      await logEmail({
-        direction: 'outbound',
-        from: fromAddress,
-        to: to,
-        subject: subject,
-        status: 'failed',
-        emailType: 'guestbook_thank_you',
-      });
-      return false;
-    }
-
+  if (result.error) {
+    console.error('Failed to send guestbook email:', result.error);
     await logEmail({
-      resendId: emailData?.id,
       direction: 'outbound',
       from: fromAddress,
       to: to,
       subject: subject,
-      status: 'sent',
+      status: 'failed',
       emailType: 'guestbook_thank_you',
     });
-
-    console.log('Guestbook thank you email sent to:', to);
-    return true;
-  } catch (error) {
-    console.error('Guestbook email error:', error);
     return false;
   }
+
+  await logEmail({
+    resendId: result.id,
+    direction: 'outbound',
+    from: fromAddress,
+    to: to,
+    subject: subject,
+    status: 'sent',
+    emailType: 'guestbook_thank_you',
+  });
+
+  console.log('Guestbook thank you email sent to:', to);
+  return true;
 }
