@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { sendRSVPConfirmation } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const email = body.email.trim().toLowerCase();
+    const attending = body.attending === 'yes' || body.attending === true;
 
     // Check for duplicate RSVP
     const { data: existing, error: checkError } = await supabase
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     const rsvpData = {
       name: body.name.trim(),
       email: email,
-      attending: body.attending === 'yes' || body.attending === true,
+      attending: attending,
       meal_choice: body.mealChoice || null,
       dietary_restrictions: body.dietaryRestrictions || null,
       plus_one: body.plusOne === 'yes' || body.plusOne === true,
@@ -86,14 +88,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Send confirmation email
-    // This would integrate with a service like SendGrid, Resend, or AWS SES
-    // For now, we'll just log it
-    console.log('RSVP confirmation would be sent to:', email);
+    // Send confirmation email
+    await sendRSVPConfirmation({
+      to: email,
+      name: body.name.trim(),
+      attending: attending,
+      mealChoice: body.mealChoice,
+      plusOne: rsvpData.plus_one,
+      plusOneName: body.plusOneName,
+    });
 
     return NextResponse.json({
       success: true,
-      message: body.attending === 'yes' || body.attending === true
+      message: attending
         ? "We can't wait to celebrate with you! A confirmation email has been sent."
         : "We're sorry you can't make it, but thank you for letting us know.",
       id: data.id,

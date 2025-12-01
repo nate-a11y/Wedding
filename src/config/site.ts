@@ -56,7 +56,7 @@ export const siteConfig = {
   metadata: {
     title: 'Nate & Blake Say I Do',
     description: 'Join us in celebrating our wedding on October 31, 2027',
-    url: 'https://nateandblake.com', // Update with actual URL
+    url: 'https://nateandblake.me',
   },
 
   // Navigation
