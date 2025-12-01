@@ -80,10 +80,10 @@ export const siteConfig = {
     // Parents
     parents: {
       natesParents: [
-        { name: 'Parent Names', role: "Nate's Parents" },
+        { name: 'William & the late Tonya Bullock', role: "Nate's Parents" },
       ],
       blakesParents: [
-        { name: 'Parent Names', role: "Blake's Parents" },
+        { name: 'William and Jamie Moore', role: "Blake's Parents" },
       ],
     },
   },
