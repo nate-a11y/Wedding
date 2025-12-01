@@ -56,10 +56,15 @@ export default function RSVPPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // RSVP is open
-  const rsvpOpen = true;
+  // RSVP availability dates
+  const rsvpStartDate = new Date('2027-04-01T00:00:00');
+  const rsvpEndDate = new Date('2027-09-01T23:59:59');
+  const now = new Date();
 
-  if (!rsvpOpen) {
+  const rsvpStatus = now < rsvpStartDate ? 'not-yet' : now > rsvpEndDate ? 'closed' : 'open';
+
+  // Before April 1, 2027 - not yet accepting RSVPs
+  if (rsvpStatus === 'not-yet') {
     return (
       <div className="section-padding bg-charcoal min-h-[80vh] flex items-center">
         <div className="container-wedding">
@@ -84,7 +89,7 @@ export default function RSVPPage() {
 
               <p className="text-olive-300 text-lg mb-6">
                 We&apos;re not quite ready for RSVPs yet! Save the dates will be going out soon,
-                and we&apos;ll open RSVPs closer to the wedding date.
+                and we&apos;ll open RSVPs on April 1, 2027.
               </p>
 
               <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-4">
@@ -92,7 +97,50 @@ export default function RSVPPage() {
                   <strong className="text-gold-400">Save the Date:</strong> October 31, 2027
                 </p>
                 <p className="text-olive-400 text-sm mt-1">
-                  Formal invitations and RSVP details coming later
+                  RSVPs open April 1, 2027 through September 1, 2027
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // After September 1, 2027 - RSVP period closed
+  if (rsvpStatus === 'closed') {
+    return (
+      <div className="section-padding bg-charcoal min-h-[80vh] flex items-center">
+        <div className="container-wedding">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-2xl mx-auto"
+          >
+            <p className="font-accent text-3xl text-gold-500 mb-4">RSVP</p>
+            <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
+              RSVP Period Closed
+            </h1>
+            <div className="gold-line mx-auto mb-8" />
+
+            <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
+              <div className="w-20 h-20 mx-auto mb-6 bg-olive-800 rounded-full flex items-center justify-center">
+                <svg className="w-10 h-10 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+
+              <p className="text-olive-300 text-lg mb-6">
+                The RSVP period has ended. If you still need to respond, please reach out to us directly.
+              </p>
+
+              <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-4">
+                <p className="text-olive-300 text-sm">
+                  <strong className="text-gold-400">Contact Us:</strong>
+                </p>
+                <p className="text-olive-400 text-sm mt-1">
+                  Email us at <a href="mailto:wedding@nateandblake.me" className="text-gold-400 hover:text-gold-300">wedding@nateandblake.me</a>
                 </p>
               </div>
             </div>
@@ -118,7 +166,7 @@ export default function RSVPPage() {
           </h1>
           <div className="gold-line mx-auto mb-8" />
           <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Please respond by [Date TBA]. We can&apos;t wait to celebrate with you!
+            Please respond by September 1, 2027. We can&apos;t wait to celebrate with you!
           </p>
         </motion.div>
 
