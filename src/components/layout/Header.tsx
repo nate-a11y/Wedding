@@ -76,7 +76,7 @@ export function Header() {
               whileHover={{ scale: 1.02 }}
               className="flex flex-col items-center"
             >
-              <span className="font-accent text-2xl md:text-3xl text-gold-500">
+              <span className="font-accent-logo text-2xl md:text-3xl text-gold-500">
                 N & B
               </span>
               <span className="text-[10px] uppercase tracking-[0.2em] text-olive-300 font-medium">
