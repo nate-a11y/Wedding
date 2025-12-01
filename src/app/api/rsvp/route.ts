@@ -3,6 +3,12 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendRSVPConfirmation } from '@/lib/email';
 
+interface AdditionalGuest {
+  name: string;
+  mealChoice: string;
+  isChild: boolean;
+}
+
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
   if (!isSupabaseConfigured() || !supabase) {
@@ -59,6 +65,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Process additional guests
+    const additionalGuests: AdditionalGuest[] = (body.additionalGuests || [])
+      .filter((g: AdditionalGuest) => g.name && g.name.trim() !== '')
+      .map((g: AdditionalGuest) => ({
+        name: g.name.trim(),
+        mealChoice: g.mealChoice || '',
+        isChild: Boolean(g.isChild),
+      }));
+
     // Prepare RSVP data
     const rsvpData = {
       name: body.name.trim(),
@@ -66,11 +81,13 @@ export async function POST(request: NextRequest) {
       attending: attending,
       meal_choice: body.mealChoice || null,
       dietary_restrictions: body.dietaryRestrictions || null,
-      plus_one: body.plusOne === 'yes' || body.plusOne === true,
-      plus_one_name: body.plusOneName || null,
-      plus_one_meal_choice: body.plusOneMealChoice || null,
+      additional_guests: additionalGuests,
       song_request: body.songRequest || null,
       message: body.message || null,
+      // Keep backwards compatibility - set plus_one based on additional guests
+      plus_one: additionalGuests.length > 0,
+      plus_one_name: additionalGuests.length > 0 ? additionalGuests[0].name : null,
+      plus_one_meal_choice: additionalGuests.length > 0 ? additionalGuests[0].mealChoice : null,
     };
 
     // Insert into Supabase
@@ -95,17 +112,18 @@ export async function POST(request: NextRequest) {
       attending: attending,
       mealChoice: body.mealChoice,
       dietaryRestrictions: body.dietaryRestrictions,
-      plusOne: rsvpData.plus_one,
-      plusOneName: body.plusOneName,
-      plusOneMealChoice: body.plusOneMealChoice,
+      additionalGuests: additionalGuests,
       songRequest: body.songRequest,
       message: body.message,
     });
 
+    const guestCount = 1 + additionalGuests.length;
+    const guestText = guestCount === 1 ? '' : ` (party of ${guestCount})`;
+
     return NextResponse.json({
       success: true,
       message: attending
-        ? "We can't wait to celebrate with you! A confirmation email has been sent."
+        ? `We can't wait to celebrate with you${guestText}! A confirmation email has been sent.`
         : "We're sorry you can't make it, but thank you for letting us know.",
       id: data.id,
     });

@@ -5,6 +5,13 @@ import { motion } from 'framer-motion';
 import { Button, Input } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
 
+interface AdditionalGuest {
+  id: string;
+  name: string;
+  mealChoice: MealChoice | '';
+  isChild: boolean;
+}
+
 export default function RSVPPage() {
   const [formState, setFormState] = useState<FormState>({ status: 'idle' });
   const [formData, setFormData] = useState({
@@ -13,12 +20,10 @@ export default function RSVPPage() {
     attending: '',
     mealChoice: '' as MealChoice | '',
     dietaryRestrictions: '',
-    plusOne: '',
-    plusOneName: '',
-    plusOneMealChoice: '' as MealChoice | '',
     songRequest: '',
     message: '',
   });
+  const [additionalGuests, setAdditionalGuests] = useState<AdditionalGuest[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +33,10 @@ export default function RSVPPage() {
       const response = await fetch('/api/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          additionalGuests: additionalGuests.filter(g => g.name.trim() !== ''),
+        }),
       });
 
       const result = await response.json();
@@ -54,6 +62,25 @@ export default function RSVPPage() {
   ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const addGuest = () => {
+    setAdditionalGuests([
+      ...additionalGuests,
+      { id: crypto.randomUUID(), name: '', mealChoice: '', isChild: false },
+    ]);
+  };
+
+  const removeGuest = (id: string) => {
+    setAdditionalGuests(additionalGuests.filter(g => g.id !== id));
+  };
+
+  const updateGuest = (id: string, field: keyof AdditionalGuest, value: string | boolean) => {
+    setAdditionalGuests(
+      additionalGuests.map(g =>
+        g.id === id ? { ...g, [field]: value } : g
+      )
+    );
   };
 
   // RSVP availability dates
@@ -203,26 +230,33 @@ export default function RSVPPage() {
           ) : (
             <form onSubmit={handleSubmit} className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
               <div className="space-y-6">
-                {/* Name */}
-                <Input
-                  label="Full Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter your full name"
-                />
+                {/* Primary Guest Section */}
+                <div className="pb-4 border-b border-olive-700">
+                  <h3 className="text-lg font-medium text-gold-400 mb-4">Your Information</h3>
 
-                {/* Email */}
-                <Input
-                  label="Email Address"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="your@email.com"
-                />
+                  {/* Name */}
+                  <div className="space-y-4">
+                    <Input
+                      label="Full Name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      placeholder="Enter your full name"
+                    />
+
+                    {/* Email */}
+                    <Input
+                      label="Email Address"
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                </div>
 
                 {/* Attending */}
                 <div>
@@ -257,10 +291,10 @@ export default function RSVPPage() {
 
                 {formData.attending === 'yes' && (
                   <>
-                    {/* Meal Choice */}
+                    {/* Primary Guest Meal Choice */}
                     <div>
                       <label className="block text-sm font-medium text-cream mb-2">
-                        Meal Preference
+                        Your Meal Preference
                       </label>
                       <select
                         name="mealChoice"
@@ -283,69 +317,95 @@ export default function RSVPPage() {
                       name="dietaryRestrictions"
                       value={formData.dietaryRestrictions}
                       onChange={handleChange}
-                      placeholder="Please list any dietary needs"
+                      placeholder="Please list any dietary needs for your party"
                     />
 
-                    {/* Plus One */}
-                    <div>
-                      <label className="block text-sm font-medium text-cream mb-2">
-                        Bringing a guest?
-                      </label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="plusOne"
-                            value="yes"
-                            checked={formData.plusOne === 'yes'}
-                            onChange={handleChange}
-                            className="w-4 h-4 text-gold-500"
-                          />
-                          <span className="text-olive-300">Yes</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="plusOne"
-                            value="no"
-                            checked={formData.plusOne === 'no'}
-                            onChange={handleChange}
-                            className="w-4 h-4 text-gold-500"
-                          />
-                          <span className="text-olive-300">No</span>
-                        </label>
+                    {/* Additional Guests Section */}
+                    <div className="pt-4 border-t border-olive-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium text-gold-400">Additional Guests</h3>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addGuest}
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Guest
+                        </Button>
                       </div>
-                    </div>
 
-                    {formData.plusOne === 'yes' && (
-                      <>
-                        <Input
-                          label="Guest Name"
-                          name="plusOneName"
-                          value={formData.plusOneName}
-                          onChange={handleChange}
-                          placeholder="Enter your guest's name"
-                        />
-                        <div>
-                          <label className="block text-sm font-medium text-cream mb-2">
-                            Guest Meal Preference
-                          </label>
-                          <select
-                            name="plusOneMealChoice"
-                            value={formData.plusOneMealChoice}
-                            onChange={handleChange}
-                            className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
-                          >
-                            <option value="">Select an option</option>
-                            <option value="chicken">Chicken</option>
-                            <option value="beef">Beef</option>
-                            <option value="fish">Fish</option>
-                            <option value="vegetarian">Vegetarian</option>
-                            <option value="vegan">Vegan</option>
-                          </select>
+                      <p className="text-olive-400 text-sm mb-4">
+                        Add any family members or guests attending with you, including children.
+                      </p>
+
+                      {additionalGuests.length === 0 ? (
+                        <p className="text-olive-500 text-sm italic">No additional guests added.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {additionalGuests.map((guest, index) => (
+                            <div
+                              key={guest.id}
+                              className="bg-olive-900/30 border border-olive-700 rounded-lg p-4"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-medium text-cream">
+                                  Guest {index + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeGuest(guest.id)}
+                                  className="text-red-400 hover:text-red-300 p-1"
+                                  title="Remove guest"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                <input
+                                  type="text"
+                                  value={guest.name}
+                                  onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
+                                  placeholder="Guest name"
+                                  className="flex h-10 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                                />
+
+                                <div className="flex gap-4 items-center">
+                                  <select
+                                    value={guest.mealChoice}
+                                    onChange={(e) => updateGuest(guest.id, 'mealChoice', e.target.value)}
+                                    className="flex h-10 flex-1 rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                                  >
+                                    <option value="">Meal preference</option>
+                                    <option value="chicken">Chicken</option>
+                                    <option value="beef">Beef</option>
+                                    <option value="fish">Fish</option>
+                                    <option value="vegetarian">Vegetarian</option>
+                                    <option value="vegan">Vegan</option>
+                                    <option value="kids">Kids Meal</option>
+                                  </select>
+
+                                  <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                    <input
+                                      type="checkbox"
+                                      checked={guest.isChild}
+                                      onChange={(e) => updateGuest(guest.id, 'isChild', e.target.checked)}
+                                      className="w-4 h-4 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500/20"
+                                    />
+                                    <span className="text-olive-300 text-sm">Child</span>
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
 
                     {/* Song Request */}
                     <Input

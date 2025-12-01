@@ -34,7 +34,7 @@ const faqs = [
       },
       {
         question: 'Are kids welcome?',
-        answer: 'While we love your little ones, we\'ve decided to make our wedding an adults-only celebration. We hope this gives you a chance to enjoy a night out!',
+        answer: 'Absolutely! Children are welcome to celebrate with us. Please include all family members, including children, when you RSVP so we can plan accordingly.',
       },
     ],
   },
