@@ -70,7 +70,7 @@ export const siteConfig = {
     special: [
       {
         name: 'Honey',
-        role: 'Ring Bearer',
+        role: 'Flower Girl',
         relation: 'The Goodest Girl',
         bio: 'A very special pup who will lead the way down the aisle.',
         photo: '/images/party/honey.jpg',
