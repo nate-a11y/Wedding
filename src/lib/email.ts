@@ -1,9 +1,13 @@
 import { Resend } from 'resend';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const resend = process.env.RESEND_API_KEY
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+const apiKey = process.env.RESEND_API_KEY;
+const resend = apiKey ? new Resend(apiKey) : null;
+
+// Debug: Log if API key is present (not the actual key)
+if (typeof window === 'undefined') {
+  console.log('Resend API configured:', !!apiKey, apiKey ? `Key starts with: ${apiKey.substring(0, 6)}...` : 'No key');
+}
 
 export function isEmailConfigured(): boolean {
   return resend !== null;
