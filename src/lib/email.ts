@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -6,6 +7,38 @@ const resend = process.env.RESEND_API_KEY
 
 export function isEmailConfigured(): boolean {
   return resend !== null;
+}
+
+// Log email to database
+async function logEmail(data: {
+  resendId?: string;
+  direction: 'outbound' | 'inbound';
+  from: string;
+  to: string;
+  subject: string;
+  status: string;
+  emailType?: string;
+  relatedId?: string;
+}) {
+  if (!isSupabaseConfigured() || !supabase) {
+    console.log('Database not configured, skipping email log');
+    return;
+  }
+
+  try {
+    await supabase.from('emails').insert({
+      resend_id: data.resendId || null,
+      direction: data.direction,
+      from_address: data.from,
+      to_address: data.to,
+      subject: data.subject,
+      status: data.status,
+      email_type: data.emailType || null,
+      related_id: data.relatedId || null,
+    });
+  } catch (error) {
+    console.error('Failed to log email:', error);
+  }
 }
 
 interface RSVPEmailData {
@@ -80,9 +113,11 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     </div>
   `;
 
+  const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
+
   try {
-    const { error } = await resend.emails.send({
-      from: 'Nate & Blake Say I Do <wedding@nateandblake.me>',
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
       to: [to],
       subject: subject,
       html: attending ? attendingHtml : notAttendingHtml,
@@ -90,8 +125,28 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
 
     if (error) {
       console.error('Failed to send email:', error);
+      // Log failed email
+      await logEmail({
+        direction: 'outbound',
+        from: fromAddress,
+        to: to,
+        subject: subject,
+        status: 'failed',
+        emailType: 'rsvp_confirmation',
+      });
       return false;
     }
+
+    // Log successful email
+    await logEmail({
+      resendId: data?.id,
+      direction: 'outbound',
+      from: fromAddress,
+      to: to,
+      subject: subject,
+      status: 'sent',
+      emailType: 'rsvp_confirmation',
+    });
 
     console.log('Confirmation email sent to:', to);
     return true;

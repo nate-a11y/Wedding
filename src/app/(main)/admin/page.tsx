@@ -48,7 +48,20 @@ interface Photo {
   created_at: string;
 }
 
-type Tab = 'overview' | 'rsvps' | 'guestbook' | 'photos';
+interface Email {
+  id: string;
+  resend_id: string | null;
+  direction: 'outbound' | 'inbound';
+  from_address: string;
+  to_address: string;
+  subject: string | null;
+  status: string;
+  email_type: string | null;
+  related_id: string | null;
+  created_at: string;
+}
+
+type Tab = 'overview' | 'rsvps' | 'guestbook' | 'photos' | 'emails';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -66,6 +79,7 @@ export default function AdminPage() {
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [guestbook, setGuestbook] = useState<GuestbookEntry[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +120,11 @@ export default function AdminPage() {
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           setPhotos(data.photos);
+        } else if (activeTab === 'emails') {
+          const response = await fetch('/api/admin/emails');
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
+          setEmails(data.emails);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -198,6 +217,15 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'emails',
+      label: 'Emails',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
       ),
     },
@@ -442,6 +470,71 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'emails' && (
+            <motion.div
+              key="emails"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 text-red-400">{error}</div>
+              ) : emails.length === 0 ? (
+                <div className="text-center py-12 text-olive-400">No emails sent yet</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-olive-700">
+                        <th className="p-3 text-olive-300 font-medium">Direction</th>
+                        <th className="p-3 text-olive-300 font-medium">To</th>
+                        <th className="p-3 text-olive-300 font-medium">Subject</th>
+                        <th className="p-3 text-olive-300 font-medium">Type</th>
+                        <th className="p-3 text-olive-300 font-medium">Status</th>
+                        <th className="p-3 text-olive-300 font-medium">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {emails.map((email) => (
+                        <tr key={email.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                          <td className="p-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              email.direction === 'outbound'
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-purple-500/20 text-purple-400'
+                            }`}>
+                              {email.direction === 'outbound' ? 'Sent' : 'Received'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-cream">{email.to_address}</td>
+                          <td className="p-3 text-olive-300 max-w-xs truncate">{email.subject || '-'}</td>
+                          <td className="p-3 text-olive-400 capitalize">{email.email_type?.replace(/_/g, ' ') || '-'}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              email.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                              email.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                              email.status === 'opened' ? 'bg-purple-500/20 text-purple-400' :
+                              email.status === 'bounced' ? 'bg-red-500/20 text-red-400' :
+                              email.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                              'bg-olive-500/20 text-olive-400'
+                            }`}>
+                              {email.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-olive-500 text-sm">{formatDate(email.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </motion.div>
