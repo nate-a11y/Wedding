@@ -79,8 +79,8 @@ export default function WeddingPartyPage() {
           </p>
         </motion.div>
 
-        {/* Groom's Side */}
-        {weddingParty.groomsmen.length > 0 && (
+        {/* Nate's Side */}
+        {weddingParty.natesSide.length > 0 && (
           <section className="mb-16">
             <motion.div
               initial={{ opacity: 0 }}
@@ -94,15 +94,15 @@ export default function WeddingPartyPage() {
               <div className="w-16 h-px bg-gold-500/50 mx-auto" />
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {weddingParty.groomsmen.map((member, index) => (
+              {weddingParty.natesSide.map((member, index) => (
                 <PartyMemberCard key={member.name} member={member} index={index} />
               ))}
             </div>
           </section>
         )}
 
-        {/* Bride's Side */}
-        {weddingParty.bridesmaids.length > 0 && (
+        {/* Blake's Side */}
+        {weddingParty.blakesSide.length > 0 && (
           <section className="mb-16">
             <motion.div
               initial={{ opacity: 0 }}
@@ -116,7 +116,7 @@ export default function WeddingPartyPage() {
               <div className="w-16 h-px bg-gold-500/50 mx-auto" />
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {weddingParty.bridesmaids.map((member, index) => (
+              {weddingParty.blakesSide.map((member, index) => (
                 <PartyMemberCard key={member.name} member={member} index={index} />
               ))}
             </div>
@@ -159,7 +159,7 @@ export default function WeddingPartyPage() {
             <div className="w-16 h-px bg-gold-500/50 mx-auto" />
           </motion.div>
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Groom's Parents */}
+            {/* Nate's Parents */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -169,12 +169,12 @@ export default function WeddingPartyPage() {
               <h3 className="font-heading text-xl text-gold-400 mb-4">
                 Parents of {couple.person1.firstName}
               </h3>
-              {weddingParty.parents.groomParents.map((parent, idx) => (
+              {weddingParty.parents.natesParents.map((parent, idx) => (
                 <p key={idx} className="text-cream">{parent.name}</p>
               ))}
             </motion.div>
 
-            {/* Bride's Parents */}
+            {/* Blake's Parents */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -184,7 +184,7 @@ export default function WeddingPartyPage() {
               <h3 className="font-heading text-xl text-gold-400 mb-4">
                 Parents of {couple.person2.firstName}
               </h3>
-              {weddingParty.parents.brideParents.map((parent, idx) => (
+              {weddingParty.parents.blakesParents.map((parent, idx) => (
                 <p key={idx} className="text-cream">{parent.name}</p>
               ))}
             </motion.div>
