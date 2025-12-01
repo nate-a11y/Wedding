@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { sendGuestbookThankYou } from '@/lib/email';
 
 // GET - Fetch all guest book entries
 export async function GET() {
@@ -59,9 +60,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.name || !body.message) {
+    if (!body.name || !body.email || !body.message) {
       return NextResponse.json(
-        { error: 'Name and message are required' },
+        { error: 'Name, email, and message are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(body.email)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid email address' },
         { status: 400 }
       );
     }
@@ -76,6 +86,7 @@ export async function POST(request: NextRequest) {
 
     const entryData = {
       name: body.name.trim(),
+      email: body.email.trim().toLowerCase(),
       message: body.message.trim(),
     };
 
@@ -92,6 +103,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Send thank you email (don't wait, don't fail if email fails)
+    sendGuestbookThankYou({
+      to: entryData.email,
+      name: entryData.name,
+      message: entryData.message,
+    }).catch((err) => console.error('Failed to send guestbook thank you email:', err));
 
     return NextResponse.json({
       success: true,

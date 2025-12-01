@@ -155,3 +155,86 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     return false;
   }
 }
+
+interface GuestbookEmailData {
+  to: string;
+  name: string;
+  message: string;
+}
+
+export async function sendGuestbookThankYou(data: GuestbookEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log('Email not configured, skipping guestbook thank you email');
+    return false;
+  }
+
+  const { to, name, message } = data;
+  const subject = "Thank you for signing our guest book! 💕";
+
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #d4af37; font-size: 28px; margin: 0;">Nate & Blake</h1>
+        <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
+      </div>
+
+      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+        <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
+        <p style="color: #a5b697; line-height: 1.6;">
+          Your kind words mean so much to us. Thank you for taking the time to sign our guest book!
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
+          <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
+        </div>
+      </div>
+
+      <div style="text-align: center; color: #536537; font-size: 14px;">
+        <p style="color: #a5b697;">We can't wait to celebrate with you!</p>
+        <p style="color: #d4af37;">#NateAndBlakeSayIDo2027</p>
+        <p>Visit us at <a href="https://nateandblake.me" style="color: #d4af37;">nateandblake.me</a></p>
+      </div>
+    </div>
+  `;
+
+  const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
+
+  try {
+    const { data: emailData, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [to],
+      subject: subject,
+      html: html,
+    });
+
+    if (error) {
+      console.error('Failed to send guestbook email:', error);
+      await logEmail({
+        direction: 'outbound',
+        from: fromAddress,
+        to: to,
+        subject: subject,
+        status: 'failed',
+        emailType: 'guestbook_thank_you',
+      });
+      return false;
+    }
+
+    await logEmail({
+      resendId: emailData?.id,
+      direction: 'outbound',
+      from: fromAddress,
+      to: to,
+      subject: subject,
+      status: 'sent',
+      emailType: 'guestbook_thank_you',
+    });
+
+    console.log('Guestbook thank you email sent to:', to);
+    return true;
+  } catch (error) {
+    console.error('Guestbook email error:', error);
+    return false;
+  }
+}

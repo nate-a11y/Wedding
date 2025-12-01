@@ -29,6 +29,7 @@ export default function GuestBookPage() {
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     message: '',
   });
 
@@ -75,7 +76,7 @@ export default function GuestBookPage() {
       }
 
       setSuccess(true);
-      setFormData({ name: '', message: '' });
+      setFormData({ name: '', email: '', message: '' });
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(false), 5000);
@@ -135,6 +136,17 @@ export default function GuestBookPage() {
                 placeholder="Enter your name"
                 required
                 maxLength={100}
+              />
+
+              <Input
+                label="Your Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                required
+                maxLength={255}
               />
 
               <div className="w-full">
