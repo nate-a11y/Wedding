@@ -56,7 +56,7 @@ export const siteConfig = {
   metadata: {
     title: 'Nate & Blake Say I Do',
     description: 'Join us in celebrating our wedding on October 31, 2027',
-    url: 'https://nateandblake.com', // Update with actual URL
+    url: 'https://nateandblake.me',
   },
 
   // Navigation
@@ -64,6 +64,7 @@ export const siteConfig = {
     { name: 'Home', href: '/' },
     { name: 'Our Story', href: '/our-story' },
     { name: 'Events', href: '/events' },
+    { name: 'Dress Code', href: '/dress-code' },
     { name: 'Travel', href: '/travel' },
     { name: 'Gallery', href: '/gallery' },
     { name: 'Photo Booth', href: '/photos' },
