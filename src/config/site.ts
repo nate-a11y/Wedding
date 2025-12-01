@@ -68,6 +68,7 @@ export const siteConfig = {
     { name: 'Gallery', href: '/gallery' },
     { name: 'RSVP', href: '/rsvp' },
     { name: 'FAQ', href: '/faq' },
+    { name: 'Guest Book', href: '/guestbook' },
     { name: 'Registry', href: '/registry' },
   ],
 } as const;
