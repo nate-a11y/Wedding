@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const BUCKET_NAME = 'wedding';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -59,6 +60,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Photo storage is not configured' },
       { status: 503 }
+    );
+  }
+
+  // Rate limiting - 10 photos per minute
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const rateLimit = checkRateLimit(`photos:${ip}`, { windowMs: 60000, maxRequests: 10 });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many uploads. Please wait a moment and try again.' },
+      { status: 429 }
     );
   }
 

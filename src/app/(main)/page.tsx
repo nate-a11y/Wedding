@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Hero } from '@/components/sections';
+import { Hero, GuestCount } from '@/components/sections';
 
 export default function HomePage() {
   return (
@@ -14,11 +14,12 @@ export default function HomePage() {
             We Can&apos;t Wait to Celebrate With You
           </h2>
           <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 text-lg leading-relaxed">
+          <p className="text-olive-300 text-lg leading-relaxed mb-6">
             We are so excited to share our special day with the people we love most.
             This website is your one-stop destination for all the details about our wedding.
             We&apos;ll be updating it with more information as the big day approaches.
           </p>
+          <GuestCount className="mx-auto" />
         </div>
       </section>
 

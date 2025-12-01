@@ -55,15 +55,20 @@ export function Footer() {
           </motion.nav>
 
           {/* Hashtag */}
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
-            className="text-gold-500 font-medium mb-8"
+            className="mb-8"
           >
-            #NateAndBlakeSayIDo
-          </motion.p>
+            <p className="text-gold-500 font-medium text-xl mb-2">
+              #NateAndBlakeSayIDo2027
+            </p>
+            <p className="text-olive-400 text-sm">
+              Share your photos with our wedding hashtag!
+            </p>
+          </motion.div>
 
           {/* Copyright */}
           <motion.p

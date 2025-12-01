@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // GET - Fetch all guest book entries
 export async function GET() {
@@ -40,6 +41,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Guest book is not configured' },
       { status: 503 }
+    );
+  }
+
+  // Rate limiting
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const rateLimit = checkRateLimit(`guestbook:${ip}`, { windowMs: 60000, maxRequests: 3 });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429 }
     );
   }
 

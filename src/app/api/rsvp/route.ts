@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
@@ -7,6 +8,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'RSVP system is not configured' },
       { status: 503 }
+    );
+  }
+
+  // Rate limiting based on IP
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const rateLimit = checkRateLimit(`rsvp:${ip}`, { windowMs: 60000, maxRequests: 5 });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429 }
     );
   }
 
@@ -21,10 +33,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const email = body.email.trim().toLowerCase();
+
+    // Check for duplicate RSVP
+    const { data: existing, error: checkError } = await supabase
+      .from('rsvps')
+      .select('id, name')
+      .eq('email', email)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 = no rows returned, which is what we want
+      console.error('Duplicate check error:', checkError);
+    }
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          error: `An RSVP has already been submitted with this email address (by ${existing.name}). If you need to update your response, please contact us.`,
+          duplicate: true,
+        },
+        { status: 409 }
+      );
+    }
+
     // Prepare RSVP data
     const rsvpData = {
       name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
+      email: email,
       attending: body.attending === 'yes' || body.attending === true,
       meal_choice: body.mealChoice || null,
       dietary_restrictions: body.dietaryRestrictions || null,
@@ -50,10 +86,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TODO: Send confirmation email
+    // This would integrate with a service like SendGrid, Resend, or AWS SES
+    // For now, we'll just log it
+    console.log('RSVP confirmation would be sent to:', email);
+
     return NextResponse.json({
       success: true,
       message: body.attending === 'yes' || body.attending === true
-        ? "We can't wait to celebrate with you!"
+        ? "We can't wait to celebrate with you! A confirmation email has been sent."
         : "We're sorry you can't make it, but thank you for letting us know.",
       id: data.id,
     });
