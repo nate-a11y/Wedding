@@ -142,11 +142,12 @@ export default function AddressPage() {
                       placeholder="your@email.com"
                     />
                     <Input
-                      label="Phone Number (Optional)"
+                      label="Phone Number"
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      required
                       placeholder="(555) 123-4567"
                     />
                   </div>
