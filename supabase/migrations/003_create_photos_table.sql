@@ -27,4 +27,4 @@ CREATE POLICY "Allow public insert photos" ON photos
   FOR INSERT WITH CHECK (true);
 
 -- Storage bucket policy (run this in Supabase dashboard if not already set up)
--- Make sure the 'public.wedding' bucket exists and has public read access
+-- Make sure the 'wedding' bucket exists and has public read access

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const BUCKET_NAME = 'public.wedding';
+const BUCKET_NAME = 'wedding';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const guestName = formData.get('guestName') as string | null;
     const caption = formData.get('caption') as string | null;
+    const source = (formData.get('source') as string) || 'upload'; // 'camera' or 'upload'
 
     // Validate required fields
     if (!file || !guestName) {
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
         file_path: filePath,
         file_name: fileName,
         caption: caption?.trim() || null,
+        source: source === 'camera' ? 'camera' : 'upload',
       }])
       .select()
       .single();
