@@ -21,7 +21,7 @@ export async function GET() {
 
     // Generate URLs for all photos
     const photosWithUrls = (data || []).map((photo) => {
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = supabase!.storage
         .from(BUCKET_NAME)
         .getPublicUrl(photo.file_path);
 
