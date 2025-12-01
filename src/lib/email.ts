@@ -83,15 +83,19 @@ async function logEmail(data: {
   }
 }
 
+interface AdditionalGuest {
+  name: string;
+  mealChoice: string;
+  isChild: boolean;
+}
+
 interface RSVPEmailData {
   to: string;
   name: string;
   attending: boolean;
   mealChoice?: string | null;
   dietaryRestrictions?: string | null;
-  plusOne?: boolean;
-  plusOneName?: string | null;
-  plusOneMealChoice?: string | null;
+  additionalGuests?: AdditionalGuest[];
   songRequest?: string | null;
   message?: string | null;
 }
@@ -102,14 +106,34 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     return false;
   }
 
-  const { to, name, attending, mealChoice, dietaryRestrictions, plusOne, plusOneName, plusOneMealChoice, songRequest, message } = data;
+  const { to, name, attending, mealChoice, dietaryRestrictions, additionalGuests = [], songRequest, message } = data;
 
+  const partySize = 1 + additionalGuests.length;
   const subject = attending
-    ? "We can't wait to celebrate with you! 🎃"
+    ? partySize > 1
+      ? `We can't wait to celebrate with your party of ${partySize}! 🎃`
+      : "We can't wait to celebrate with you! 🎃"
     : "Thank you for letting us know";
 
   // Helper to capitalize meal choice
-  const formatMeal = (meal: string | null | undefined) => meal ? meal.charAt(0).toUpperCase() + meal.slice(1) : '';
+  const formatMeal = (meal: string | null | undefined) => {
+    if (!meal) return '';
+    if (meal === 'kids') return 'Kids Meal';
+    return meal.charAt(0).toUpperCase() + meal.slice(1);
+  };
+
+  // Generate HTML for additional guests
+  const guestsHtml = additionalGuests.length > 0 ? `
+    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #536537;">
+      <p style="color: #d4af37; margin: 5px 0 15px 0; font-weight: bold;">Additional Guests (${additionalGuests.length})</p>
+      ${additionalGuests.map((guest, index) => `
+        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+          <p style="color: #a5b697; margin: 3px 0;"><strong>${guest.name}</strong>${guest.isChild ? ' <span style="color: #d4af37; font-size: 12px;">(Child)</span>' : ''}</p>
+          ${guest.mealChoice ? `<p style="color: #a5b697; margin: 3px 0; font-size: 14px;">Meal: ${formatMeal(guest.mealChoice)}</p>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
 
   const attendingHtml = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
@@ -121,22 +145,17 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
       <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
         <p style="color: #a5b697; line-height: 1.6;">
-          We're thrilled that you'll be joining us on our special day! Your RSVP has been received.
+          We're thrilled that you'll be joining us on our special day! Your RSVP has been received${partySize > 1 ? ` for your party of ${partySize}` : ''}.
         </p>
 
         <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
           <h3 style="color: #d4af37; margin-top: 0;">Your RSVP Details</h3>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Name:</strong> ${name}</p>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Status:</strong> Attending ✓</p>
-          ${mealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Meal Choice:</strong> ${formatMeal(mealChoice)}</p>` : ''}
+          <p style="color: #a5b697; margin: 5px 0;"><strong>Party Size:</strong> ${partySize} ${partySize === 1 ? 'guest' : 'guests'}</p>
+          ${mealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Your Meal:</strong> ${formatMeal(mealChoice)}</p>` : ''}
           ${dietaryRestrictions ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Dietary Restrictions:</strong> ${dietaryRestrictions}</p>` : ''}
-          ${plusOne ? `
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #536537;">
-              <p style="color: #d4af37; margin: 5px 0; font-weight: bold;">Plus One</p>
-              <p style="color: #a5b697; margin: 5px 0;"><strong>Guest Name:</strong> ${plusOneName || 'Not specified'}</p>
-              ${plusOneMealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Guest Meal:</strong> ${formatMeal(plusOneMealChoice)}</p>` : ''}
-            </div>
-          ` : ''}
+          ${guestsHtml}
           ${songRequest ? `<p style="color: #a5b697; margin: 15px 0 5px 0;"><strong>Song Request:</strong> ${songRequest}</p>` : ''}
         </div>
         ${message ? `

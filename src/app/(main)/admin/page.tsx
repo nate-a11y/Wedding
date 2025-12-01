@@ -9,10 +9,18 @@ interface Stats {
     attending: number;
     notAttending: number;
     plusOnes: number;
+    additionalGuests?: number;
+    children?: number;
     totalGuests: number;
   };
   guestbook: number;
   photos: number;
+}
+
+interface AdditionalGuest {
+  name: string;
+  mealChoice: string;
+  isChild: boolean;
 }
 
 interface RSVP {
@@ -22,6 +30,7 @@ interface RSVP {
   attending: boolean;
   meal_choice: string | null;
   dietary_restrictions: string | null;
+  additional_guests: AdditionalGuest[] | null;
   plus_one: boolean;
   plus_one_name: string | null;
   plus_one_meal_choice: string | null;
@@ -292,7 +301,7 @@ export default function AdminPage() {
                 </div>
                 <div className="text-olive-300">Total Guests</div>
                 <div className="text-olive-500 text-sm mt-1">
-                  {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.plusOnes || 0} plus ones
+                  {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.additionalGuests || stats?.rsvps.plusOnes || 0} guests
                 </div>
               </div>
 
@@ -357,39 +366,58 @@ export default function AdminPage() {
                         <th className="p-3 text-olive-300 font-medium">Email</th>
                         <th className="p-3 text-olive-300 font-medium">Status</th>
                         <th className="p-3 text-olive-300 font-medium">Meal</th>
-                        <th className="p-3 text-olive-300 font-medium">Plus One</th>
+                        <th className="p-3 text-olive-300 font-medium">Party</th>
                         <th className="p-3 text-olive-300 font-medium">Date</th>
                         <th className="p-3 text-olive-300 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rsvps.map((rsvp) => (
-                        <tr key={rsvp.id} className="border-b border-olive-800 hover:bg-olive-900/30">
-                          <td className="p-3 text-cream">{rsvp.name}</td>
-                          <td className="p-3 text-olive-400">{rsvp.email}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              rsvp.attending ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                            }`}>
-                              {rsvp.attending ? 'Attending' : 'Not Attending'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-olive-400 capitalize">{rsvp.meal_choice || '-'}</td>
-                          <td className="p-3 text-olive-400">{rsvp.plus_one ? rsvp.plus_one_name || 'Yes' : '-'}</td>
-                          <td className="p-3 text-olive-500 text-sm">{formatDate(rsvp.created_at)}</td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => deleteRsvp(rsvp.id)}
-                              className="text-red-400 hover:text-red-300 p-1"
-                              title="Delete RSVP"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {rsvps.map((rsvp) => {
+                        const guests = rsvp.additional_guests || [];
+                        const partySize = 1 + guests.length;
+                        const childCount = guests.filter(g => g.isChild).length;
+                        return (
+                          <tr key={rsvp.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                            <td className="p-3 text-cream">
+                              {rsvp.name}
+                              {guests.length > 0 && (
+                                <div className="text-xs text-olive-500 mt-1">
+                                  +{guests.map(g => g.name).join(', ')}
+                                </div>
+                              )}
+                            </td>
+                            <td className="p-3 text-olive-400">{rsvp.email}</td>
+                            <td className="p-3">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                rsvp.attending ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {rsvp.attending ? 'Attending' : 'Not Attending'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-olive-400 capitalize">{rsvp.meal_choice || '-'}</td>
+                            <td className="p-3 text-olive-400">
+                              {partySize}
+                              {childCount > 0 && (
+                                <span className="text-xs text-gold-400 ml-1">
+                                  ({childCount} {childCount === 1 ? 'child' : 'children'})
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 text-olive-500 text-sm">{formatDate(rsvp.created_at)}</td>
+                            <td className="p-3">
+                              <button
+                                onClick={() => deleteRsvp(rsvp.id)}
+                                className="text-red-400 hover:text-red-300 p-1"
+                                title="Delete RSVP"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
