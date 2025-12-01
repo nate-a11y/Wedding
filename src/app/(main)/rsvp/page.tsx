@@ -56,8 +56,8 @@ export default function RSVPPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // RSVP not yet open
-  const rsvpOpen = false;
+  // RSVP is open
+  const rsvpOpen = true;
 
   if (!rsvpOpen) {
     return (
