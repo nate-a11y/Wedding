@@ -15,6 +15,11 @@ interface Stats {
   };
   guestbook: number;
   photos: number;
+  addresses?: {
+    total: number;
+    linked: number;
+    unlinked: number;
+  };
 }
 
 interface AdditionalGuest {
@@ -70,7 +75,28 @@ interface Email {
   created_at: string;
 }
 
-type Tab = 'overview' | 'rsvps' | 'guestbook' | 'photos' | 'emails';
+interface GuestAddress {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  street_address: string;
+  street_address_2: string | null;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+  linked_rsvp_id: string | null;
+  rsvps: {
+    id: string;
+    name: string;
+    attending: boolean;
+    created_at: string;
+  } | null;
+  created_at: string;
+}
+
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'emails';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -89,6 +115,7 @@ export default function AdminPage() {
   const [guestbook, setGuestbook] = useState<GuestbookEntry[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [emails, setEmails] = useState<Email[]>([]);
+  const [addresses, setAddresses] = useState<GuestAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,6 +161,11 @@ export default function AdminPage() {
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           setEmails(data.emails);
+        } else if (activeTab === 'addresses') {
+          const response = await fetch('/api/admin/addresses');
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
+          setAddresses(data.addresses);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -206,6 +238,20 @@ export default function AdminPage() {
     }
   };
 
+  const deleteAddress = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this address?')) return;
+    try {
+      await fetch('/api/admin/addresses', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setAddresses(addresses.filter(a => a.id !== id));
+    } catch (err) {
+      console.error('Failed to delete address:', err);
+    }
+  };
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     {
       id: 'overview',
@@ -222,6 +268,16 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'addresses',
+      label: 'Addresses',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
     },
@@ -339,6 +395,16 @@ export default function AdminPage() {
                 </div>
                 <div className="text-olive-300">Photos Uploaded</div>
               </div>
+
+              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
+                <div className="text-4xl font-heading text-teal-400 mb-2">
+                  {stats?.addresses?.total || 0}
+                </div>
+                <div className="text-olive-300">Addresses Collected</div>
+                <div className="text-olive-500 text-sm mt-1">
+                  {stats?.addresses?.linked || 0} linked to RSVPs
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -418,6 +484,84 @@ export default function AdminPage() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'addresses' && (
+            <motion.div
+              key="addresses"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 text-red-400">{error}</div>
+              ) : addresses.length === 0 ? (
+                <div className="text-center py-12 text-olive-400">No addresses collected yet</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-olive-700">
+                        <th className="p-3 text-olive-300 font-medium">Name</th>
+                        <th className="p-3 text-olive-300 font-medium">Email</th>
+                        <th className="p-3 text-olive-300 font-medium">Address</th>
+                        <th className="p-3 text-olive-300 font-medium">RSVP Status</th>
+                        <th className="p-3 text-olive-300 font-medium">Date</th>
+                        <th className="p-3 text-olive-300 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {addresses.map((addr) => (
+                        <tr key={addr.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                          <td className="p-3 text-cream">
+                            {addr.name}
+                            {addr.phone && (
+                              <div className="text-xs text-olive-500 mt-1">{addr.phone}</div>
+                            )}
+                          </td>
+                          <td className="p-3 text-olive-400">{addr.email}</td>
+                          <td className="p-3 text-olive-300 text-sm">
+                            <div>{addr.street_address}</div>
+                            {addr.street_address_2 && <div>{addr.street_address_2}</div>}
+                            <div>{addr.city}, {addr.state} {addr.postal_code}</div>
+                            {addr.country !== 'United States' && <div>{addr.country}</div>}
+                          </td>
+                          <td className="p-3">
+                            {addr.rsvps ? (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                addr.rsvps.attending ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {addr.rsvps.attending ? 'Attending' : 'Not Attending'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-olive-500/20 text-olive-400">
+                                No RSVP
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-olive-500 text-sm">{formatDate(addr.created_at)}</td>
+                          <td className="p-3">
+                            <button
+                              onClick={() => deleteAddress(addr.id)}
+                              className="text-red-400 hover:text-red-300 p-1"
+                              title="Delete Address"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

@@ -105,6 +105,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Auto-link guest address if one exists with matching email
+    const { error: linkError } = await supabase
+      .from('guest_addresses')
+      .update({ linked_rsvp_id: data.id })
+      .eq('email', email);
+
+    if (linkError) {
+      // Non-critical error - log but don't fail the RSVP
+      console.log('Note: Could not link address (may not exist):', linkError.message);
+    }
+
     // Send confirmation email with all RSVP details
     await sendRSVPConfirmation({
       to: email,

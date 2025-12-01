@@ -53,6 +53,16 @@ export async function GET() {
 
     if (photoError) throw photoError;
 
+    // Get address counts
+    const { data: addresses, error: addrError } = await supabase
+      .from('guest_addresses')
+      .select('linked_rsvp_id');
+
+    if (addrError) throw addrError;
+
+    const addressCount = addresses?.length || 0;
+    const linkedAddresses = addresses?.filter(a => a.linked_rsvp_id !== null).length || 0;
+
     return NextResponse.json({
       rsvps: {
         total: rsvps?.length || 0,
@@ -66,6 +76,11 @@ export async function GET() {
       },
       guestbook: guestbookCount || 0,
       photos: photoCount || 0,
+      addresses: {
+        total: addressCount,
+        linked: linkedAddresses,
+        unlinked: addressCount - linkedAddresses,
+      },
     });
   } catch (error) {
     console.error('Admin stats error:', error);
