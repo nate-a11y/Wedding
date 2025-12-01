@@ -145,17 +145,18 @@ export default function RegistryPage() {
               In lieu of traditional gifts, we&apos;d love contributions toward our dream honeymoon
               adventure. Every contribution helps us create unforgettable memories together!
             </p>
-            <div className="bg-olive-900/50 rounded-lg p-4 mb-6">
-              <p className="text-olive-400 text-sm italic">
-                Honeymoon fund link coming soon! We&apos;re still planning our destination.
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🏖️ Beach</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🏔️ Mountains</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🌍 Adventure</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🍷 Wine Country</span>
-            </div>
+            <Link
+              href="https://www.honeyfund.com/site/bullock-moore-10-31-2027"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 px-8 py-3 rounded-lg font-medium transition-all group"
+              style={{ color: '#000000' }}
+            >
+              Contribute to Our Honeymoon
+              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
           </div>
         </motion.div>
 
