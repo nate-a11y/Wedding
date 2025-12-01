@@ -66,6 +66,7 @@ export const siteConfig = {
     { name: 'Events', href: '/events' },
     { name: 'Travel', href: '/travel' },
     { name: 'Gallery', href: '/gallery' },
+    { name: 'Photo Booth', href: '/photos' },
     { name: 'RSVP', href: '/rsvp' },
     { name: 'FAQ', href: '/faq' },
     { name: 'Guest Book', href: '/guestbook' },
