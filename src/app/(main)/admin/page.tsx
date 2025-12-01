@@ -296,14 +296,17 @@ export default function AdminPage() {
   const deleteAddress = async (id: string) => {
     if (!confirm('Are you sure you want to delete this address?')) return;
     try {
-      await fetch('/api/admin/addresses', {
+      const response = await fetch('/api/admin/addresses', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
       setAddresses(addresses.filter(a => a.id !== id));
     } catch (err) {
       console.error('Failed to delete address:', err);
+      alert('Failed to delete address. Please try again.');
     }
   };
 
