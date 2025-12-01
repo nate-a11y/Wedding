@@ -88,14 +88,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send confirmation email
+    // Send confirmation email with all RSVP details
     await sendRSVPConfirmation({
       to: email,
       name: body.name.trim(),
       attending: attending,
       mealChoice: body.mealChoice,
+      dietaryRestrictions: body.dietaryRestrictions,
       plusOne: rsvpData.plus_one,
       plusOneName: body.plusOneName,
+      plusOneMealChoice: body.plusOneMealChoice,
+      songRequest: body.songRequest,
+      message: body.message,
     });
 
     return NextResponse.json({

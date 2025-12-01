@@ -14,3 +14,9 @@ DROP POLICY IF EXISTS "Allow public select" ON rsvps;
 CREATE POLICY "Allow public select" ON rsvps
   FOR SELECT
   USING (true);
+
+-- Add DELETE policy for admin operations
+DROP POLICY IF EXISTS "Allow public delete rsvps" ON rsvps;
+CREATE POLICY "Allow public delete rsvps" ON rsvps
+  FOR DELETE
+  USING (true);

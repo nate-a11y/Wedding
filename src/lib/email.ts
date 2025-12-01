@@ -88,8 +88,12 @@ interface RSVPEmailData {
   name: string;
   attending: boolean;
   mealChoice?: string | null;
+  dietaryRestrictions?: string | null;
   plusOne?: boolean;
   plusOneName?: string | null;
+  plusOneMealChoice?: string | null;
+  songRequest?: string | null;
+  message?: string | null;
 }
 
 export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean> {
@@ -98,11 +102,14 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     return false;
   }
 
-  const { to, name, attending, mealChoice, plusOne, plusOneName } = data;
+  const { to, name, attending, mealChoice, dietaryRestrictions, plusOne, plusOneName, plusOneMealChoice, songRequest, message } = data;
 
   const subject = attending
     ? "We can't wait to celebrate with you! 🎃"
     : "Thank you for letting us know";
+
+  // Helper to capitalize meal choice
+  const formatMeal = (meal: string | null | undefined) => meal ? meal.charAt(0).toUpperCase() + meal.slice(1) : '';
 
   const attendingHtml = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
@@ -121,9 +128,23 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
           <h3 style="color: #d4af37; margin-top: 0;">Your RSVP Details</h3>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Name:</strong> ${name}</p>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Status:</strong> Attending ✓</p>
-          ${mealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Meal Choice:</strong> ${mealChoice}</p>` : ''}
-          ${plusOne && plusOneName ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Plus One:</strong> ${plusOneName}</p>` : ''}
+          ${mealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Meal Choice:</strong> ${formatMeal(mealChoice)}</p>` : ''}
+          ${dietaryRestrictions ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Dietary Restrictions:</strong> ${dietaryRestrictions}</p>` : ''}
+          ${plusOne ? `
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #536537;">
+              <p style="color: #d4af37; margin: 5px 0; font-weight: bold;">Plus One</p>
+              <p style="color: #a5b697; margin: 5px 0;"><strong>Guest Name:</strong> ${plusOneName || 'Not specified'}</p>
+              ${plusOneMealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Guest Meal:</strong> ${formatMeal(plusOneMealChoice)}</p>` : ''}
+            </div>
+          ` : ''}
+          ${songRequest ? `<p style="color: #a5b697; margin: 15px 0 5px 0;"><strong>Song Request:</strong> ${songRequest}</p>` : ''}
         </div>
+        ${message ? `
+          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
+            <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
+          </div>
+        ` : ''}
       </div>
 
       <div style="text-align: center; color: #536537; font-size: 14px;">
@@ -146,6 +167,12 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
           We're sorry you won't be able to join us, but we truly appreciate you letting us know.
           You'll be in our thoughts on our special day!
         </p>
+        ${message ? `
+          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
+            <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
+          </div>
+        ` : ''}
       </div>
 
       <div style="text-align: center; color: #536537; font-size: 14px;">
