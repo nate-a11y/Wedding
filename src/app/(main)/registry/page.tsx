@@ -57,9 +57,8 @@ const registries: RegistryItem[] = [
         <circle cx="12" cy="12" r="2" fill="currentColor"/>
       </svg>
     ),
-    url: '#',
+    url: 'https://www.target.com/gift-registry/gift/nateandblakesayido2027',
     color: 'bg-[#CC0000]',
-    comingSoon: true,
   },
 ];
 
