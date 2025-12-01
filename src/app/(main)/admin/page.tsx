@@ -96,7 +96,30 @@ interface GuestAddress {
   created_at: string;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'emails';
+interface SeatingTable {
+  id: string;
+  name: string;
+  capacity: number;
+  table_type: string;
+  notes: string | null;
+}
+
+interface SeatingAssignment {
+  id: string;
+  table_id: string;
+  guest_name: string;
+  rsvp_id: string | null;
+  is_additional_guest: boolean;
+}
+
+interface UnassignedGuest {
+  name: string;
+  rsvpId: string;
+  email: string;
+  isAdditionalGuest: boolean;
+}
+
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -108,6 +131,25 @@ function formatDate(dateString: string): string {
   });
 }
 
+// CSV Export utilities
+function escapeCSV(value: string | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function downloadCSV(data: string, filename: string) {
+  const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [stats, setStats] = useState<Stats | null>(null);
@@ -116,6 +158,11 @@ export default function AdminPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [emails, setEmails] = useState<Email[]>([]);
   const [addresses, setAddresses] = useState<GuestAddress[]>([]);
+  const [seatingTables, setSeatingTables] = useState<SeatingTable[]>([]);
+  const [seatingAssignments, setSeatingAssignments] = useState<SeatingAssignment[]>([]);
+  const [unassignedGuests, setUnassignedGuests] = useState<UnassignedGuest[]>([]);
+  const [newTableName, setNewTableName] = useState('');
+  const [newTableCapacity, setNewTableCapacity] = useState(8);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,6 +213,13 @@ export default function AdminPage() {
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           setAddresses(data.addresses);
+        } else if (activeTab === 'seating') {
+          const response = await fetch('/api/admin/seating');
+          const data = await response.json();
+          if (data.error) throw new Error(data.error);
+          setSeatingTables(data.tables);
+          setSeatingAssignments(data.assignments);
+          setUnassignedGuests(data.unassignedGuests);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -252,6 +306,183 @@ export default function AdminPage() {
     }
   };
 
+  // Export RSVPs with meal choices (for caterer)
+  const exportMealChoices = () => {
+    const attendingRsvps = rsvps.filter(r => r.attending);
+    const rows: string[][] = [
+      ['Name', 'Email', 'Meal Choice', 'Dietary Restrictions', 'Is Child', 'Party Size']
+    ];
+
+    attendingRsvps.forEach(rsvp => {
+      // Primary guest
+      rows.push([
+        escapeCSV(rsvp.name),
+        escapeCSV(rsvp.email),
+        escapeCSV(rsvp.meal_choice),
+        escapeCSV(rsvp.dietary_restrictions),
+        'No',
+        String(1 + (rsvp.additional_guests?.length || 0))
+      ]);
+
+      // Additional guests
+      rsvp.additional_guests?.forEach(guest => {
+        rows.push([
+          escapeCSV(guest.name),
+          '',
+          escapeCSV(guest.mealChoice),
+          '',
+          guest.isChild ? 'Yes' : 'No',
+          ''
+        ]);
+      });
+    });
+
+    const csv = rows.map(row => row.join(',')).join('\n');
+    downloadCSV(csv, `meal-choices-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Export full RSVP data
+  const exportAllRsvps = () => {
+    const rows: string[][] = [
+      ['Name', 'Email', 'Attending', 'Meal Choice', 'Dietary Restrictions', 'Additional Guests', 'Song Request', 'Message', 'Date']
+    ];
+
+    rsvps.forEach(rsvp => {
+      const guestNames = rsvp.additional_guests?.map(g => g.name).join('; ') || '';
+      rows.push([
+        escapeCSV(rsvp.name),
+        escapeCSV(rsvp.email),
+        rsvp.attending ? 'Yes' : 'No',
+        escapeCSV(rsvp.meal_choice),
+        escapeCSV(rsvp.dietary_restrictions),
+        escapeCSV(guestNames),
+        escapeCSV(rsvp.song_request),
+        escapeCSV(rsvp.message),
+        new Date(rsvp.created_at).toLocaleDateString()
+      ]);
+    });
+
+    const csv = rows.map(row => row.join(',')).join('\n');
+    downloadCSV(csv, `all-rsvps-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Export addresses for mailing labels
+  const exportAddresses = () => {
+    const rows: string[][] = [
+      ['Name', 'Street Address', 'Address Line 2', 'City', 'State', 'ZIP', 'Country', 'Email', 'Phone', 'RSVP Status']
+    ];
+
+    addresses.forEach(addr => {
+      rows.push([
+        escapeCSV(addr.name),
+        escapeCSV(addr.street_address),
+        escapeCSV(addr.street_address_2),
+        escapeCSV(addr.city),
+        escapeCSV(addr.state),
+        escapeCSV(addr.postal_code),
+        escapeCSV(addr.country),
+        escapeCSV(addr.email),
+        escapeCSV(addr.phone),
+        addr.rsvps ? (addr.rsvps.attending ? 'Attending' : 'Not Attending') : 'No RSVP'
+      ]);
+    });
+
+    const csv = rows.map(row => row.join(',')).join('\n');
+    downloadCSV(csv, `mailing-addresses-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Seating chart functions
+  const createTable = async () => {
+    if (!newTableName.trim()) return;
+    try {
+      const response = await fetch('/api/admin/seating', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTableName, capacity: newTableCapacity }),
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+      setSeatingTables([...seatingTables, data.table]);
+      setNewTableName('');
+      setNewTableCapacity(8);
+    } catch (err) {
+      console.error('Failed to create table:', err);
+    }
+  };
+
+  const deleteTable = async (tableId: string) => {
+    if (!confirm('Delete this table? All guest assignments will be removed.')) return;
+    try {
+      await fetch('/api/admin/seating', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tableId }),
+      });
+      setSeatingTables(seatingTables.filter(t => t.id !== tableId));
+      // Move assignments back to unassigned
+      const removedAssignments = seatingAssignments.filter(a => a.table_id === tableId);
+      setSeatingAssignments(seatingAssignments.filter(a => a.table_id !== tableId));
+      setUnassignedGuests([
+        ...unassignedGuests,
+        ...removedAssignments.map(a => ({
+          name: a.guest_name,
+          rsvpId: a.rsvp_id || '',
+          email: '',
+          isAdditionalGuest: a.is_additional_guest,
+        })),
+      ]);
+    } catch (err) {
+      console.error('Failed to delete table:', err);
+    }
+  };
+
+  const assignGuest = async (tableId: string, guest: UnassignedGuest) => {
+    try {
+      const response = await fetch('/api/admin/seating/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableId,
+          guestName: guest.name,
+          rsvpId: guest.rsvpId,
+          isAdditionalGuest: guest.isAdditionalGuest,
+        }),
+      });
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      setSeatingAssignments([...seatingAssignments.filter(a => a.guest_name.toLowerCase() !== guest.name.toLowerCase()), data.assignment]);
+      setUnassignedGuests(unassignedGuests.filter(g => g.name.toLowerCase() !== guest.name.toLowerCase()));
+    } catch (err) {
+      console.error('Failed to assign guest:', err);
+    }
+  };
+
+  const unassignGuest = async (assignment: SeatingAssignment) => {
+    try {
+      await fetch('/api/admin/seating/assign', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: assignment.id }),
+      });
+      setSeatingAssignments(seatingAssignments.filter(a => a.id !== assignment.id));
+      setUnassignedGuests([
+        ...unassignedGuests,
+        {
+          name: assignment.guest_name,
+          rsvpId: assignment.rsvp_id || '',
+          email: '',
+          isAdditionalGuest: assignment.is_additional_guest,
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to unassign guest:', err);
+    }
+  };
+
+  const getTableAssignments = (tableId: string) =>
+    seatingAssignments.filter(a => a.table_id === tableId);
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     {
       id: 'overview',
@@ -278,6 +509,15 @@ export default function AdminPage() {
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'seating',
+      label: 'Seating',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
         </svg>
       ),
     },
@@ -424,7 +664,29 @@ export default function AdminPage() {
               ) : rsvps.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No RSVPs yet</div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  {/* Export Buttons */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      onClick={exportMealChoices}
+                      className="flex items-center gap-2 px-3 py-2 bg-olive-800/50 text-olive-300 rounded-lg hover:bg-olive-700/50 transition-colors text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Export Meal Choices (Caterer)
+                    </button>
+                    <button
+                      onClick={exportAllRsvps}
+                      className="flex items-center gap-2 px-3 py-2 bg-olive-800/50 text-olive-300 rounded-lg hover:bg-olive-700/50 transition-colors text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Export All RSVPs
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-olive-700">
@@ -486,7 +748,8 @@ export default function AdminPage() {
                       })}
                     </tbody>
                   </table>
-                </div>
+                  </div>
+                </>
               )}
             </motion.div>
           )}
@@ -507,7 +770,20 @@ export default function AdminPage() {
               ) : addresses.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No addresses collected yet</div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                  {/* Export Button */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      onClick={exportAddresses}
+                      className="flex items-center gap-2 px-3 py-2 bg-olive-800/50 text-olive-300 rounded-lg hover:bg-olive-700/50 transition-colors text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Export Mailing Labels (CSV)
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-olive-700">
@@ -564,6 +840,175 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'seating' && (
+            <motion.div
+              key="seating"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 text-red-400">{error}</div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Create Table Form */}
+                  <div className="bg-black/50 border border-olive-700 rounded-lg p-4">
+                    <h3 className="text-lg font-medium text-gold-400 mb-3">Add New Table</h3>
+                    <div className="flex flex-wrap gap-3 items-end">
+                      <div className="flex-1 min-w-[200px]">
+                        <label className="block text-sm text-olive-300 mb-1">Table Name</label>
+                        <input
+                          type="text"
+                          value={newTableName}
+                          onChange={(e) => setNewTableName(e.target.value)}
+                          placeholder="e.g., Table 1, Head Table"
+                          className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-sm text-olive-300 mb-1">Capacity</label>
+                        <input
+                          type="number"
+                          value={newTableCapacity}
+                          onChange={(e) => setNewTableCapacity(Number(e.target.value))}
+                          min={1}
+                          max={20}
+                          className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        onClick={createTable}
+                        className="px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors font-medium"
+                      >
+                        Add Table
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid lg:grid-cols-3 gap-6">
+                    {/* Unassigned Guests */}
+                    <div className="lg:col-span-1">
+                      <div className="bg-black/50 border border-olive-700 rounded-lg p-4 sticky top-4">
+                        <h3 className="text-lg font-medium text-gold-400 mb-3">
+                          Unassigned Guests ({unassignedGuests.length})
+                        </h3>
+                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                          {unassignedGuests.length === 0 ? (
+                            <p className="text-olive-500 text-sm">All guests assigned!</p>
+                          ) : (
+                            unassignedGuests.map((guest, idx) => (
+                              <div
+                                key={`${guest.name}-${idx}`}
+                                className="flex items-center justify-between p-2 bg-olive-900/30 rounded border border-olive-700"
+                              >
+                                <span className="text-cream text-sm">
+                                  {guest.name}
+                                  {guest.isAdditionalGuest && (
+                                    <span className="text-olive-500 text-xs ml-1">(+1)</span>
+                                  )}
+                                </span>
+                                <div className="relative group">
+                                  <button className="text-gold-400 hover:text-gold-300 text-xs px-2 py-1 bg-olive-800 rounded">
+                                    Assign
+                                  </button>
+                                  <div className="absolute right-0 top-full mt-1 bg-charcoal border border-olive-600 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 min-w-[150px]">
+                                    {seatingTables.map(table => (
+                                      <button
+                                        key={table.id}
+                                        onClick={() => assignGuest(table.id, guest)}
+                                        className="block w-full text-left px-3 py-2 text-sm text-olive-300 hover:bg-olive-800 hover:text-cream first:rounded-t-lg last:rounded-b-lg"
+                                      >
+                                        {table.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tables Grid */}
+                    <div className="lg:col-span-2">
+                      {seatingTables.length === 0 ? (
+                        <div className="text-center py-12 text-olive-400">
+                          No tables created yet. Add a table above to get started.
+                        </div>
+                      ) : (
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {seatingTables.map(table => {
+                            const assignments = getTableAssignments(table.id);
+                            const isFull = assignments.length >= table.capacity;
+                            return (
+                              <div
+                                key={table.id}
+                                className={`bg-black/50 border rounded-lg p-4 ${
+                                  isFull ? 'border-gold-500/50' : 'border-olive-700'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h4 className="text-cream font-medium">{table.name}</h4>
+                                    <p className={`text-sm ${isFull ? 'text-gold-400' : 'text-olive-500'}`}>
+                                      {assignments.length} / {table.capacity} seats
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => deleteTable(table.id)}
+                                    className="text-red-400 hover:text-red-300 p-1"
+                                    title="Delete table"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                                <div className="space-y-1">
+                                  {assignments.map(assignment => (
+                                    <div
+                                      key={assignment.id}
+                                      className="flex items-center justify-between py-1 px-2 bg-olive-900/30 rounded text-sm"
+                                    >
+                                      <span className="text-olive-300">
+                                        {assignment.guest_name}
+                                        {assignment.is_additional_guest && (
+                                          <span className="text-olive-500 text-xs ml-1">(+1)</span>
+                                        )}
+                                      </span>
+                                      <button
+                                        onClick={() => unassignGuest(assignment)}
+                                        className="text-olive-500 hover:text-red-400"
+                                        title="Remove from table"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  ))}
+                                  {assignments.length === 0 && (
+                                    <p className="text-olive-600 text-sm italic">No guests assigned</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </motion.div>

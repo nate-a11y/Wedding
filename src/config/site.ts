@@ -44,11 +44,47 @@ export const siteConfig = {
 
   // Wedding Party
   weddingParty: {
-    flowerGirl: {
-      name: 'Honey',
-      title: 'Flower Girl',
-      description: 'The goodest girl',
-      isHuman: false,
+    // Groom's side
+    groomsmen: [
+      {
+        name: 'Best Man Name',
+        role: 'Best Man',
+        relation: 'Brother of the Groom',
+        bio: 'Add bio here...',
+        photo: '/images/party/placeholder.jpg',
+      },
+      // Add more groomsmen...
+    ],
+    // Bride's side
+    bridesmaids: [
+      {
+        name: 'Maid of Honor Name',
+        role: 'Maid of Honor',
+        relation: 'Sister of the Bride',
+        bio: 'Add bio here...',
+        photo: '/images/party/placeholder.jpg',
+      },
+      // Add more bridesmaids...
+    ],
+    // Special roles
+    special: [
+      {
+        name: 'Honey',
+        role: 'Flower Girl',
+        relation: 'The Goodest Girl',
+        bio: 'A very special pup who will lead the way down the aisle.',
+        photo: '/images/party/honey.jpg',
+        isHuman: false,
+      },
+    ],
+    // Parents
+    parents: {
+      groomParents: [
+        { name: 'Parent Names', role: 'Parents of the Groom' },
+      ],
+      brideParents: [
+        { name: 'Parent Names', role: 'Parents of the Bride' },
+      ],
     },
   },
 
@@ -63,6 +99,7 @@ export const siteConfig = {
   navigation: [
     { name: 'Home', href: '/' },
     { name: 'Our Story', href: '/our-story' },
+    { name: 'Wedding Party', href: '/wedding-party' },
     { name: 'Events', href: '/events' },
     { name: 'Dress Code', href: '/dress-code' },
     { name: 'Travel', href: '/travel' },
