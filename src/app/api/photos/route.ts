@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const guestName = formData.get('guestName') as string | null;
     const caption = formData.get('caption') as string | null;
+    const source = (formData.get('source') as string) || 'upload'; // 'camera' or 'upload'
 
     // Validate required fields
     if (!file || !guestName) {
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
         file_path: filePath,
         file_name: fileName,
         caption: caption?.trim() || null,
+        source: source === 'camera' ? 'camera' : 'upload',
       }])
       .select()
       .single();
