@@ -98,16 +98,34 @@ export const siteConfig = {
   // Navigation
   navigation: [
     { name: 'Home', href: '/' },
-    { name: 'Our Story', href: '/our-story' },
-    { name: 'Wedding Party', href: '/wedding-party' },
-    { name: 'Events', href: '/events' },
-    { name: 'Dress Code', href: '/dress-code' },
-    { name: 'Travel', href: '/travel' },
-    { name: 'Gallery', href: '/gallery' },
-    { name: 'Photo Booth', href: '/photos' },
-    { name: 'RSVP', href: '/rsvp' },
-    { name: 'FAQ', href: '/faq' },
-    { name: 'Guest Book', href: '/guestbook' },
+    {
+      name: 'Our Story',
+      href: '/our-story',
+      children: [
+        { name: 'Our Story', href: '/our-story' },
+        { name: 'Wedding Party', href: '/wedding-party' },
+        { name: 'Gallery', href: '/gallery' },
+      ],
+    },
+    {
+      name: 'The Day',
+      href: '/events',
+      children: [
+        { name: 'Events', href: '/events' },
+        { name: 'Dress Code', href: '/dress-code' },
+        { name: 'Travel', href: '/travel' },
+      ],
+    },
+    {
+      name: 'Celebrate',
+      href: '/photos',
+      children: [
+        { name: 'Photo Booth', href: '/photos' },
+        { name: 'Guest Book', href: '/guestbook' },
+        { name: 'FAQ', href: '/faq' },
+      ],
+    },
+    { name: 'RSVP', href: '/rsvp', highlight: true },
     { name: 'Registry', href: '/registry' },
   ],
 } as const;
