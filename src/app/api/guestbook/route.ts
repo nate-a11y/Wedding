@@ -104,12 +104,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send thank you email (don't wait, don't fail if email fails)
-    sendGuestbookThankYou({
-      to: entryData.email,
-      name: entryData.name,
-      message: entryData.message,
-    }).catch((err) => console.error('Failed to send guestbook thank you email:', err));
+    // Send thank you email (await to see logs, but don't fail if email fails)
+    try {
+      await sendGuestbookThankYou({
+        to: entryData.email,
+        name: entryData.name,
+        message: entryData.message,
+      });
+    } catch (err) {
+      console.error('Failed to send guestbook thank you email:', err);
+    }
 
     return NextResponse.json({
       success: true,
