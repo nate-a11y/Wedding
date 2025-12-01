@@ -163,6 +163,7 @@ export default function AdminPage() {
   const [unassignedGuests, setUnassignedGuests] = useState<UnassignedGuest[]>([]);
   const [newTableName, setNewTableName] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState(8);
+  const [openAssignDropdown, setOpenAssignDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -902,39 +903,63 @@ export default function AdminPage() {
                         <h3 className="text-lg font-medium text-gold-400 mb-3">
                           Unassigned Guests ({unassignedGuests.length})
                         </h3>
-                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                        <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                           {unassignedGuests.length === 0 ? (
                             <p className="text-olive-500 text-sm">All guests assigned!</p>
                           ) : (
-                            unassignedGuests.map((guest, idx) => (
-                              <div
-                                key={`${guest.name}-${idx}`}
-                                className="flex items-center justify-between p-2 bg-olive-900/30 rounded border border-olive-700"
-                              >
-                                <span className="text-cream text-sm">
-                                  {guest.name}
-                                  {guest.isAdditionalGuest && (
-                                    <span className="text-olive-500 text-xs ml-1">(+1)</span>
-                                  )}
-                                </span>
-                                <div className="relative group">
-                                  <button className="text-gold-400 hover:text-gold-300 text-xs px-2 py-1 bg-olive-800 rounded">
-                                    Assign
-                                  </button>
-                                  <div className="absolute right-0 top-full mt-1 bg-charcoal border border-olive-600 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 min-w-[150px]">
-                                    {seatingTables.map(table => (
-                                      <button
-                                        key={table.id}
-                                        onClick={() => assignGuest(table.id, guest)}
-                                        className="block w-full text-left px-3 py-2 text-sm text-olive-300 hover:bg-olive-800 hover:text-cream first:rounded-t-lg last:rounded-b-lg"
-                                      >
-                                        {table.name}
-                                      </button>
-                                    ))}
+                            unassignedGuests.map((guest, idx) => {
+                              const dropdownId = `${guest.name}-${idx}`;
+                              const isOpen = openAssignDropdown === dropdownId;
+                              return (
+                                <div
+                                  key={dropdownId}
+                                  className="flex items-center justify-between p-2 bg-olive-900/30 rounded border border-olive-700"
+                                >
+                                  <span className="text-cream text-sm">
+                                    {guest.name}
+                                    {guest.isAdditionalGuest && (
+                                      <span className="text-olive-500 text-xs ml-1">(+1)</span>
+                                    )}
+                                  </span>
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setOpenAssignDropdown(isOpen ? null : dropdownId)}
+                                      className="text-gold-400 hover:text-gold-300 text-xs px-2 py-1 bg-olive-800 rounded"
+                                    >
+                                      Assign ▾
+                                    </button>
+                                    {isOpen && (
+                                      <>
+                                        {/* Backdrop to close dropdown */}
+                                        <div
+                                          className="fixed inset-0 z-40"
+                                          onClick={() => setOpenAssignDropdown(null)}
+                                        />
+                                        {/* Dropdown menu */}
+                                        <div className="absolute right-0 bottom-full mb-1 bg-charcoal border border-olive-600 rounded-lg shadow-lg z-50 min-w-[150px] max-h-[200px] overflow-y-auto">
+                                          {seatingTables.length === 0 ? (
+                                            <p className="px-3 py-2 text-olive-500 text-sm">No tables yet</p>
+                                          ) : (
+                                            seatingTables.map(table => (
+                                              <button
+                                                key={table.id}
+                                                onClick={() => {
+                                                  assignGuest(table.id, guest);
+                                                  setOpenAssignDropdown(null);
+                                                }}
+                                                className="block w-full text-left px-3 py-2 text-sm text-olive-300 hover:bg-olive-800 hover:text-cream first:rounded-t-lg last:rounded-b-lg"
+                                              >
+                                                {table.name}
+                                              </button>
+                                            ))
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           )}
                         </div>
                       </div>
