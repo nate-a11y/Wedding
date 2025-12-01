@@ -237,6 +237,106 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
   return true;
 }
 
+interface AddressEmailData {
+  to: string;
+  name: string;
+  address: {
+    street: string;
+    street2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  isUpdate: boolean;
+}
+
+export async function sendAddressConfirmation(data: AddressEmailData): Promise<boolean> {
+  if (!isEmailConfigured()) {
+    console.log('Email not configured, skipping address confirmation email');
+    return false;
+  }
+
+  const { to, name, address, isUpdate } = data;
+  const subject = isUpdate
+    ? "Your address has been updated!"
+    : "Thank you for sharing your address!";
+
+  const addressLines = [
+    address.street,
+    address.street2,
+    `${address.city}, ${address.state} ${address.postalCode}`,
+    address.country !== 'United States' ? address.country : null,
+  ].filter(Boolean).join('<br/>');
+
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #d4af37; font-size: 28px; margin: 0;">Nate & Blake</h1>
+        <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
+      </div>
+
+      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+        <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
+        <p style="color: #a5b697; line-height: 1.6;">
+          ${isUpdate
+            ? "We've updated your mailing address in our records."
+            : "We've received your mailing address. This will help us send you important wedding updates and your invitation!"}
+        </p>
+
+        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <h3 style="color: #d4af37; margin-top: 0;">Your Address</h3>
+          <p style="color: #a5b697; margin: 5px 0; line-height: 1.8;">${addressLines}</p>
+        </div>
+
+        <p style="color: #a5b697; margin-top: 20px; font-size: 14px;">
+          Need to make changes? Just submit the form again with your email address and we'll update your information.
+        </p>
+      </div>
+
+      <div style="text-align: center; color: #536537; font-size: 14px;">
+        <p style="color: #d4af37;">#NateAndBlakeSayIDo2027</p>
+        <p>Visit us at <a href="https://nateandblake.me" style="color: #d4af37;">nateandblake.me</a></p>
+      </div>
+    </div>
+  `;
+
+  const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
+
+  const result = await sendEmail({
+    from: fromAddress,
+    to: [to],
+    subject: subject,
+    html: html,
+  });
+
+  if (result.error) {
+    console.error('Failed to send address confirmation email:', result.error);
+    await logEmail({
+      direction: 'outbound',
+      from: fromAddress,
+      to: to,
+      subject: subject,
+      status: 'failed',
+      emailType: 'address_confirmation',
+    });
+    return false;
+  }
+
+  await logEmail({
+    resendId: result.id,
+    direction: 'outbound',
+    from: fromAddress,
+    to: to,
+    subject: subject,
+    status: 'sent',
+    emailType: 'address_confirmation',
+  });
+
+  console.log('Address confirmation email sent to:', to);
+  return true;
+}
+
 interface GuestbookEmailData {
   to: string;
   name: string;
