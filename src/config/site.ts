@@ -44,33 +44,33 @@ export const siteConfig = {
 
   // Wedding Party
   weddingParty: {
-    // Groom's side
-    groomsmen: [
+    // Nate's side
+    natesSide: [
       {
         name: 'Best Man Name',
         role: 'Best Man',
-        relation: 'Brother of the Groom',
+        relation: 'Brother',
         bio: 'Add bio here...',
         photo: '/images/party/placeholder.jpg',
       },
       // Add more groomsmen...
     ],
-    // Bride's side
-    bridesmaids: [
+    // Blake's side
+    blakesSide: [
       {
-        name: 'Maid of Honor Name',
-        role: 'Maid of Honor',
-        relation: 'Sister of the Bride',
+        name: 'Best Man Name',
+        role: 'Best Man',
+        relation: 'Best Friend',
         bio: 'Add bio here...',
         photo: '/images/party/placeholder.jpg',
       },
-      // Add more bridesmaids...
+      // Add more groomsmen...
     ],
     // Special roles
     special: [
       {
         name: 'Honey',
-        role: 'Flower Girl',
+        role: 'Ring Bearer',
         relation: 'The Goodest Girl',
         bio: 'A very special pup who will lead the way down the aisle.',
         photo: '/images/party/honey.jpg',
@@ -79,11 +79,11 @@ export const siteConfig = {
     ],
     // Parents
     parents: {
-      groomParents: [
-        { name: 'Parent Names', role: 'Parents of the Groom' },
+      natesParents: [
+        { name: 'Parent Names', role: "Nate's Parents" },
       ],
-      brideParents: [
-        { name: 'Parent Names', role: 'Parents of the Bride' },
+      blakesParents: [
+        { name: 'Parent Names', role: "Blake's Parents" },
       ],
     },
   },
