@@ -159,7 +159,7 @@ export function Header() {
                   className={cn(
                     'px-4 py-2 text-sm uppercase tracking-wider font-medium transition-all rounded-lg',
                     highlighted
-                      ? 'bg-gold-500 text-charcoal hover:bg-gold-400 font-medium'
+                      ? 'bg-gold-500 text-charcoal hover:bg-gold-400 font-semibold'
                       : isActive
                         ? 'text-gold-400'
                         : 'text-cream hover:text-gold-400 hover:bg-olive-800/30'
@@ -285,7 +285,7 @@ export function Header() {
                         className={cn(
                           'block px-4 py-3 text-lg font-heading transition-colors rounded-lg',
                           highlighted
-                            ? 'bg-gold-500 text-charcoal font-medium text-center mx-4'
+                            ? 'bg-gold-500 text-charcoal font-semibold text-center mx-4'
                             : pathname === item.href
                               ? 'text-gold-400'
                               : 'text-cream hover:text-gold-400'
