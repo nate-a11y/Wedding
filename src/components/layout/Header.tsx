@@ -164,6 +164,7 @@ export function Header() {
                         ? 'text-gold-400'
                         : 'text-cream hover:text-gold-400 hover:bg-olive-800/30'
                   )}
+                  style={highlighted ? { color: '#000000' } : undefined}
                 >
                   {item.name}
                 </Link>
@@ -289,6 +290,7 @@ export function Header() {
                               ? 'text-gold-400'
                               : 'text-cream hover:text-gold-400'
                         )}
+                        style={highlighted ? { color: '#000000' } : undefined}
                       >
                         {item.name}
                       </Link>

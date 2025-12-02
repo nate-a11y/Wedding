@@ -21,9 +21,8 @@ const registries: RegistryItem[] = [
         <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.493.124.102.17.05.324-.156.462l-.09.063c-2.96 2.057-6.34 3.086-10.145 3.086-4.128 0-7.82-1.077-11.08-3.234a.363.363 0 01-.1-.485zm-.028-2.247c.064-.21.21-.24.436-.09.016.012.047.033.094.062 3.27 2.01 6.867 3.014 10.79 3.014 2.34 0 4.628-.343 6.863-1.027.378-.116.675.07.892.556.217.49.09.818-.382 1.027-2.406.9-4.893 1.35-7.46 1.35-4.08 0-7.707-1.046-10.884-3.136l-.062-.044c-.265-.174-.345-.402-.287-.712zm14.227-10.84c.652-.67 1.422-.88 2.312-.63.89.25 1.504.81 1.843 1.68l.014.038c.34.894.24 1.753-.298 2.58l-.016.023-.6.89c-.132.193-.12.388.035.58.156.192.357.243.604.153l.035-.014c.645-.232 1.23-.092 1.753.42.524.512.695 1.116.51 1.813-.184.696-.6 1.19-1.247 1.48l-.028.013c-.28.13-.59.235-.93.31l-.1.024c-.9.182-1.76.052-2.583-.392l-.05-.028a3.548 3.548 0 01-1.418-1.378l-.033-.06c-.3-.56-.377-1.147-.227-1.764l.02-.073c.152-.56.45-1.022.89-1.39l.034-.026c.132-.107.19-.232.177-.375-.013-.143-.095-.253-.247-.33l-.03-.014c-.24-.1-.52-.094-.84.02l-.048.017c-.42.152-.806.12-1.156-.095-.35-.215-.554-.523-.615-.922l-.006-.04c-.06-.43.04-.82.3-1.167l.02-.026c.286-.376.62-.682.998-.916l.033-.02c.374-.228.77-.372 1.19-.43l.048-.007c.47-.06.906.01 1.308.213z"/>
       </svg>
     ),
-    url: '#',
+    url: 'https://www.amazon.com/wedding/share/NateAndBlakeSayIDo2027',
     color: 'bg-[#FF9900]',
-    comingSoon: true,
   },
   {
     name: 'Crate & Barrel',
@@ -33,9 +32,8 @@ const registries: RegistryItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
     ),
-    url: '#',
+    url: 'https://www.crateandbarrel.com/gift-registry/nate-bullock-and-blake-moore/r7441539',
     color: 'bg-[#000000]',
-    comingSoon: true,
   },
   {
     name: 'Williams Sonoma',
@@ -45,9 +43,8 @@ const registries: RegistryItem[] = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
     ),
-    url: '#',
+    url: 'https://www.williams-sonoma.com/registry/nnb9lm6hxd/registry-list.html',
     color: 'bg-[#1a3a5c]',
-    comingSoon: true,
   },
   {
     name: 'Target',
@@ -59,9 +56,8 @@ const registries: RegistryItem[] = [
         <circle cx="12" cy="12" r="2" fill="currentColor"/>
       </svg>
     ),
-    url: '#',
+    url: 'https://www.target.com/gift-registry/gift/nateandblakesayido2027',
     color: 'bg-[#CC0000]',
-    comingSoon: true,
   },
 ];
 
@@ -149,17 +145,18 @@ export default function RegistryPage() {
               In lieu of traditional gifts, we&apos;d love contributions toward our dream honeymoon
               adventure. Every contribution helps us create unforgettable memories together!
             </p>
-            <div className="bg-olive-900/50 rounded-lg p-4 mb-6">
-              <p className="text-olive-400 text-sm italic">
-                Honeymoon fund link coming soon! We&apos;re still planning our destination.
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🏖️ Beach</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🏔️ Mountains</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🌍 Adventure</span>
-              <span className="bg-olive-800/50 text-olive-300 px-3 py-1 rounded-full text-sm">🍷 Wine Country</span>
-            </div>
+            <Link
+              href="https://www.honeyfund.com/site/bullock-moore-10-31-2027"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 px-8 py-3 rounded-lg font-medium transition-all group"
+              style={{ color: '#000000' }}
+            >
+              Contribute to Our Honeymoon
+              <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Link>
           </div>
         </motion.div>
 
