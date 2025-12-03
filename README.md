@@ -66,9 +66,16 @@ cp .env.example .env.local
 
 4. Update `.env.local` with your values:
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Site Authentication
 SITE_PASSWORD=your_site_password
+
+# Resend (for email notifications)
+RESEND_API_KEY=your_resend_api_key
+RESEND_WEBHOOK_SECRET=your_resend_webhook_secret
 ```
 
 5. Run the development server:
@@ -119,39 +126,37 @@ src/
 ### Environment Variables for Production
 
 Set these in your Vercel dashboard:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SITE_PASSWORD`
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SITE_PASSWORD` - Password for guest access
+- `RESEND_API_KEY` - API key from Resend for email notifications
+- `RESEND_WEBHOOK_SECRET` - Webhook secret for Resend email events
 
 ## Supabase Setup
 
-To enable RSVP functionality, create a table in Supabase:
+The database schema is managed via SQL files in the `supabase/` directory:
 
-```sql
-CREATE TABLE rsvp_responses (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  attending BOOLEAN,
-  meal_choice TEXT,
-  dietary_restrictions TEXT,
-  plus_one BOOLEAN DEFAULT FALSE,
-  plus_one_name TEXT,
-  plus_one_meal_choice TEXT,
-  song_request TEXT,
-  message TEXT,
-  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+1. **Initial schema**: Run `supabase/schema.sql` to create the base `rsvps` table
+2. **Migrations**: Apply migrations in order from `supabase/migrations/`
 
--- Enable Row Level Security
-ALTER TABLE rsvp_responses ENABLE ROW LEVEL SECURITY;
+### Database Tables
 
--- Create policy for inserting
-CREATE POLICY "Allow anonymous inserts" ON rsvp_responses
-  FOR INSERT TO anon
-  WITH CHECK (true);
+The application uses the following tables:
+- `rsvps` - Wedding guest RSVP responses
+- `guestbook` - Guest book messages
+- `photos` - Photo gallery items
+- `guest_addresses` - Mailing addresses for invitations
+- `seating_tables` - Table definitions for seating chart
+- `seating_assignments` - Guest-to-table assignments
+- `emails` - Email tracking for notifications
+
+### Quick Setup
+
+```bash
+# Using Supabase CLI
+supabase db push
+
+# Or manually run the SQL files in your Supabase dashboard
 ```
 
 ## Scripts
@@ -163,7 +168,7 @@ CREATE POLICY "Allow anonymous inserts" ON rsvp_responses
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
+All Rights Reserved - See [LICENSE](LICENSE) for details.
 
 ---
 
