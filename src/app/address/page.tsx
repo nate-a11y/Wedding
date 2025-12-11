@@ -80,11 +80,14 @@ export default function AddressPage() {
             You're On Our List!
           </h1>
           <div className="gold-line mx-auto mb-6" />
+          <p className="text-gold-400 font-medium mb-4">
+            October 31, 2027
+          </p>
           <p className="text-olive-300 max-w-md mx-auto mb-4">
             We're so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
           </p>
           <p className="text-olive-400 text-sm max-w-md mx-auto">
-            This form is for our save the date and invitation mailing list. Formal invitations with RSVP details will follow closer to the wedding date.
+            Save the dates will be mailed around Halloween 2026, with formal invitations following in April 2027.
           </p>
         </motion.div>
 
