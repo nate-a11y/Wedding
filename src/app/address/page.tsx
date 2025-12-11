@@ -77,11 +77,17 @@ export default function AddressPage() {
             Nate & Blake
           </p>
           <h1 className="font-heading text-3xl text-cream mb-4">
-            Share Your Address
+            You're On Our List!
           </h1>
           <div className="gold-line mx-auto mb-6" />
-          <p className="text-olive-300 max-w-md mx-auto">
-            Help us make sure you receive your wedding invitation and other important updates!
+          <p className="text-gold-400 font-medium mb-4">
+            October 31, 2027
+          </p>
+          <p className="text-olive-300 max-w-md mx-auto mb-4">
+            We're so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
+          </p>
+          <p className="text-olive-400 text-sm max-w-md mx-auto">
+            Save the dates will be mailed around Halloween 2026, with formal invitations following in April 2027.
           </p>
         </motion.div>
 
@@ -99,9 +105,12 @@ export default function AddressPage() {
                 </svg>
               </div>
               <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
-              <p className="text-olive-300 mb-6">{formState.message}</p>
-              <p className="text-olive-400 text-sm">
+              <p className="text-olive-300 mb-4">{formState.message}</p>
+              <p className="text-olive-400 text-sm mb-2">
                 A confirmation email has been sent to your inbox.
+              </p>
+              <p className="text-olive-400 text-sm">
+                Keep an eye on your mailbox for a save the date, and later, your formal invitation!
               </p>
             </div>
           ) : formState.status === 'error' ? (
@@ -240,7 +249,7 @@ export default function AddressPage() {
                 </div>
 
                 <p className="text-olive-500 text-sm text-center">
-                  Already submitted? No problem! Just enter your email again to update your address.
+                  Already submitted? No problem! Enter your email again to update your address. Moving soon? You can update anytime before we send out the invitations.
                 </p>
               </div>
             </form>
