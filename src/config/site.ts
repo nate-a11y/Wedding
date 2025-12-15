@@ -73,7 +73,7 @@ export const siteConfig = {
         role: 'Flower Girl',
         relation: 'The Goodest Girl',
         bio: 'A very special pup who will lead the way down the aisle.',
-        photo: '/images/party/honey.jpg',
+        photo: '/20250119_000105.jpg',
         isHuman: false,
       },
     ],
