@@ -115,21 +115,13 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
       : "We can't wait to celebrate with you! 🎃"
     : "Thank you for letting us know";
 
-  // Helper to capitalize meal choice
-  const formatMeal = (meal: string | null | undefined) => {
-    if (!meal) return '';
-    if (meal === 'kids') return 'Kids Meal';
-    return meal.charAt(0).toUpperCase() + meal.slice(1);
-  };
-
   // Generate HTML for additional guests
   const guestsHtml = additionalGuests.length > 0 ? `
     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #536537;">
       <p style="color: #d4af37; margin: 5px 0 15px 0; font-weight: bold;">Additional Guests (${additionalGuests.length})</p>
-      ${additionalGuests.map((guest, index) => `
+      ${additionalGuests.map((guest) => `
         <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px;">
           <p style="color: #a5b697; margin: 3px 0;"><strong>${guest.name}</strong>${guest.isChild ? ' <span style="color: #d4af37; font-size: 12px;">(Child)</span>' : ''}</p>
-          ${guest.mealChoice ? `<p style="color: #a5b697; margin: 3px 0; font-size: 14px;">Meal: ${formatMeal(guest.mealChoice)}</p>` : ''}
         </div>
       `).join('')}
     </div>
@@ -153,7 +145,6 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
           <p style="color: #a5b697; margin: 5px 0;"><strong>Name:</strong> ${name}</p>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Status:</strong> Attending ✓</p>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Party Size:</strong> ${partySize} ${partySize === 1 ? 'guest' : 'guests'}</p>
-          ${mealChoice ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Your Meal:</strong> ${formatMeal(mealChoice)}</p>` : ''}
           ${dietaryRestrictions ? `<p style="color: #a5b697; margin: 5px 0;"><strong>Dietary Restrictions:</strong> ${dietaryRestrictions}</p>` : ''}
           ${guestsHtml}
           ${songRequest ? `<p style="color: #a5b697; margin: 15px 0 5px 0;"><strong>Song Request:</strong> ${songRequest}</p>` : ''}
@@ -281,7 +272,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
       </div>
 
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" style="max-width: 100%; height: auto; border-radius: 8px;" />
+        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" style="max-width: 300px; width: 100%; height: auto; border-radius: 8px;" />
       </div>
 
       <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
