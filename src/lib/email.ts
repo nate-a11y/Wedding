@@ -120,7 +120,7 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #536537;">
       <p style="color: #d4af37; margin: 5px 0 15px 0; font-weight: bold;">Additional Guests (${additionalGuests.length})</p>
       ${additionalGuests.map((guest) => `
-        <div style="margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+        <div style="margin-bottom: 10px; padding: 10px; background: #141414; border-radius: 4px;">
           <p style="color: #a5b697; margin: 3px 0;"><strong>${guest.name}</strong>${guest.isChild ? ' <span style="color: #d4af37; font-size: 12px;">(Child)</span>' : ''}</p>
         </div>
       `).join('')}
@@ -134,13 +134,13 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
         <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
       </div>
 
-      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
         <p style="color: #a5b697; line-height: 1.6;">
           We're thrilled that you'll be joining us on our special day! Your RSVP has been received${partySize > 1 ? ` for your party of ${partySize}` : ''}.
         </p>
 
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+        <div style="background: #121212; padding: 20px; border-radius: 8px; margin-top: 20px;">
           <h3 style="color: #d4af37; margin-top: 0;">Your RSVP Details</h3>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Name:</strong> ${name}</p>
           <p style="color: #a5b697; margin: 5px 0;"><strong>Status:</strong> Attending ✓</p>
@@ -150,7 +150,7 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
           ${songRequest ? `<p style="color: #a5b697; margin: 15px 0 5px 0;"><strong>Song Request:</strong> ${songRequest}</p>` : ''}
         </div>
         ${message ? `
-          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <div style="background: #121212; padding: 20px; border-radius: 8px; margin-top: 20px;">
             <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
             <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
           </div>
@@ -171,14 +171,14 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
         <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
       </div>
 
-      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}</h2>
         <p style="color: #a5b697; line-height: 1.6;">
           We're sorry you won't be able to join us, but we truly appreciate you letting us know.
           You'll be in our thoughts on our special day!
         </p>
         ${message ? `
-          <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+          <div style="background: #121212; padding: 20px; border-radius: 8px; margin-top: 20px;">
             <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
             <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
           </div>
@@ -275,7 +275,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
         <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" width="300" style="width: 300px; max-width: 100%; height: auto; border-radius: 8px;" />
       </div>
 
-      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
         <p style="color: #a5b697; line-height: 1.6;">
           ${mainMessage}
@@ -290,7 +290,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
         </div>
         ` : ''}
 
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+        <div style="background: #121212; padding: 20px; border-radius: 8px; margin-top: 20px;">
           <h3 style="color: #d4af37; margin-top: 0;">Your Address on File</h3>
           <p style="color: #a5b697; margin: 5px 0; line-height: 1.8;">${addressLines}</p>
         </div>
@@ -365,13 +365,13 @@ export async function sendGuestbookThankYou(data: GuestbookEmailData): Promise<b
         <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
       </div>
 
-      <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+      <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
         <p style="color: #a5b697; line-height: 1.6;">
           Your kind words mean so much to us. Thank you for taking the time to sign our guest book!
         </p>
 
-        <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
+        <div style="background: #121212; padding: 20px; border-radius: 8px; margin-top: 20px;">
           <h3 style="color: #d4af37; margin-top: 0;">Your Message</h3>
           <p style="color: #a5b697; font-style: italic; line-height: 1.6;">"${message}"</p>
         </div>
