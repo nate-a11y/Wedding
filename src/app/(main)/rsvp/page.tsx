@@ -299,26 +299,6 @@ export default function RSVPPage() {
 
                 {formData.attending === 'yes' && (
                   <>
-                    {/* Primary Guest Meal Choice */}
-                    <div>
-                      <label className="block text-sm font-medium text-cream mb-2">
-                        Your Meal Preference
-                      </label>
-                      <select
-                        name="mealChoice"
-                        value={formData.mealChoice}
-                        onChange={handleChange}
-                        className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
-                      >
-                        <option value="">Select an option</option>
-                        <option value="chicken">Chicken</option>
-                        <option value="beef">Beef</option>
-                        <option value="fish">Fish</option>
-                        <option value="vegetarian">Vegetarian</option>
-                        <option value="vegan">Vegan</option>
-                      </select>
-                    </div>
-
                     {/* Dietary Restrictions */}
                     <Input
                       label="Dietary Restrictions or Allergies"
@@ -375,28 +355,14 @@ export default function RSVPPage() {
                               </div>
 
                               <div className="space-y-3">
-                                <input
-                                  type="text"
-                                  value={guest.name}
-                                  onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
-                                  placeholder="Guest name"
-                                  className="flex h-10 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
-                                />
-
                                 <div className="flex gap-4 items-center">
-                                  <select
-                                    value={guest.mealChoice}
-                                    onChange={(e) => updateGuest(guest.id, 'mealChoice', e.target.value)}
-                                    className="flex h-10 flex-1 rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
-                                  >
-                                    <option value="">Meal preference</option>
-                                    <option value="chicken">Chicken</option>
-                                    <option value="beef">Beef</option>
-                                    <option value="fish">Fish</option>
-                                    <option value="vegetarian">Vegetarian</option>
-                                    <option value="vegan">Vegan</option>
-                                    <option value="kids">Kids Meal</option>
-                                  </select>
+                                  <input
+                                    type="text"
+                                    value={guest.name}
+                                    onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
+                                    placeholder="Guest name"
+                                    className="flex h-10 flex-1 rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                                  />
 
                                   <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
                                     <input
