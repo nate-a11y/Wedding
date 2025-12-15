@@ -272,7 +272,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
       </div>
 
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" style="max-width: 300px; width: 100%; height: auto; border-radius: 8px;" />
+        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" width="300" style="width: 300px; max-width: 100%; height: auto; border-radius: 8px;" />
       </div>
 
       <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
