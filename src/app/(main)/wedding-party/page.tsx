@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
 
@@ -12,7 +13,13 @@ interface PartyMember {
   isHuman?: boolean;
 }
 
+const hasRealPhoto = (photo: string) => {
+  return photo && !photo.includes('placeholder');
+};
+
 function PartyMemberCard({ member, index }: { member: PartyMember; index: number }) {
+  const showPhoto = hasRealPhoto(member.photo);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -24,21 +31,22 @@ function PartyMemberCard({ member, index }: { member: PartyMember; index: number
       <div className="bg-black/50 border border-olive-700 rounded-lg overflow-hidden hover:border-gold-500/50 transition-colors">
         {/* Photo */}
         <div className="aspect-[3/4] bg-olive-900/50 relative overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center">
-            {/* Placeholder - replace with actual image when available */}
-            <div className="w-24 h-24 rounded-full bg-olive-800 flex items-center justify-center">
-              <svg className="w-12 h-12 text-olive-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+          {showPhoto ? (
+            <Image
+              src={member.photo}
+              alt={member.name}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-24 h-24 rounded-full bg-olive-800 flex items-center justify-center">
+                <svg className="w-12 h-12 text-olive-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
             </div>
-          </div>
-          {/* Uncomment when photos are added:
-          <img
-            src={member.photo}
-            alt={member.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          */}
+          )}
         </div>
 
         {/* Info */}
