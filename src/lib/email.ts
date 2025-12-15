@@ -260,7 +260,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
   const { to, name, address, isUpdate } = data;
   const subject = isUpdate
     ? "Your address has been updated!"
-    : "Thank you for sharing your address!";
+    : "You're on our list! 🎃";
 
   const addressLines = [
     address.street,
@@ -269,6 +269,10 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
     address.country !== 'United States' ? address.country : null,
   ].filter(Boolean).join('<br/>');
 
+  const mainMessage = isUpdate
+    ? "We've updated your mailing address in our records. You're all set to receive your save the date around Halloween 2026 and your formal invitation in April 2027!"
+    : "We're so excited you'll be part of our wedding journey! Your address has been saved, and you're officially on our mailing list.";
+
   const html = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
       <div style="text-align: center; margin-bottom: 30px;">
@@ -276,16 +280,27 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
         <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
       </div>
 
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" style="max-width: 100%; height: auto; border-radius: 8px;" />
+      </div>
+
       <div style="background: rgba(83, 101, 55, 0.2); border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
         <h2 style="color: #faf9f6; margin-top: 0;">Thank you, ${name}!</h2>
         <p style="color: #a5b697; line-height: 1.6;">
-          ${isUpdate
-            ? "We've updated your mailing address in our records."
-            : "We've received your mailing address. This will help us send you important wedding updates and your invitation!"}
+          ${mainMessage}
         </p>
 
+        ${!isUpdate ? `
+        <div style="margin-top: 20px;">
+          <h3 style="color: #d4af37; margin-top: 0;">What's next?</h3>
+          <p style="color: #a5b697; line-height: 1.6;">
+            Official save the dates will be mailed around Halloween 2026, with formal invitations (including RSVP details) following in April 2027. In the meantime, enjoy this sneak peek!
+          </p>
+        </div>
+        ` : ''}
+
         <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; margin-top: 20px;">
-          <h3 style="color: #d4af37; margin-top: 0;">Your Address</h3>
+          <h3 style="color: #d4af37; margin-top: 0;">Your Address on File</h3>
           <p style="color: #a5b697; margin: 5px 0; line-height: 1.8;">${addressLines}</p>
         </div>
 
