@@ -5,25 +5,32 @@ import { Button } from '@/components/ui';
 
 const hotels = [
   {
-    name: 'Hotel TBA',
-    distance: 'Distance TBA',
-    rate: 'Rate TBA',
+    name: 'Baymont by Wyndham Fulton',
+    distance: '5 min away',
+    address: '2205 Cardinal Dr, Fulton, MO 65251',
     amenities: ['Free WiFi', 'Parking', 'Pool'],
-    bookingLink: '#',
+    bookingLink: 'https://www.wyndhamhotels.com/baymont/fulton-missouri/baymont-inn-and-suites-fulton/overview',
   },
   {
-    name: 'Hotel TBA',
-    distance: 'Distance TBA',
-    rate: 'Rate TBA',
+    name: 'Holiday Inn Express Kingdom City',
+    distance: '10 min away',
+    address: '3257 County Rd 211, Kingdom City, MO 65262',
     amenities: ['Free WiFi', 'Parking', 'Breakfast'],
-    bookingLink: '#',
+    bookingLink: 'https://www.ihg.com/holidayinnexpress/hotels/us/en/kingdom-city/kcymo/hoteldetail',
   },
   {
-    name: 'Hotel TBA',
-    distance: 'Distance TBA',
-    rate: 'Rate TBA',
-    amenities: ['Free WiFi', 'Parking', 'Gym'],
-    bookingLink: '#',
+    name: 'Baymont by Wyndham Kingdom City',
+    distance: '10 min away',
+    address: '5750 Jade Rd, Kingdom City, MO 65262',
+    amenities: ['Free WiFi', 'Parking', 'Pool'],
+    bookingLink: 'https://www.wyndhamhotels.com/baymont/kingdom-city-missouri/baymont-inn-and-suites-kingdom-city/overview',
+  },
+  {
+    name: 'Courtyard by Marriott Jefferson City',
+    distance: '30 min away',
+    address: '610 Bolivar St, Jefferson City, MO 65101',
+    amenities: ['Free WiFi', 'Parking', 'Restaurant'],
+    bookingLink: 'https://www.marriott.com/hotels/travel/jefcy-courtyard-jefferson-city/',
   },
 ];
 
@@ -44,7 +51,7 @@ export default function TravelPage() {
           </h1>
           <div className="gold-line mx-auto mb-8" />
           <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Information about accommodations and travel will be updated once the venue is finalized.
+            Everything you need to know about getting to The Callaway Jewel in Fulton, Missouri.
           </p>
         </motion.div>
 
@@ -69,7 +76,7 @@ export default function TravelPage() {
 
             {/* Venue Info */}
             <div>
-              <h2 className="font-heading text-2xl text-cream mb-4">Venue Location</h2>
+              <h2 className="font-heading text-2xl text-cream mb-4">The Callaway Jewel</h2>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-gold-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,14 +84,21 @@ export default function TravelPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <div>
-                    <p className="font-medium text-cream">Address TBA</p>
-                    <p className="text-olive-300">Location to be announced</p>
+                    <p className="font-medium text-cream">4910 County Rd 105</p>
+                    <p className="text-olive-300">Fulton, MO 65251</p>
                   </div>
                 </div>
-                <p className="text-olive-300">
-                  We&apos;re still finalizing our venue. Check back for updates on the location,
-                  directions, and parking information.
-                </p>
+                <a
+                  href="https://www.thecallawayjewel.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-gold-500 hover:text-gold-400 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Visit Venue Website
+                </a>
               </div>
             </div>
           </div>
@@ -102,11 +116,10 @@ export default function TravelPage() {
             Accommodations
           </h2>
           <p className="text-olive-300 text-center mb-8 max-w-2xl mx-auto">
-            We&apos;ll negotiate room blocks at nearby hotels once the venue is confirmed.
-            Check back for special rates and booking information.
+            Here are some nearby hotel options for your stay. We recommend booking early!
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {hotels.map((hotel, index) => (
               <motion.div
                 key={index}
@@ -116,14 +129,14 @@ export default function TravelPage() {
                 transition={{ delay: index * 0.1 }}
                 className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6"
               >
-                <div className="w-full h-32 bg-olive-800 rounded-lg mb-4 flex items-center justify-center">
-                  <svg className="w-12 h-12 text-olive-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-full h-24 bg-olive-800 rounded-lg mb-4 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-olive-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
-                <h3 className="font-heading text-xl text-cream mb-2">{hotel.name}</h3>
-                <p className="text-olive-300 text-sm mb-1">{hotel.distance}</p>
-                <p className="text-gold-600 font-medium mb-3">{hotel.rate}</p>
+                <h3 className="font-heading text-lg text-cream mb-2">{hotel.name}</h3>
+                <p className="text-gold-500 text-sm font-medium mb-1">{hotel.distance}</p>
+                <p className="text-olive-400 text-xs mb-3">{hotel.address}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {hotel.amenities.map((amenity) => (
                     <span
@@ -134,8 +147,13 @@ export default function TravelPage() {
                     </span>
                   ))}
                 </div>
-                <Button variant="outline" size="sm" className="w-full" disabled>
-                  Coming Soon
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => window.open(hotel.bookingLink, '_blank')}
+                >
+                  Book Now
                 </Button>
               </motion.div>
             ))}
@@ -164,7 +182,8 @@ export default function TravelPage() {
                 <h3 className="font-heading text-xl text-cream">By Air</h3>
               </div>
               <p className="text-olive-300">
-                Nearest airport information will be provided once the venue is confirmed.
+                The closest major airports are Columbia Regional Airport (COU) about 30 minutes away,
+                and St. Louis Lambert International Airport (STL) about 1.5 hours away.
               </p>
             </div>
 
@@ -178,7 +197,7 @@ export default function TravelPage() {
                 <h3 className="font-heading text-xl text-cream">Parking</h3>
               </div>
               <p className="text-olive-300">
-                Parking details and shuttle information will be shared closer to the date.
+                Plenty of free parking available on-site at The Callaway Jewel.
               </p>
             </div>
           </div>

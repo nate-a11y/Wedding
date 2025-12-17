@@ -48,8 +48,8 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="font-heading text-xl text-cream mb-2">Where</h3>
-              <p className="text-gold-400 font-medium">Location TBA</p>
-              <p className="text-olive-400 text-sm">Stay tuned!</p>
+              <p className="text-gold-400 font-medium">The Callaway Jewel</p>
+              <p className="text-olive-400 text-sm">Fulton, Missouri</p>
             </div>
 
             {/* RSVP */}

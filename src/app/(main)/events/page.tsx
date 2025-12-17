@@ -6,8 +6,8 @@ const events = [
   {
     name: 'Ceremony',
     time: 'Time TBA',
-    location: 'Location TBA',
-    address: 'Address TBA',
+    location: 'The Callaway Jewel',
+    address: '4910 County Rd 105, Fulton, MO 65251',
     description: 'Join us as we exchange vows and begin our journey as a married couple.',
     dressCode: 'Formal attire',
     icon: (
@@ -19,8 +19,8 @@ const events = [
   {
     name: 'Cocktail Hour',
     time: 'Time TBA',
-    location: 'Location TBA',
-    address: 'Address TBA',
+    location: 'The Callaway Jewel',
+    address: '4910 County Rd 105, Fulton, MO 65251',
     description: 'Mix and mingle with fellow guests while enjoying drinks and hors d\'oeuvres.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,8 +31,8 @@ const events = [
   {
     name: 'Reception',
     time: 'Time TBA',
-    location: 'Location TBA',
-    address: 'Address TBA',
+    location: 'The Callaway Jewel',
+    address: '4910 County Rd 105, Fulton, MO 65251',
     description: 'Dinner, dancing, and celebration! Join us for an unforgettable evening.',
     dressCode: 'Formal attire',
     icon: (
@@ -130,7 +130,7 @@ export default function EventsPage() {
         >
           <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-6 max-w-2xl mx-auto">
             <p className="text-olive-300">
-              <strong className="text-gold-400">Note:</strong> Full event details including times and addresses will be
+              <strong className="text-gold-400">Note:</strong> Event times will be
               updated as they are finalized. Check back soon!
             </p>
           </div>

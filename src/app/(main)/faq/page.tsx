@@ -13,7 +13,7 @@ const faqs = [
       },
       {
         question: 'Where is the wedding?',
-        answer: 'The venue is still being finalized. We\'ll update the website as soon as we have all the details!',
+        answer: 'Our wedding will be at The Callaway Jewel in Fulton, Missouri. The address is 4910 County Rd 105, Fulton, MO 65251.',
       },
       {
         question: 'What time should I arrive?',
@@ -51,7 +51,7 @@ const faqs = [
       },
       {
         question: 'Will the wedding be indoors or outdoors?',
-        answer: 'Details will be shared once we finalize the venue. We\'ll make sure to let everyone know so you can dress appropriately!',
+        answer: 'The Callaway Jewel offers both indoor and outdoor spaces. We\'ll share more specific details closer to the date, so you can dress appropriately!',
       },
     ],
   },
@@ -73,7 +73,7 @@ const faqs = [
     questions: [
       {
         question: 'Is there parking at the venue?',
-        answer: 'Parking information will be provided once we finalize the venue. We\'ll include all details in your invitation.',
+        answer: 'Yes! There is plenty of free parking available on-site at The Callaway Jewel.',
       },
       {
         question: 'Will there be an open bar?',
