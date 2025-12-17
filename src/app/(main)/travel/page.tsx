@@ -46,7 +46,7 @@ const hotels = [
 ];
 
 export default function TravelPage() {
-  const [selectedImage, setSelectedImage] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
     <div className="section-padding bg-charcoal">
@@ -74,37 +74,21 @@ export default function TravelPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 mb-12 max-w-5xl mx-auto"
+          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 mb-12 max-w-4xl mx-auto"
         >
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Venue Gallery */}
-            <div className="space-y-4">
-              <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
-                <Image
-                  src={venueImages[selectedImage].src}
-                  alt={venueImages[selectedImage].alt}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="grid grid-cols-6 gap-2">
-                {venueImages.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`relative aspect-square rounded overflow-hidden border-2 transition-all ${
-                      selectedImage === index ? 'border-gold-500' : 'border-transparent opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <Image
-                      src={image.src}
-                      alt={image.alt}
-                      fill
-                      className="object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
+            {/* Map */}
+            <div className="rounded-lg overflow-hidden h-64 md:h-auto">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3107.5!2d-91.9847!3d38.8897!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87dcf0a5c8e6e24d%3A0x0!2s4910%20County%20Rd%20105%2C%20Fulton%2C%20MO%2065251!5e0!3m2!1sen!2sus!4v1"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: '250px' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="The Callaway Jewel Location"
+              />
             </div>
 
             {/* Venue Info */}
@@ -125,32 +109,118 @@ export default function TravelPage() {
                   A stunning modern farmhouse venue featuring elegant indoor spaces with vaulted wood ceilings,
                   crystal chandeliers, and beautiful outdoor areas perfect for our Halloween celebration.
                 </p>
-                <a
-                  href="https://www.thecallawayjewel.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-gold-500 hover:text-gold-400 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Visit Venue Website
-                </a>
-                <a
-                  href="https://www.google.com/maps/search/?api=1&query=4910+County+Rd+105+Fulton+MO+65251"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-olive-300 hover:text-olive-200 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                  Get Directions
-                </a>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href="https://www.thecallawayjewel.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-gold-500 hover:text-gold-400 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Visit Venue Website
+                  </a>
+                  <a
+                    href="https://www.google.com/maps/dir/?api=1&destination=4910+County+Rd+105+Fulton+MO+65251"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-olive-300 hover:text-olive-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Get Directions
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </motion.div>
+
+        {/* Venue Gallery */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-12 max-w-5xl mx-auto"
+        >
+          <h2 className="font-heading text-2xl text-cream text-center mb-6">
+            Venue Photos
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {venueImages.map((image, index) => (
+              <button
+                key={index}
+                onClick={() => setLightboxIndex(index)}
+                className="relative aspect-[4/3] rounded-lg overflow-hidden group cursor-pointer"
+              >
+                <Image
+                  src={image.src}
+                  alt={image.alt}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Lightbox */}
+        {lightboxIndex !== null && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setLightboxIndex(null)}
+          >
+            <button
+              className="absolute top-4 right-4 text-white hover:text-gold-400 transition-colors"
+              onClick={() => setLightboxIndex(null)}
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gold-400 transition-colors p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => (prev === 0 ? venueImages.length - 1 : (prev ?? 0) - 1));
+              }}
+            >
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gold-400 transition-colors p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => (prev === venueImages.length - 1 ? 0 : (prev ?? 0) + 1));
+              }}
+            >
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div className="relative max-w-5xl max-h-[80vh] w-full" onClick={(e) => e.stopPropagation()}>
+              <Image
+                src={venueImages[lightboxIndex].src}
+                alt={venueImages[lightboxIndex].alt}
+                width={1200}
+                height={800}
+                className="object-contain w-full h-full max-h-[80vh]"
+              />
+              <p className="text-center text-olive-300 mt-4">{venueImages[lightboxIndex].alt}</p>
+            </div>
+          </div>
+        )}
 
         {/* Accommodations */}
         <motion.div
