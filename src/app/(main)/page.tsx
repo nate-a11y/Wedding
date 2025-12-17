@@ -60,8 +60,8 @@ export default function HomePage() {
                 </svg>
               </div>
               <h3 className="font-heading text-xl text-cream mb-2">RSVP</h3>
-              <p className="text-gold-400 font-medium">Coming Soon</p>
-              <p className="text-olive-400 text-sm">Check back later</p>
+              <p className="text-gold-400 font-medium">Opens April 1, 2027</p>
+              <p className="text-olive-400 text-sm">Save the date!</p>
             </div>
           </div>
         </div>
