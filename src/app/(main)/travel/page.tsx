@@ -80,7 +80,7 @@ export default function TravelPage() {
             {/* Map */}
             <div className="rounded-lg overflow-hidden h-64 md:h-auto">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3107.5!2d-91.9847!3d38.8897!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87dcf0a5c8e6e24d%3A0x0!2s4910%20County%20Rd%20105%2C%20Fulton%2C%20MO%2065251!5e0!3m2!1sen!2sus!4v1"
+                src="https://maps.google.com/maps?q=4910+County+Rd+105,+Fulton,+MO+65251&t=&z=14&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="100%"
                 style={{ border: 0, minHeight: '250px' }}
