@@ -76,7 +76,7 @@ export function Hero() {
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="gold-line mb-8 lg:mx-0 mx-auto"
+              className="gold-line mb-8 lg:mx-0 mx-auto !w-48 md:!w-64"
             />
 
             {/* Date */}
