@@ -203,7 +203,7 @@ export default function DressCodePage() {
             <ul className="text-olive-400 text-sm space-y-2 text-left">
               <li className="flex items-start gap-2">
                 <span>👠</span>
-                <span>Consider the venue - comfortable shoes for any outdoor portions</span>
+                <span>The Callaway Jewel has both indoor and outdoor areas - comfortable shoes recommended</span>
               </li>
               <li className="flex items-start gap-2">
                 <span>🧥</span>

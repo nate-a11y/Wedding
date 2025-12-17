@@ -11,12 +11,12 @@ interface WeatherData {
   location: string;
 }
 
-// Historical average for October 31 - you can update this with actual location data
+// Historical average for October 31 in Fulton, MO
 const FALLBACK_WEATHER = {
-  temp: 58,
+  temp: 55,
   condition: 'Partly Cloudy',
   humidity: 65,
-  location: 'Wedding Venue',
+  location: 'Fulton, MO',
   icon: '⛅',
 };
 
