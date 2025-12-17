@@ -1,7 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui';
+
+const venueImages = [
+  { src: '/Callaway+Jewel+4.12.25+Major+FIlms+(8).jpg', alt: 'The Callaway Jewel - Front Entrance' },
+  { src: '/Callaway+Jewel+4.12.25+Major+FIlms+(4).webp', alt: 'The Callaway Jewel - Aerial View' },
+  { src: '/2a699294-676c-4b3d-be02-3a42a2c228ac.jpg', alt: 'Ceremony Space' },
+  { src: '/06ed19cc-b532-41ac-979a-fdf88170954e.jpg', alt: 'Reception Hall' },
+  { src: '/499a73fb-3454-4387-ae25-a2b24629ee63.jpg', alt: 'Venue Interior Panorama' },
+  { src: '/efec04b6-1560-4b55-a1f4-fb0e92f20b14.jpg', alt: 'Reception Space with Tables' },
+];
 
 const hotels = [
   {
@@ -35,6 +46,8 @@ const hotels = [
 ];
 
 export default function TravelPage() {
+  const [selectedImage, setSelectedImage] = useState(0);
+
   return (
     <div className="section-padding bg-charcoal">
       <div className="container-wedding">
@@ -61,16 +74,36 @@ export default function TravelPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 mb-12 max-w-4xl mx-auto"
+          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 mb-12 max-w-5xl mx-auto"
         >
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Map Placeholder */}
-            <div className="bg-olive-800 rounded-lg h-64 flex items-center justify-center">
-              <div className="text-center">
-                <svg className="w-16 h-16 text-olive-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                <p className="text-olive-400">Map coming soon</p>
+            {/* Venue Gallery */}
+            <div className="space-y-4">
+              <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                <Image
+                  src={venueImages[selectedImage].src}
+                  alt={venueImages[selectedImage].alt}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="grid grid-cols-6 gap-2">
+                {venueImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`relative aspect-square rounded overflow-hidden border-2 transition-all ${
+                      selectedImage === index ? 'border-gold-500' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -88,6 +121,10 @@ export default function TravelPage() {
                     <p className="text-olive-300">Fulton, MO 65251</p>
                   </div>
                 </div>
+                <p className="text-olive-300 text-sm">
+                  A stunning modern farmhouse venue featuring elegant indoor spaces with vaulted wood ceilings,
+                  crystal chandeliers, and beautiful outdoor areas perfect for our Halloween celebration.
+                </p>
                 <a
                   href="https://www.thecallawayjewel.com/"
                   target="_blank"
@@ -98,6 +135,17 @@ export default function TravelPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                   Visit Venue Website
+                </a>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=4910+County+Rd+105+Fulton+MO+65251"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-olive-300 hover:text-olive-200 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                  Get Directions
                 </a>
               </div>
             </div>
