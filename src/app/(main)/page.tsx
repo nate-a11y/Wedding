@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Hero, GuestCount } from '@/components/sections';
+import { Hero, GuestCount, RSVPCard } from '@/components/sections';
 
 export default function HomePage() {
   return (
@@ -53,16 +53,7 @@ export default function HomePage() {
             </div>
 
             {/* RSVP */}
-            <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 text-center">
-              <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gold-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="font-heading text-xl text-cream mb-2">RSVP</h3>
-              <p className="text-gold-400 font-medium">Opens April 1, 2027</p>
-              <p className="text-olive-400 text-sm">Save the date!</p>
-            </div>
+            <RSVPCard />
           </div>
         </div>
       </section>
