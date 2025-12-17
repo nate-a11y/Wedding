@@ -90,7 +90,7 @@ export function Hero() {
                 {siteConfig.wedding.displayDate}
               </p>
               <p className="text-olive-300 mt-2">
-                Location to be announced
+                The Callaway Jewel • Fulton, Missouri
               </p>
             </motion.div>
 
