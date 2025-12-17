@@ -14,6 +14,51 @@ const venueImages = [
   { src: '/efec04b6-1560-4b55-a1f4-fb0e92f20b14.jpg', alt: 'Reception Space with Tables' },
 ];
 
+const attractions = [
+  {
+    name: 'Winston Churchill Memorial',
+    description: 'Historic museum at Westminster College featuring the Church of St. Mary the Virgin, relocated stone-by-stone from London.',
+    distance: '5 min',
+    link: 'https://www.nationalchurchillmuseum.org/',
+    icon: '🏛️',
+  },
+  {
+    name: 'Missouri Wine Country',
+    description: 'Explore local wineries along the Missouri River. Les Bourgeois and Stone Hill are popular favorites.',
+    distance: '30-45 min',
+    link: 'https://missouriwine.org/',
+    icon: '🍷',
+  },
+  {
+    name: 'Jefferson City',
+    description: 'Visit Missouri\'s historic state capital, featuring the Capitol building, Governor\'s Garden, and riverfront trails.',
+    distance: '30 min',
+    link: 'https://www.visitjeffersoncity.com/',
+    icon: '🏛️',
+  },
+  {
+    name: 'Columbia, MO',
+    description: 'Vibrant college town home to Mizzou, with great restaurants, shopping, and the famous Shakespeare\'s Pizza.',
+    distance: '30 min',
+    link: 'https://www.visitcolumbiamo.com/',
+    icon: '🎓',
+  },
+  {
+    name: 'Katy Trail State Park',
+    description: 'America\'s longest rail-trail stretching 240 miles. Perfect for biking, hiking, or a scenic drive along the Missouri River.',
+    distance: '20 min',
+    link: 'https://mostateparks.com/park/katy-trail-state-park',
+    icon: '🚴',
+  },
+  {
+    name: 'Arrow Rock',
+    description: 'Charming historic village with antique shops, the Lyceum Theatre, and old-fashioned Main Street vibes.',
+    distance: '45 min',
+    link: 'https://www.arrowrock.org/',
+    icon: '🏘️',
+  },
+];
+
 const hotels = [
   {
     name: 'Baymont by Wyndham Fulton',
@@ -318,6 +363,48 @@ export default function TravelPage() {
                 Plenty of free parking available on-site at The Callaway Jewel.
               </p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Local Attractions */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mt-12 max-w-5xl mx-auto"
+        >
+          <h2 className="font-heading text-3xl text-cream text-center mb-4">
+            Things to Do Nearby
+          </h2>
+          <p className="text-olive-300 text-center mb-8 max-w-2xl mx-auto">
+            Making a weekend of it? Here are some local attractions worth checking out.
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {attractions.map((attraction, index) => (
+              <motion.a
+                key={attraction.name}
+                href={attraction.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 hover:border-gold-500/50 transition-colors group"
+              >
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">{attraction.icon}</span>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg text-cream group-hover:text-gold-400 transition-colors">
+                      {attraction.name}
+                    </h3>
+                    <p className="text-gold-500 text-xs font-medium mb-2">{attraction.distance} from venue</p>
+                    <p className="text-olive-400 text-sm">{attraction.description}</p>
+                  </div>
+                </div>
+              </motion.a>
+            ))}
           </div>
         </motion.div>
       </div>
