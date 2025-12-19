@@ -30,7 +30,7 @@ const faqs = [
       },
       {
         question: 'Can I bring a date?',
-        answer: 'Your invitation will indicate if you have a plus one. If you have questions about your invite, please reach out to us directly.',
+        answer: 'Yes! Everyone is welcome to bring a plus one. Please include them when you RSVP so we can plan accordingly.',
       },
       {
         question: 'Are kids welcome?',
@@ -43,7 +43,7 @@ const faqs = [
     questions: [
       {
         question: 'What is the dress code?',
-        answer: 'The dress code is formal/black tie optional. We want everyone to feel elegant! Given it\'s Halloween, feel free to incorporate subtle festive touches if you\'d like, but costumes are not required.',
+        answer: 'The dress code is formal/black tie optional. We want everyone to feel elegant! Given it\'s Halloween, feel free to incorporate subtle festive touches if you\'d like, but costumes are not allowed.',
       },
       {
         question: 'What colors should I avoid wearing?',
