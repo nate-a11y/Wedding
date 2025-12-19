@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button, Input, CelebrationAnimation } from '@/components/ui';
+import { PageEffects, AnimatedHeader } from '@/components/ui/PageEffects';
 import type { FormState } from '@/types';
 
 const US_STATES = [
@@ -66,26 +67,21 @@ export default function AddressPage() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal py-12 px-4">
+    <div className="min-h-screen bg-charcoal py-12 px-4 relative overflow-hidden">
+      <PageEffects variant="subtle" />
       <CelebrationAnimation isActive={showCelebration} />
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto relative z-10">
         {/* Header */}
+        <AnimatedHeader
+          title="You're On Our List!"
+          subtitle="October 31, 2027"
+        />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
           className="text-center mb-8"
         >
-          <p className="font-accent text-4xl text-gold-500 mb-2">
-            Nate & Blake
-          </p>
-          <h1 className="font-heading text-3xl text-cream mb-4">
-            You're On Our List!
-          </h1>
-          <div className="gold-line mx-auto mb-6" />
-          <p className="text-gold-400 font-medium mb-4">
-            October 31, 2027
-          </p>
           <p className="text-olive-300 max-w-md mx-auto mb-4">
             We're so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
           </p>
