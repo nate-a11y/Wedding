@@ -206,7 +206,7 @@ export function Hero() {
       ))}
 
       {/* Content */}
-      <div className="container-wedding relative z-10 py-20">
+      <div className="container-wedding relative z-10 py-12 md:py-20">
         <div className="max-w-3xl mx-auto text-center relative">
           {/* Animated rings behind content */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -234,10 +234,10 @@ export function Hero() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-6 relative"
+            className="mb-4 md:mb-6 relative"
           >
             <motion.span
-              className="text-olive-400 text-sm uppercase tracking-[0.3em] font-medium inline-block"
+              className="text-olive-400 text-base md:text-lg uppercase tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -250,16 +250,16 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className="mb-4 relative"
+            className="mb-2 md:mb-4 relative"
           >
-            <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl mb-4">
+            <h1 className="font-accent text-6xl sm:text-7xl md:text-8xl lg:text-9xl mb-2 md:mb-4">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
                 delay={0.3}
               />
               <motion.span
-                className="text-olive-500 mx-3 inline-block"
+                className="text-olive-500 mx-2 md:mx-3 inline-block text-5xl sm:text-6xl md:text-7xl lg:text-8xl"
                 initial={{ opacity: 0, scale: 0, rotate: -180 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.6, delay: 0.6, type: 'spring' }}
@@ -275,12 +275,12 @@ export function Hero() {
           </motion.div>
 
           {/* Animated Gold Line */}
-          <div className="relative mb-8 flex justify-center">
+          <div className="relative mb-6 md:mb-8 flex justify-center">
             <motion.div
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 0.8, delay: 1.2, ease: 'easeOut' }}
-              className="h-[2px] w-48 md:w-64 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+              className="h-[2px] w-56 md:w-72 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
             />
             <motion.div
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
@@ -295,16 +295,16 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.3 }}
-            className="mb-10"
+            className="mb-8 md:mb-10"
           >
             <motion.p
-              className="font-heading text-2xl md:text-3xl text-cream tracking-wide"
+              className="font-heading text-3xl md:text-4xl text-cream tracking-wide"
               animate={{ textShadow: ['0 0 20px rgba(212, 175, 55, 0)', '0 0 20px rgba(212, 175, 55, 0.3)', '0 0 20px rgba(212, 175, 55, 0)'] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
               {siteConfig.wedding.displayDate}
             </motion.p>
-            <p className="text-olive-300 mt-2">
+            <p className="text-olive-300 mt-2 text-lg md:text-xl">
               The Callaway Jewel • Fulton, Missouri
             </p>
           </motion.div>
@@ -314,7 +314,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.5 }}
-            className="mb-10"
+            className="mb-8 md:mb-10"
           >
             <Countdown targetDate={siteConfig.wedding.date} />
           </motion.div>
