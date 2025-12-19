@@ -51,7 +51,7 @@ const faqs = [
       },
       {
         question: 'Will the wedding be indoors or outdoors?',
-        answer: 'The Callaway Jewel offers both indoor and outdoor spaces. We\'ll share more specific details closer to the date, so you can dress appropriately!',
+        answer: 'The ceremony will be indoors. Cocktail hour will be in a mixed indoor/outdoor space, weather permitting.',
       },
     ],
   },
