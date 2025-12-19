@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { Countdown } from './Countdown';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui';
@@ -23,106 +22,84 @@ export function Hero() {
 
       {/* Content */}
       <div className="container-wedding relative z-10 py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Save the Date Image */}
+        <div className="max-w-3xl mx-auto text-center">
+          {/* Decorative Top Element */}
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex justify-center lg:justify-end"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
           >
-            <div className="relative w-full max-w-md">
-              <Image
-                src="/Save the Date.png"
-                alt="Save the Date - Nate & Blake - October 31, 2027"
-                width={600}
-                height={800}
-                className="rounded-lg shadow-2xl"
-                priority
-              />
-            </div>
+            <span className="text-olive-400 text-sm uppercase tracking-[0.3em] font-medium">
+              We&apos;re Getting Married
+            </span>
           </motion.div>
 
-          {/* Text Content */}
-          <div className="text-center lg:text-left">
-            {/* Decorative Top Element */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-6"
-            >
-              <span className="text-olive-400 text-sm uppercase tracking-[0.3em] font-medium">
-                We&apos;re Getting Married
-              </span>
-            </motion.div>
+          {/* Names */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mb-4"
+          >
+            <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl text-gold-500 mb-4">
+              {siteConfig.couple.person1.firstName}
+              <span className="text-olive-500 mx-3">&</span>
+              {siteConfig.couple.person2.firstName}
+            </h1>
+          </motion.div>
 
-            {/* Names */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mb-4"
-            >
-              <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl text-gold-500 mb-4">
-                {siteConfig.couple.person1.firstName}
-                <span className="text-olive-500 mx-3">&</span>
-                {siteConfig.couple.person2.firstName}
-              </h1>
-            </motion.div>
+          {/* Gold Line */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="gold-line mb-8 mx-auto !w-48 md:!w-64"
+          />
 
-            {/* Gold Line */}
-            <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="gold-line mb-8 lg:mx-0 mx-auto !w-48 md:!w-64"
-            />
+          {/* Date */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="mb-10"
+          >
+            <p className="font-heading text-2xl md:text-3xl text-cream tracking-wide">
+              {siteConfig.wedding.displayDate}
+            </p>
+            <p className="text-olive-300 mt-2">
+              The Callaway Jewel • Fulton, Missouri
+            </p>
+          </motion.div>
 
-            {/* Date */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="mb-10"
-            >
-              <p className="font-heading text-2xl md:text-3xl text-cream tracking-wide">
-                {siteConfig.wedding.displayDate}
-              </p>
-              <p className="text-olive-300 mt-2">
-                The Callaway Jewel • Fulton, Missouri
-              </p>
-            </motion.div>
+          {/* Countdown */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="mb-10"
+          >
+            <Countdown targetDate={siteConfig.wedding.date} />
+          </motion.div>
 
-            {/* Countdown */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="mb-10"
-            >
-              <Countdown targetDate={siteConfig.wedding.date} />
-            </motion.div>
-
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-              className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4"
-            >
-              <Link href="/our-story">
-                <Button variant="primary" size="lg">
-                  Our Story
-                </Button>
-              </Link>
-              <Link href="/rsvp">
-                <Button variant="outline" size="lg">
-                  RSVP
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            <Link href="/our-story">
+              <Button variant="primary" size="lg">
+                Our Story
+              </Button>
+            </Link>
+            <Link href="/rsvp">
+              <Button variant="outline" size="lg">
+                RSVP
+              </Button>
+            </Link>
+          </motion.div>
         </div>
 
         {/* Scroll Indicator */}
