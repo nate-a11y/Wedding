@@ -156,7 +156,7 @@ export function Hero() {
   );
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-charcoal">
+    <section className="relative min-h-screen flex items-center justify-center overflow-x-hidden bg-charcoal pt-20">
       {/* Animated gradient background */}
       <motion.div
         className="absolute inset-0"
