@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
+import { PageEffects } from '@/components/ui';
 
 // Configuration
 const LIVESTREAM_CONFIG = {
@@ -54,8 +55,11 @@ export default function LivestreamPage() {
   const showPlayer = streamStatus === 'live' || streamStatus === 'ended';
 
   return (
-    <div className="section-padding bg-charcoal min-h-screen">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal min-h-screen relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -63,13 +67,30 @@ export default function LivestreamPage() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="font-accent text-3xl text-gold-500 mb-4">
+          <motion.p
+            className="font-accent text-3xl text-gold-500 mb-4"
+            animate={{ opacity: [0.8, 1, 0.8] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          >
             {streamStatus === 'live' ? 'Now Live' : streamStatus === 'ended' ? 'Watch Recording' : 'Watch Live'}
-          </p>
+          </motion.p>
           <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
             360° Livestream
           </h1>
-          <div className="gold-line mx-auto mb-8" />
+          <div className="relative mb-8 flex justify-center">
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
+              className="h-[2px] w-48 md:w-64 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+            />
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.5, 1] }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+            />
+          </div>
           <p className="text-olive-300 max-w-2xl mx-auto text-lg">
             {streamStatus === 'live'
               ? "We're live! Join us virtually with our immersive 360° livestream. Look around in any direction to feel like you're right there with us."
