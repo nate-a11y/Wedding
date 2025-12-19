@@ -26,7 +26,7 @@ const faqs = [
     questions: [
       {
         question: 'When do I need to RSVP by?',
-        answer: 'The RSVP deadline will be announced with the formal invitations. We\'ll send save the dates first!',
+        answer: 'Please RSVP by September 1, 2027. RSVPs open on April 1, 2027.',
       },
       {
         question: 'Can I bring a date?',

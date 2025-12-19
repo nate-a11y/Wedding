@@ -36,7 +36,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-heading text-xl text-cream mb-2">When</h3>
               <p className="text-gold-400 font-medium">October 31, 2027</p>
-              <p className="text-olive-400 text-sm">Time TBA</p>
+              <p className="text-olive-400 text-sm">Ceremony at 4:00 PM</p>
             </div>
 
             {/* Where */}
