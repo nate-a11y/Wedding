@@ -324,7 +324,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.7 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-row items-center justify-center gap-4"
           >
             <Link href="/our-story">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
