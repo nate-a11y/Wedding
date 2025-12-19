@@ -295,7 +295,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.3 }}
-            className="mb-10 md:mb-12"
+            className="mb-8 md:mb-10"
           >
             <motion.p
               className="font-heading text-3xl md:text-4xl text-cream tracking-wide"
@@ -314,7 +314,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.5 }}
-            className="mb-10 md:mb-12"
+            className="mb-8 md:mb-10"
           >
             <Countdown targetDate={siteConfig.wedding.date} />
           </motion.div>
