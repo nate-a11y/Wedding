@@ -30,11 +30,11 @@ const faqs = [
       },
       {
         question: 'Can I bring a date?',
-        answer: 'Your invitation will indicate if you have a plus one. If you have questions about your invite, please reach out to us directly.',
+        answer: 'Yes! Everyone is welcome to bring a plus one. Please include them when you RSVP so we can plan accordingly.',
       },
       {
         question: 'Are kids welcome?',
-        answer: 'Absolutely! Children are welcome to celebrate with us. Please include all family members, including children, when you RSVP so we can plan accordingly.',
+        answer: 'Children are welcome, but be advised: if your child becomes disruptive during the ceremony or reception, you will be asked to leave with them. This is our day and we expect it to go smoothly. Please include all children when you RSVP.',
       },
     ],
   },
@@ -43,7 +43,7 @@ const faqs = [
     questions: [
       {
         question: 'What is the dress code?',
-        answer: 'The dress code is formal/black tie optional. We want everyone to feel elegant! Given it\'s Halloween, feel free to incorporate subtle festive touches if you\'d like, but costumes are not required.',
+        answer: 'The dress code is formal/black tie optional. We want everyone to feel elegant! Given it\'s Halloween, feel free to incorporate subtle festive touches if you\'d like, but costumes are not allowed.',
       },
       {
         question: 'What colors should I avoid wearing?',
@@ -51,7 +51,7 @@ const faqs = [
       },
       {
         question: 'Will the wedding be indoors or outdoors?',
-        answer: 'The Callaway Jewel offers both indoor and outdoor spaces. We\'ll share more specific details closer to the date, so you can dress appropriately!',
+        answer: 'The ceremony will be indoors. Cocktail hour will be in a mixed indoor/outdoor space, weather permitting.',
       },
     ],
   },
@@ -81,7 +81,7 @@ const faqs = [
       },
       {
         question: 'Can I take photos during the ceremony?',
-        answer: 'We ask that you keep your phones put away during the ceremony so you can be fully present. We\'ll have a professional photographer capturing everything. Feel free to take photos during the reception!',
+        answer: 'No. This is an unplugged ceremony and will be strictly enforced. We do not want phones in front of your faces during the wedding or in our photos. Our professional photographer will capture everything. Feel free to take photos during the reception.',
       },
     ],
   },
