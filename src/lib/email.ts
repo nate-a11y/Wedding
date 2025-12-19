@@ -505,7 +505,6 @@ function generateBrandedEmailHtml(recipient: BulkEmailRecipient, htmlContent: st
       </div>
 
       <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
-        <p style="color: #faf9f6; margin-top: 0;">Dear ${recipient.name.split(' ')[0]},</p>
         <div style="color: #a5b697; line-height: 1.6;">
           ${processedContent}
         </div>
