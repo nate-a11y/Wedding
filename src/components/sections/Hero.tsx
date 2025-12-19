@@ -237,7 +237,7 @@ export function Hero() {
             className="mb-6 md:mb-8 relative"
           >
             <motion.span
-              className="text-olive-400 text-lg sm:text-xl md:text-2xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
+              className="text-olive-400 text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -252,7 +252,7 @@ export function Hero() {
             transition={{ duration: 0.3, delay: 0.2 }}
             className="mb-4 md:mb-6 relative"
           >
-            <h1 className="font-accent text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] mb-4 md:mb-6">
+            <h1 className="font-accent text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] mb-4 md:mb-6">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
