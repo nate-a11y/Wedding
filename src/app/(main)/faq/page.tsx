@@ -81,7 +81,7 @@ const faqs = [
       },
       {
         question: 'Can I take photos during the ceremony?',
-        answer: 'We ask that you keep your phones put away during the ceremony so you can be fully present. We\'ll have a professional photographer capturing everything. Feel free to take photos during the reception!',
+        answer: 'No. This is an unplugged ceremony and will be strictly enforced. We do not want phones in front of your faces during the wedding or in our photos. Our professional photographer will capture everything. Feel free to take photos during the reception.',
       },
     ],
   },
