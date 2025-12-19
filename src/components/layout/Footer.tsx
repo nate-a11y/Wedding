@@ -26,14 +26,23 @@ export function Footer() {
             </p>
           </motion.div>
 
-          {/* Divider */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="gold-line mx-auto my-8"
-          />
+          {/* Animated Divider */}
+          <div className="relative my-8 flex justify-center">
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+              className="h-[2px] w-48 md:w-64 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+            />
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
+              initial={{ scale: 0 }}
+              whileInView={{ scale: [0, 1.5, 1] }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+            />
+          </div>
 
           {/* Quick Links */}
           <motion.nav
