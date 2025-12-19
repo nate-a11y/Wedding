@@ -15,7 +15,7 @@ export const siteConfig = {
 
   // Wedding Details
   wedding: {
-    date: new Date('2027-10-31T00:00:00'),
+    date: new Date('2027-10-31T16:00:00-05:00'), // 4:00 PM Central Time
     displayDate: 'October 31, 2027',
     venue: {
       ceremony: {
