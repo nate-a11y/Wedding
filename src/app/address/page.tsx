@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, CelebrationAnimation } from '@/components/ui';
 import type { FormState } from '@/types';
 
 const US_STATES = [
@@ -15,6 +15,7 @@ const US_STATES = [
 
 export default function AddressPage() {
   const [formState, setFormState] = useState<FormState>({ status: 'idle' });
+  const [showCelebration, setShowCelebration] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -48,6 +49,7 @@ export default function AddressPage() {
         status: 'success',
         message: result.message || 'Thank you! Your address has been saved.',
       });
+      setShowCelebration(true);
     } catch (error) {
       setFormState({
         status: 'error',
@@ -65,6 +67,7 @@ export default function AddressPage() {
 
   return (
     <div className="min-h-screen bg-charcoal py-12 px-4">
+      <CelebrationAnimation isActive={showCelebration} />
       <div className="max-w-xl mx-auto">
         {/* Header */}
         <motion.div

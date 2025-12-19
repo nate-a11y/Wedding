@@ -9,14 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.86.0",
+    "@supabase/supabase-js": "^2.89.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "^12.23.24",
-    "next": "16.0.7",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "resend": "^6.5.2",
+    "framer-motion": "^12.23.26",
+    "next": "16.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "resend": "^6.6.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
@@ -25,7 +25,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.0.7",
+    "eslint-config-next": "16.1.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
