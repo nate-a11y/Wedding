@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui';
+import { PageEffects } from '@/components/ui/PageEffects';
 
 export function LoginForm() {
   const [password, setPassword] = useState('');
@@ -41,12 +42,13 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-charcoal px-4">
+    <div className="min-h-screen flex items-center justify-center bg-charcoal px-4 relative overflow-hidden">
+      <PageEffects variant="subtle" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         <div className="text-center mb-8">
           <motion.p
