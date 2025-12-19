@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui';
+import { Button, PageEffects, AnimatedHeader } from '@/components/ui';
 
 // Calendar event details
 const calendarEvent = {
@@ -121,47 +121,45 @@ const events = [
 
 export default function EventsPage() {
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">The Big Day</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Wedding Events
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            October 31, 2027 — Mark your calendars! Here&apos;s what to expect on our special day.
-          </p>
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
 
-          {/* Add to Calendar */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-            <a
-              href={getGoogleCalendarUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zM19.5 9h-15V4.5h15V9z"/>
-              </svg>
-              Add to Google Calendar
-            </a>
-            <button
-              onClick={downloadICS}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Add to Apple/Outlook
-            </button>
-          </div>
+      <div className="container-wedding relative z-10">
+        {/* Header */}
+        <AnimatedHeader
+          subtitle="The Big Day"
+          title="Wedding Events"
+          description="October 31, 2027 — Mark your calendars! Here's what to expect on our special day."
+        />
+
+        {/* Add to Calendar */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 -mt-8 mb-16"
+        >
+          <a
+            href={getGoogleCalendarUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zM19.5 9h-15V4.5h15V9z"/>
+            </svg>
+            Add to Google Calendar
+          </a>
+          <button
+            onClick={downloadICS}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Add to Apple/Outlook
+          </button>
         </motion.div>
 
         {/* Events */}

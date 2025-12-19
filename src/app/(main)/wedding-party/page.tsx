@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 interface PartyMember {
   name: string;
@@ -67,25 +68,17 @@ export default function WeddingPartyPage() {
   const { weddingParty, couple } = siteConfig;
 
   return (
-    <div className="section-padding bg-charcoal min-h-screen">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal min-h-screen relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="minimal" showGradient={true} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-2">Meet Our</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-4">
-            Wedding Party
-          </h1>
-          <div className="gold-line mx-auto mb-6" />
-          <p className="text-olive-300 max-w-2xl mx-auto">
-            These are the wonderful people who will stand beside us on our special day.
-            We are so grateful for their love and support.
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="Meet Our"
+          title="Wedding Party"
+          description="These are the wonderful people who will stand beside us on our special day. We are so grateful for their love and support."
+        />
 
         {/* Nate's Side */}
         {weddingParty.natesSide.length > 0 && (
