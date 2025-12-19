@@ -1,23 +1,57 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
 
-// Configuration - Update this with your YouTube Live URL when ready
+// Configuration
 const LIVESTREAM_CONFIG = {
-  // Replace with your YouTube Live video ID when you go live
-  // Example: If your YouTube URL is https://youtube.com/watch?v=ABC123, use 'ABC123'
+  // YouTube Live video ID
   youtubeVideoId: 'F64VhoE56Ww',
-  // Set to true on the day of the wedding to show the stream
-  isLive: false,
-  // Set to true after the wedding if you want to show the recording
-  showRecording: false,
+  // Wedding day: October 31, 2027 at 3:30 PM Central Time
+  // Stream goes live automatically at this time
+  goLiveDate: new Date('2027-10-31T15:30:00-05:00'), // CDT (Central Daylight Time)
+  // Stream ends and shows recording after this time (end of reception ~11 PM)
+  streamEndDate: new Date('2027-10-31T23:00:00-05:00'),
 };
+
+function useStreamStatus() {
+  const [status, setStatus] = useState<'upcoming' | 'live' | 'ended'>('upcoming');
+
+  useEffect(() => {
+    const checkStatus = () => {
+      const now = new Date();
+      const { goLiveDate, streamEndDate } = LIVESTREAM_CONFIG;
+
+      if (now >= streamEndDate) {
+        setStatus('ended');
+      } else if (now >= goLiveDate) {
+        setStatus('live');
+      } else {
+        setStatus('upcoming');
+      }
+    };
+
+    // Check immediately
+    checkStatus();
+
+    // Check every minute
+    const interval = setInterval(checkStatus, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return status;
+}
 
 export default function LivestreamPage() {
   const weddingDate = siteConfig.wedding.displayDate;
-  const { youtubeVideoId, isLive, showRecording } = LIVESTREAM_CONFIG;
+  const { youtubeVideoId } = LIVESTREAM_CONFIG;
   const hasVideoId = youtubeVideoId && youtubeVideoId.length > 0;
+  const streamStatus = useStreamStatus();
+
+  // Show the video player if live or ended (for recording)
+  const showPlayer = streamStatus === 'live' || streamStatus === 'ended';
 
   return (
     <div className="section-padding bg-charcoal min-h-screen">
@@ -29,14 +63,19 @@ export default function LivestreamPage() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <p className="font-accent text-3xl text-gold-500 mb-4">Watch Live</p>
+          <p className="font-accent text-3xl text-gold-500 mb-4">
+            {streamStatus === 'live' ? 'Now Live' : streamStatus === 'ended' ? 'Watch Recording' : 'Watch Live'}
+          </p>
           <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
             360° Livestream
           </h1>
           <div className="gold-line mx-auto mb-8" />
           <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Can&apos;t be there in person? Join us virtually with our immersive 360° livestream.
-            Look around in any direction to feel like you&apos;re right there with us.
+            {streamStatus === 'live'
+              ? "We're live! Join us virtually with our immersive 360° livestream. Look around in any direction to feel like you're right there with us."
+              : streamStatus === 'ended'
+              ? "Thanks for celebrating with us! Watch the recording of our special day in immersive 360°."
+              : "Can't be there in person? Join us virtually with our immersive 360° livestream. Look around in any direction to feel like you're right there with us."}
           </p>
         </motion.div>
 
@@ -48,7 +87,7 @@ export default function LivestreamPage() {
           className="max-w-5xl mx-auto mb-12"
         >
           <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant overflow-hidden">
-            {isLive || showRecording ? (
+            {showPlayer ? (
               hasVideoId ? (
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                   <iframe
@@ -92,6 +131,7 @@ export default function LivestreamPage() {
                     The livestream will be available on
                   </p>
                   <p className="text-gold-500 text-xl font-medium">{weddingDate}</p>
+                  <p className="text-olive-400 mt-2 text-sm">Starting at 3:30 PM Central</p>
                   <p className="text-olive-400 mt-4 text-sm">
                     Check back on the day of our wedding to watch live!
                   </p>
@@ -100,6 +140,20 @@ export default function LivestreamPage() {
             )}
           </div>
         </motion.div>
+
+        {/* Live indicator */}
+        {streamStatus === 'live' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex justify-center mb-8"
+          >
+            <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/50 rounded-full px-4 py-2">
+              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-red-400 font-medium">LIVE NOW</span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Instructions */}
         <motion.div
