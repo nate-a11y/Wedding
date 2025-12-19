@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, CelebrationAnimation } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
 
 interface AdditionalGuest {
@@ -14,6 +14,7 @@ interface AdditionalGuest {
 
 export default function RSVPPage() {
   const [formState, setFormState] = useState<FormState>({ status: 'idle' });
+  const [showCelebration, setShowCelebration] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -49,6 +50,7 @@ export default function RSVPPage() {
         status: 'success',
         message: result.message || 'Thank you for your RSVP!',
       });
+      setShowCelebration(true);
     } catch (error) {
       setFormState({
         status: 'error',
@@ -187,6 +189,7 @@ export default function RSVPPage() {
 
   return (
     <div className="section-padding bg-charcoal">
+      <CelebrationAnimation isActive={showCelebration} />
       <div className="container-wedding">
         {/* Header */}
         <motion.div
