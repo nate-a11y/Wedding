@@ -19,7 +19,7 @@ export interface CelebrationAnimationProps {
   particleCount?: number;
 }
 
-function CelebrationAnimation({ isActive, particleCount = 50 }: CelebrationAnimationProps) {
+function CelebrationAnimation({ isActive, particleCount = 100 }: CelebrationAnimationProps) {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   useEffect(() => {
@@ -31,10 +31,10 @@ function CelebrationAnimation({ isActive, particleCount = 50 }: CelebrationAnima
           x: Math.random() * 100,
           y: Math.random() * 100,
           type: Math.random() > 0.4 ? 'sparkle' : 'heart',
-          size: Math.random() * 12 + 8,
-          delay: Math.random() * 0.5,
-          duration: Math.random() * 2 + 2,
-          rotation: Math.random() * 360,
+          size: Math.random() * 16 + 10,
+          delay: Math.random() * 4,
+          duration: Math.random() * 4 + 5,
+          rotation: Math.random() * 720 - 360,
         });
       }
       setParticles(newParticles);
@@ -106,15 +106,18 @@ function CelebrationAnimation({ isActive, particleCount = 50 }: CelebrationAnima
             </motion.div>
           ))}
 
-          {/* Central burst effect */}
-          <motion.div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: [0, 0.8, 0], scale: [0, 2, 3] }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          >
-            <div className="w-32 h-32 rounded-full bg-gradient-radial from-gold-400/40 via-gold-500/20 to-transparent" />
-          </motion.div>
+          {/* Central burst effects - multiple waves */}
+          {[0, 0.3, 0.6].map((delay, i) => (
+            <motion.div
+              key={i}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: [0, 0.6, 0], scale: [0, 2.5, 4] }}
+              transition={{ duration: 1.5, delay, ease: 'easeOut' }}
+            >
+              <div className="w-48 h-48 rounded-full bg-gradient-radial from-gold-400/50 via-gold-500/20 to-transparent" />
+            </motion.div>
+          ))}
         </div>
       )}
     </AnimatePresence>
