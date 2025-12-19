@@ -56,10 +56,10 @@ const downloadICS = () => {
 const events = [
   {
     name: 'Ceremony',
-    time: 'Time TBA',
+    time: '4:00 PM',
     location: 'The Callaway Jewel',
     address: '4910 County Rd 105, Fulton, MO 65251',
-    description: 'Join us as we exchange vows and begin our journey as a married couple.',
+    description: 'Please be seated by 3:45 PM. Join us as we exchange vows and begin our journey as a married couple.',
     dressCode: 'Formal attire',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@ const events = [
   },
   {
     name: 'Cocktail Hour',
-    time: 'Time TBA',
+    time: '4:45 PM',
     location: 'The Callaway Jewel',
     address: '4910 County Rd 105, Fulton, MO 65251',
     description: 'Mix and mingle with fellow guests while enjoying drinks and hors d\'oeuvres.',
@@ -81,14 +81,26 @@ const events = [
   },
   {
     name: 'Reception',
-    time: 'Time TBA',
+    time: '6:00 PM',
     location: 'The Callaway Jewel',
     address: '4910 County Rd 105, Fulton, MO 65251',
-    description: 'Dinner, dancing, and celebration! Join us for an unforgettable evening.',
+    description: 'Dinner, dancing, and celebration! Join us for an unforgettable evening. Dancing kicks off at 8:00 PM.',
     dressCode: 'Formal attire',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Send-off',
+    time: '10:45 PM',
+    location: 'The Callaway Jewel',
+    address: '4910 County Rd 105, Fulton, MO 65251',
+    description: 'Join us for our grand exit!',
+    icon: (
+      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3l14 9-14 9V3z" />
       </svg>
     ),
   },
@@ -195,21 +207,6 @@ export default function EventsPage() {
           ))}
         </div>
 
-        {/* Note */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-16 text-center"
-        >
-          <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-6 max-w-2xl mx-auto">
-            <p className="text-olive-300">
-              <strong className="text-gold-400">Note:</strong> Event times will be
-              updated as they are finalized. Check back soon!
-            </p>
-          </div>
-        </motion.div>
       </div>
     </div>
   );
