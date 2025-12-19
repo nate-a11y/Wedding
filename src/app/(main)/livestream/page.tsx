@@ -7,7 +7,7 @@ import { siteConfig } from '@/config/site';
 const LIVESTREAM_CONFIG = {
   // Replace with your YouTube Live video ID when you go live
   // Example: If your YouTube URL is https://youtube.com/watch?v=ABC123, use 'ABC123'
-  youtubeVideoId: '',
+  youtubeVideoId: 'F64VhoE56Ww',
   // Set to true on the day of the wedding to show the stream
   isLive: false,
   // Set to true after the wedding if you want to show the recording
