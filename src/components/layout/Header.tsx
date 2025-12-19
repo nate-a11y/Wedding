@@ -74,7 +74,7 @@ export function Header() {
           <Link href="/" className="relative z-10">
             <motion.div
               whileHover={{ scale: 1.02 }}
-              className="flex flex-col items-center"
+              className="flex flex-col items-center pt-1"
             >
               <span className="font-accent-logo text-2xl md:text-3xl text-gold-500">
                 N & B
