@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 interface Photo {
   id: string;
@@ -322,25 +323,17 @@ export default function PhotosPage() {
   const remainingUploads = UPLOAD_LIMIT - userPhotoCount;
 
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="minimal" showGradient={true} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">Capture the Moment</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Photo Booth
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Share your favorite moments from our celebration! Take a photo with the retro filter
-            or upload existing photos to add them to our shared gallery.
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="Capture the Moment"
+          title="Photo Booth"
+          description="Share your favorite moments from our celebration! Take a photo with the retro filter or upload existing photos to add them to our shared gallery."
+        />
 
         {/* Upload Section */}
         <motion.div

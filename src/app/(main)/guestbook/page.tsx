@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 interface GuestBookEntry {
   id: string;
@@ -95,25 +96,17 @@ export default function GuestBookPage() {
   };
 
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">Sign Our</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Guest Book
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Leave us a message, share your wishes, or just say hello! We&apos;d love
-            to hear from you.
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="Sign Our"
+          title="Guest Book"
+          description="Leave us a message, share your wishes, or just say hello! We'd love to hear from you."
+        />
 
         <div className="max-w-4xl mx-auto">
           {/* Sign Form */}

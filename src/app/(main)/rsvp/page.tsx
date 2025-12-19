@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button, Input, CelebrationAnimation } from '@/components/ui';
+import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
 
 interface AdditionalGuest {
@@ -103,8 +103,9 @@ export default function RSVPPage() {
   // Before April 1, 2027 - not yet accepting RSVPs
   if (rsvpStatus === 'not-yet') {
     return (
-      <div className="section-padding bg-charcoal min-h-[80vh] flex items-center">
-        <div className="container-wedding">
+      <div className="section-padding bg-charcoal min-h-[80vh] flex items-center relative overflow-hidden">
+        <PageEffects variant="minimal" showGradient={true} />
+        <div className="container-wedding relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -147,8 +148,9 @@ export default function RSVPPage() {
   // After September 1, 2027 - RSVP period closed
   if (rsvpStatus === 'closed') {
     return (
-      <div className="section-padding bg-charcoal min-h-[80vh] flex items-center">
-        <div className="container-wedding">
+      <div className="section-padding bg-charcoal min-h-[80vh] flex items-center relative overflow-hidden">
+        <PageEffects variant="minimal" showGradient={true} />
+        <div className="container-wedding relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -188,25 +190,18 @@ export default function RSVPPage() {
   }
 
   return (
-    <div className="section-padding bg-charcoal">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
+
       <CelebrationAnimation isActive={showCelebration} />
-      <div className="container-wedding">
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-12"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">RSVP</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Will You Join Us?
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Please respond by September 1, 2027. We can&apos;t wait to celebrate with you!
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="RSVP"
+          title="Will You Join Us?"
+          description="Please respond by September 1, 2027. We can't wait to celebrate with you!"
+        />
 
         {/* Form */}
         <motion.div
