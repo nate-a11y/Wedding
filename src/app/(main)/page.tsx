@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { Hero, GuestCount, RSVPCard } from '@/components/sections';
+import { AnimatedGoldLine } from '@/components/ui';
 
 export default function HomePage() {
   return (
@@ -13,7 +14,7 @@ export default function HomePage() {
           <h2 className="font-heading text-3xl md:text-4xl text-cream mb-6">
             We Can&apos;t Wait to Celebrate With You
           </h2>
-          <div className="gold-line mx-auto mb-8" />
+          <AnimatedGoldLine />
           <p className="text-olive-300 text-lg leading-relaxed mb-6">
             We are so excited to share our special day with the people we love most.
             This website is your one-stop destination for all the details about our wedding.
@@ -65,7 +66,7 @@ export default function HomePage() {
           <h2 className="font-heading text-2xl md:text-3xl text-cream mb-6">
             Meet Our Flower Girl
           </h2>
-          <div className="gold-line mx-auto mb-8" />
+          <AnimatedGoldLine />
           <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-8">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gold-500">
               <Image

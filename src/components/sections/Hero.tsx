@@ -232,7 +232,8 @@ export function Hero() {
           {/* Decorative Top Element */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0 }}
             transition={{ duration: 0.6 }}
             className="mb-6 md:mb-8 relative"
           >
@@ -248,7 +249,8 @@ export function Hero() {
           {/* Names with letter animation */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, amount: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
             className="mb-4 md:mb-6 relative"
           >

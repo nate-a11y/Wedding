@@ -298,3 +298,33 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
     </motion.div>
   );
 }
+
+// Standalone animated gold line component
+interface AnimatedGoldLineProps {
+  className?: string;
+  delay?: number;
+}
+
+export function AnimatedGoldLine({ className = 'mb-8', delay = 0 }: AnimatedGoldLineProps) {
+  return (
+    <div className={`relative flex justify-center ${className}`}>
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.8, delay: delay, ease: 'easeOut' }}
+        className="h-[2px] w-48 md:w-64 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
+        initial={{ scale: 0 }}
+        animate={{ scale: [0, 1.5, 1] }}
+        transition={{ duration: 0.5, delay: delay + 0.5 }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
+        animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity, delay: delay + 1 }}
+      />
+    </div>
+  );
+}

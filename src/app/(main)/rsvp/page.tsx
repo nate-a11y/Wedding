@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader } from '@/components/ui';
+import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
 
 interface AdditionalGuest {
@@ -111,7 +111,7 @@ export default function RSVPPage() {
             <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
               Coming Soon
             </h1>
-            <div className="gold-line mx-auto mb-8" />
+            <AnimatedGoldLine />
 
             <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
               <div className="w-20 h-20 mx-auto mb-6 bg-olive-800 rounded-full flex items-center justify-center">
@@ -156,7 +156,7 @@ export default function RSVPPage() {
             <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
               RSVP Period Closed
             </h1>
-            <div className="gold-line mx-auto mb-8" />
+            <AnimatedGoldLine />
 
             <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
               <div className="w-20 h-20 mx-auto mb-6 bg-olive-800 rounded-full flex items-center justify-center">
