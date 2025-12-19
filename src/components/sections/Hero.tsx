@@ -234,10 +234,10 @@ export function Hero() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-4 md:mb-6 relative"
+            className="mb-6 md:mb-8 relative"
           >
             <motion.span
-              className="text-olive-400 text-lg sm:text-xl md:text-2xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
+              className="text-olive-400 text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -250,9 +250,9 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.2 }}
-            className="mb-2 md:mb-4 relative"
+            className="mb-4 md:mb-6 relative"
           >
-            <h1 className="font-accent text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] mb-2 md:mb-4">
+            <h1 className="font-accent text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] mb-4 md:mb-6">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
@@ -275,7 +275,7 @@ export function Hero() {
           </motion.div>
 
           {/* Animated Gold Line */}
-          <div className="relative mb-6 md:mb-8 flex justify-center">
+          <div className="relative mb-8 md:mb-10 flex justify-center">
             <motion.div
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
