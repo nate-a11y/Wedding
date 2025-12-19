@@ -237,7 +237,7 @@ export function Hero() {
             className="mb-4 md:mb-6 relative"
           >
             <motion.span
-              className="text-olive-400 text-base md:text-lg uppercase tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
+              className="text-olive-400 text-lg sm:text-xl md:text-2xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
               animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
