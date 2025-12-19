@@ -1,14 +1,189 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { useEffect, useState, useMemo } from 'react';
 import { Countdown } from './Countdown';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui';
 import Link from 'next/link';
 
+// Floating particle component
+function FloatingParticle({ delay, duration, size, left, top }: {
+  delay: number;
+  duration: number;
+  size: number;
+  left: string;
+  top: string;
+}) {
+  return (
+    <motion.div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        left,
+        top,
+        background: `radial-gradient(circle, rgba(212, 175, 55, 0.8) 0%, rgba(212, 175, 55, 0) 70%)`,
+      }}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{
+        opacity: [0, 1, 1, 0],
+        scale: [0, 1, 1, 0],
+        y: [0, -100, -200, -300],
+        x: [0, Math.random() * 50 - 25, Math.random() * 100 - 50],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        repeatDelay: Math.random() * 2,
+        ease: 'easeOut',
+      }}
+    />
+  );
+}
+
+// Animated ring component
+function AnimatedRing({ size, delay, duration }: { size: number; delay: number; duration: number }) {
+  return (
+    <motion.div
+      className="absolute rounded-full border border-gold-500/20 pointer-events-none"
+      style={{
+        width: size,
+        height: size,
+        left: '50%',
+        top: '50%',
+        marginLeft: -size / 2,
+        marginTop: -size / 2,
+      }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{
+        opacity: [0, 0.5, 0],
+        scale: [0.8, 1.2, 1.5],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: 'easeOut',
+      }}
+    />
+  );
+}
+
+// Sparkle star component
+function Sparkle({ style, delay }: { style: React.CSSProperties; delay: number }) {
+  return (
+    <motion.div
+      className="absolute pointer-events-none"
+      style={style}
+      initial={{ opacity: 0, scale: 0, rotate: 0 }}
+      animate={{
+        opacity: [0, 1, 0],
+        scale: [0, 1, 0],
+        rotate: [0, 180],
+      }}
+      transition={{
+        duration: 2,
+        delay,
+        repeat: Infinity,
+        repeatDelay: Math.random() * 3 + 1,
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path
+          d="M10 0L11.5 8.5L20 10L11.5 11.5L10 20L8.5 11.5L0 10L8.5 8.5L10 0Z"
+          fill="rgba(212, 175, 55, 0.6)"
+        />
+      </svg>
+    </motion.div>
+  );
+}
+
+// Letter animation component
+function AnimatedText({ text, className, delay = 0 }: { text: string; className?: string; delay?: number }) {
+  return (
+    <span className={className}>
+      {text.split('').map((char, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.4,
+            delay: delay + i * 0.05,
+            ease: 'easeOut',
+          }}
+          className="inline-block"
+          style={{ display: char === ' ' ? 'inline' : 'inline-block' }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
 export function Hero() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Generate particles
+  const particles = useMemo(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      delay: Math.random() * 5,
+      duration: 4 + Math.random() * 3,
+      size: 4 + Math.random() * 8,
+      left: `${Math.random() * 100}%`,
+      top: `${60 + Math.random() * 40}%`,
+    })), []
+  );
+
+  // Generate sparkles
+  const sparkles = useMemo(() =>
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      delay: Math.random() * 4,
+      style: {
+        left: `${10 + Math.random() * 80}%`,
+        top: `${10 + Math.random() * 80}%`,
+      },
+    })), []
+  );
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-charcoal">
+      {/* Animated gradient background */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{
+          background: [
+            'radial-gradient(ellipse at 20% 20%, rgba(83, 101, 55, 0.15) 0%, transparent 50%)',
+            'radial-gradient(ellipse at 80% 80%, rgba(83, 101, 55, 0.15) 0%, transparent 50%)',
+            'radial-gradient(ellipse at 50% 50%, rgba(83, 101, 55, 0.1) 0%, transparent 50%)',
+            'radial-gradient(ellipse at 20% 20%, rgba(83, 101, 55, 0.15) 0%, transparent 50%)',
+          ],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Secondary gradient overlay */}
+      <motion.div
+        className="absolute inset-0"
+        animate={{
+          background: [
+            'radial-gradient(ellipse at 80% 20%, rgba(212, 175, 55, 0.05) 0%, transparent 40%)',
+            'radial-gradient(ellipse at 20% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 40%)',
+            'radial-gradient(ellipse at 80% 20%, rgba(212, 175, 55, 0.05) 0%, transparent 40%)',
+          ],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      />
+
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div
@@ -20,53 +195,115 @@ export function Hero() {
         />
       </div>
 
+      {/* Floating particles */}
+      {mounted && particles.map((p) => (
+        <FloatingParticle key={p.id} {...p} />
+      ))}
+
+      {/* Sparkle effects */}
+      {mounted && sparkles.map((s) => (
+        <Sparkle key={s.id} style={s.style} delay={s.delay} />
+      ))}
+
       {/* Content */}
       <div className="container-wedding relative z-10 py-20">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-3xl mx-auto text-center relative">
+          {/* Animated rings behind content */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <AnimatedRing size={300} delay={0} duration={4} />
+            <AnimatedRing size={400} delay={1} duration={5} />
+            <AnimatedRing size={500} delay={2} duration={6} />
+          </div>
+
+          {/* Glow effect behind names */}
+          <motion.div
+            className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 w-96 h-32 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse, rgba(212, 175, 55, 0.15) 0%, transparent 70%)',
+              filter: 'blur(40px)',
+            }}
+            animate={{
+              opacity: [0.5, 0.8, 0.5],
+              scale: [1, 1.1, 1],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          />
+
           {/* Decorative Top Element */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-6"
+            className="mb-6 relative"
           >
-            <span className="text-olive-400 text-sm uppercase tracking-[0.3em] font-medium">
+            <motion.span
+              className="text-olive-400 text-sm uppercase tracking-[0.3em] font-medium inline-block"
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
               We&apos;re Getting Married
-            </span>
+            </motion.span>
           </motion.div>
 
-          {/* Names */}
+          {/* Names with letter animation */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="mb-4 relative"
           >
-            <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl text-gold-500 mb-4">
-              {siteConfig.couple.person1.firstName}
-              <span className="text-olive-500 mx-3">&</span>
-              {siteConfig.couple.person2.firstName}
+            <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl mb-4">
+              <AnimatedText
+                text={siteConfig.couple.person1.firstName}
+                className="text-gold-500"
+                delay={0.3}
+              />
+              <motion.span
+                className="text-olive-500 mx-3 inline-block"
+                initial={{ opacity: 0, scale: 0, rotate: -180 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ duration: 0.6, delay: 0.6, type: 'spring' }}
+              >
+                &
+              </motion.span>
+              <AnimatedText
+                text={siteConfig.couple.person2.firstName}
+                className="text-gold-500"
+                delay={0.7}
+              />
             </h1>
           </motion.div>
 
-          {/* Gold Line */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="gold-line mb-8 mx-auto !w-48 md:!w-64"
-          />
+          {/* Animated Gold Line */}
+          <div className="relative mb-8 flex justify-center">
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.8, delay: 1.2, ease: 'easeOut' }}
+              className="h-[2px] w-48 md:w-64 bg-gradient-to-r from-transparent via-gold-500 to-transparent"
+            />
+            <motion.div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.5, 1] }}
+              transition={{ duration: 0.5, delay: 1.5 }}
+            />
+          </div>
 
           {/* Date */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
+            transition={{ duration: 0.6, delay: 1.3 }}
             className="mb-10"
           >
-            <p className="font-heading text-2xl md:text-3xl text-cream tracking-wide">
+            <motion.p
+              className="font-heading text-2xl md:text-3xl text-cream tracking-wide"
+              animate={{ textShadow: ['0 0 20px rgba(212, 175, 55, 0)', '0 0 20px rgba(212, 175, 55, 0.3)', '0 0 20px rgba(212, 175, 55, 0)'] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
               {siteConfig.wedding.displayDate}
-            </p>
+            </motion.p>
             <p className="text-olive-300 mt-2">
               The Callaway Jewel • Fulton, Missouri
             </p>
@@ -76,7 +313,7 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            transition={{ duration: 0.6, delay: 1.5 }}
             className="mb-10"
           >
             <Countdown targetDate={siteConfig.wedding.date} />
@@ -86,18 +323,22 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
+            transition={{ duration: 0.6, delay: 1.7 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link href="/our-story">
-              <Button variant="primary" size="lg">
-                Our Story
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="primary" size="lg">
+                  Our Story
+                </Button>
+              </motion.div>
             </Link>
             <Link href="/rsvp">
-              <Button variant="outline" size="lg">
-                RSVP
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="lg">
+                  RSVP
+                </Button>
+              </motion.div>
             </Link>
           </motion.div>
         </div>
@@ -106,7 +347,7 @@ export function Hero() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
+          transition={{ delay: 2 }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
           <motion.div
@@ -114,11 +355,13 @@ export function Hero() {
             transition={{ repeat: Infinity, duration: 1.5 }}
             className="text-gold-500"
           >
-            <svg
+            <motion.svg
               className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
             >
               <path
                 strokeLinecap="round"
@@ -126,10 +369,13 @@ export function Hero() {
                 strokeWidth={2}
                 d="M19 14l-7 7m0 0l-7-7m7 7V3"
               />
-            </svg>
+            </motion.svg>
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Bottom gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-charcoal to-transparent pointer-events-none" />
     </section>
   );
 }
