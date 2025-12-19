@@ -17,7 +17,7 @@ const faqs = [
       },
       {
         question: 'What time should I arrive?',
-        answer: 'We recommend arriving 30 minutes before the ceremony begins. The exact time will be shared once finalized.',
+        answer: 'Please arrive by 3:30 PM. The ceremony begins at 4:00 PM, and we ask that all guests be seated by 3:45 PM.',
       },
     ],
   },
