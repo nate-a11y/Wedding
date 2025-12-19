@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 interface RegistryItem {
   name: string;
@@ -63,25 +64,17 @@ const registries: RegistryItem[] = [
 
 export default function RegistryPage() {
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto mb-12"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">Registry</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Gift Registry
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 text-lg">
-            Your presence at our wedding is the greatest gift of all. However, if you wish to
-            honor us with a gift, we&apos;ve registered at the following stores.
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="Registry"
+          title="Gift Registry"
+          description="Your presence at our wedding is the greatest gift of all. However, if you wish to honor us with a gift, we've registered at the following stores."
+        />
 
         {/* Registry Cards */}
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">

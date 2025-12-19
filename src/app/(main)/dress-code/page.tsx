@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { WeatherWidget } from '@/components/sections';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 interface DressCodeItem {
   title: string;
@@ -59,28 +60,28 @@ const colorPalette = [
 
 export default function DressCodePage() {
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="subtle" showRings={false} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto mb-12"
+        <AnimatedHeader
+          subtitle="What to Wear"
+          title="Dress Code"
+          description="Semi-Formal / Cocktail Attire"
+        />
+
+        {/* Additional description */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-olive-400 text-center -mt-10 mb-12 max-w-2xl mx-auto"
         >
-          <p className="font-accent text-3xl text-gold-500 mb-4">What to Wear</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Dress Code
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 text-lg">
-            Semi-Formal / Cocktail Attire
-          </p>
-          <p className="text-olive-400 mt-2">
-            Our Halloween wedding celebrates elegance with a touch of autumn magic.
-            Dress to impress while staying comfortable for an evening of celebration!
-          </p>
-        </motion.div>
+          Our Halloween wedding celebrates elegance with a touch of autumn magic.
+          Dress to impress while staying comfortable for an evening of celebration!
+        </motion.p>
 
         {/* Weather Widget */}
         <motion.div

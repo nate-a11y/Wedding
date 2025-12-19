@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Button } from '@/components/ui';
+import { Button, PageEffects, AnimatedHeader } from '@/components/ui';
 
 const venueImages = [
   { src: '/Callaway+Jewel+4.12.25+Major+FIlms+(8).jpg', alt: 'The Callaway Jewel - Front Entrance' },
@@ -94,24 +94,17 @@ export default function TravelPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
-    <div className="section-padding bg-charcoal">
-      <div className="container-wedding">
+    <div className="section-padding bg-charcoal relative overflow-hidden">
+      {/* Animated background effects */}
+      <PageEffects variant="minimal" showGradient={true} />
+
+      <div className="container-wedding relative z-10">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-          <p className="font-accent text-3xl text-gold-500 mb-4">Travel & Stay</p>
-          <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6">
-            Getting There
-          </h1>
-          <div className="gold-line mx-auto mb-8" />
-          <p className="text-olive-300 max-w-2xl mx-auto text-lg">
-            Everything you need to know about getting to The Callaway Jewel in Fulton, Missouri.
-          </p>
-        </motion.div>
+        <AnimatedHeader
+          subtitle="Travel & Stay"
+          title="Getting There"
+          description="Everything you need to know about getting to The Callaway Jewel in Fulton, Missouri."
+        />
 
         {/* Location Card */}
         <motion.div
