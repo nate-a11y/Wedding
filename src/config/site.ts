@@ -118,6 +118,7 @@ export const siteConfig = {
         { name: 'Events', href: '/events' },
         { name: 'Dress Code', href: '/dress-code' },
         { name: 'Travel', href: '/travel' },
+        { name: 'Livestream', href: '/livestream' },
       ],
     },
     {
