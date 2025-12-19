@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RichTextEditor } from '@/components/ui';
 
 interface Stats {
   rsvps: {
@@ -167,6 +168,171 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Bulk email state
+  const [showComposeEmail, setShowComposeEmail] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailHtmlContent, setEmailHtmlContent] = useState('');
+  const [selectedRecipients, setSelectedRecipients] = useState<Set<string>>(new Set());
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSendResult, setEmailSendResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [clearEditor, setClearEditor] = useState(false);
+  const [textToInsert, setTextToInsert] = useState<string | null>(null);
+
+  // Get all unique email recipients from addresses and RSVPs with full data
+  const availableRecipients = useMemo(() => {
+    interface RecipientData {
+      email: string;
+      name: string;
+      source: string;
+      address?: {
+        street: string;
+        street2?: string;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+      };
+      rsvpStatus?: 'attending' | 'not_attending' | null;
+    }
+
+    const recipientMap = new Map<string, RecipientData>();
+
+    // Add addresses
+    addresses.forEach(addr => {
+      if (addr.email && !recipientMap.has(addr.email.toLowerCase())) {
+        recipientMap.set(addr.email.toLowerCase(), {
+          email: addr.email,
+          name: addr.name,
+          source: 'address',
+          address: {
+            street: addr.street_address,
+            street2: addr.street_address_2 || undefined,
+            city: addr.city,
+            state: addr.state,
+            postalCode: addr.postal_code,
+            country: addr.country,
+          },
+          rsvpStatus: addr.rsvps ? (addr.rsvps.attending ? 'attending' : 'not_attending') : null,
+        });
+      }
+    });
+
+    // Add RSVPs (may update existing entries with RSVP source)
+    rsvps.forEach(rsvp => {
+      if (rsvp.email) {
+        const existing = recipientMap.get(rsvp.email.toLowerCase());
+        if (existing) {
+          existing.source = 'both';
+          existing.rsvpStatus = rsvp.attending ? 'attending' : 'not_attending';
+        } else {
+          recipientMap.set(rsvp.email.toLowerCase(), {
+            email: rsvp.email,
+            name: rsvp.name,
+            source: 'rsvp',
+            rsvpStatus: rsvp.attending ? 'attending' : 'not_attending',
+          });
+        }
+      }
+    });
+
+    return Array.from(recipientMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [addresses, rsvps]);
+
+  // Template variables available for insertion
+  const templateVariables = [
+    { key: '{{name}}', label: 'Full Name', description: 'Guest full name' },
+    { key: '{{first_name}}', label: 'First Name', description: 'Guest first name' },
+    { key: '{{email}}', label: 'Email', description: 'Guest email address' },
+    { key: '{{full_address}}', label: 'Full Address', description: 'Complete mailing address' },
+    { key: '{{city}}', label: 'City', description: 'City name' },
+    { key: '{{state}}', label: 'State', description: 'State/Province' },
+    { key: '{{rsvp_status}}', label: 'RSVP Status', description: 'Attending/Not Attending/No RSVP' },
+  ];
+
+  // Toggle recipient selection
+  const toggleRecipient = (email: string) => {
+    const newSelected = new Set(selectedRecipients);
+    if (newSelected.has(email)) {
+      newSelected.delete(email);
+    } else {
+      newSelected.add(email);
+    }
+    setSelectedRecipients(newSelected);
+  };
+
+  // Select/deselect all recipients
+  const toggleAllRecipients = () => {
+    if (selectedRecipients.size === availableRecipients.length) {
+      setSelectedRecipients(new Set());
+    } else {
+      setSelectedRecipients(new Set(availableRecipients.map(r => r.email)));
+    }
+  };
+
+  // Send bulk email
+  const sendBulkEmail = async () => {
+    if (selectedRecipients.size === 0) {
+      setEmailSendResult({ success: false, message: 'Please select at least one recipient' });
+      return;
+    }
+    if (!emailSubject.trim()) {
+      setEmailSendResult({ success: false, message: 'Please enter a subject' });
+      return;
+    }
+    if (!emailHtmlContent.trim() || emailHtmlContent === '<p><br></p>') {
+      setEmailSendResult({ success: false, message: 'Please enter email content' });
+      return;
+    }
+
+    const confirmSend = confirm(`Send email to ${selectedRecipients.size} recipient${selectedRecipients.size === 1 ? '' : 's'}?`);
+    if (!confirmSend) return;
+
+    setSendingEmail(true);
+    setEmailSendResult(null);
+
+    try {
+      const recipients = availableRecipients
+        .filter(r => selectedRecipients.has(r.email))
+        .map(r => ({ email: r.email, name: r.name }));
+
+      const response = await fetch('/api/admin/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          subject: emailSubject,
+          htmlContent: emailHtmlContent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setEmailSendResult({ success: false, message: data.error });
+      } else {
+        setEmailSendResult({
+          success: true,
+          message: `Successfully sent ${data.successCount} email${data.successCount === 1 ? '' : 's'}${data.failCount > 0 ? `, ${data.failCount} failed` : ''}`,
+        });
+        // Reset form on success
+        setEmailSubject('');
+        setEmailHtmlContent('');
+        setSelectedRecipients(new Set());
+        setClearEditor(true);
+        // Refresh emails list
+        const emailsResponse = await fetch('/api/admin/emails');
+        const emailsData = await emailsResponse.json();
+        if (!emailsData.error) {
+          setEmails(emailsData.emails);
+        }
+      }
+    } catch (err) {
+      setEmailSendResult({ success: false, message: 'Failed to send emails' });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   // Fetch stats
   useEffect(() => {
     async function fetchStats() {
@@ -205,10 +371,21 @@ export default function AdminPage() {
           if (data.error) throw new Error(data.error);
           setPhotos(data.photos);
         } else if (activeTab === 'emails') {
-          const response = await fetch('/api/admin/emails');
-          const data = await response.json();
-          if (data.error) throw new Error(data.error);
-          setEmails(data.emails);
+          // Fetch emails, addresses, and RSVPs for compose feature
+          const [emailsRes, addressesRes, rsvpsRes] = await Promise.all([
+            fetch('/api/admin/emails'),
+            fetch('/api/admin/addresses'),
+            fetch('/api/admin/rsvps'),
+          ]);
+          const [emailsData, addressesData, rsvpsData] = await Promise.all([
+            emailsRes.json(),
+            addressesRes.json(),
+            rsvpsRes.json(),
+          ]);
+          if (emailsData.error) throw new Error(emailsData.error);
+          setEmails(emailsData.emails);
+          if (!addressesData.error) setAddresses(addressesData.addresses || []);
+          if (!rsvpsData.error) setRsvps(rsvpsData.rsvps || []);
         } else if (activeTab === 'addresses') {
           const response = await fetch('/api/admin/addresses');
           const data = await response.json();
@@ -1153,60 +1330,227 @@ export default function AdminPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              {/* Compose Email Button */}
+              <div className="mb-6">
+                <button
+                  onClick={() => setShowComposeEmail(!showComposeEmail)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors font-medium"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  {showComposeEmail ? 'Hide Compose' : 'Compose Email'}
+                </button>
+              </div>
+
+              {/* Compose Email Section */}
+              <AnimatePresence>
+                {showComposeEmail && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden mb-8"
+                  >
+                    <div className="bg-black/50 border border-olive-700 rounded-lg p-6">
+                      <h3 className="text-xl font-heading text-gold-400 mb-4">Send Bulk Email</h3>
+
+                      {/* Result Message */}
+                      {emailSendResult && (
+                        <div className={`mb-4 p-3 rounded-lg ${
+                          emailSendResult.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {emailSendResult.message}
+                        </div>
+                      )}
+
+                      {/* Recipients */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-olive-300 font-medium">Recipients</label>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-olive-400">
+                              {selectedRecipients.size} of {availableRecipients.length} selected
+                            </span>
+                            <button
+                              type="button"
+                              onClick={toggleAllRecipients}
+                              className="text-sm text-gold-400 hover:text-gold-300"
+                            >
+                              {selectedRecipients.size === availableRecipients.length ? 'Deselect All' : 'Select All'}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="bg-charcoal border border-olive-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                          {availableRecipients.length === 0 ? (
+                            <p className="text-olive-500 text-sm">No recipients available. Add addresses or RSVPs first.</p>
+                          ) : (
+                            <div className="space-y-1">
+                              {availableRecipients.map(recipient => (
+                                <label
+                                  key={recipient.email}
+                                  className="flex items-center gap-3 p-2 hover:bg-olive-900/30 rounded cursor-pointer"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRecipients.has(recipient.email)}
+                                    onChange={() => toggleRecipient(recipient.email)}
+                                    className="w-4 h-4 rounded border-olive-600 text-gold-500 focus:ring-gold-500 bg-charcoal"
+                                  />
+                                  <span className="text-cream">{recipient.name}</span>
+                                  <span className="text-olive-500 text-sm">{recipient.email}</span>
+                                  <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
+                                    recipient.source === 'both' ? 'bg-purple-500/20 text-purple-400' :
+                                    recipient.source === 'rsvp' ? 'bg-blue-500/20 text-blue-400' :
+                                    'bg-olive-500/20 text-olive-400'
+                                  }`}>
+                                    {recipient.source === 'both' ? 'Address + RSVP' :
+                                     recipient.source === 'rsvp' ? 'RSVP' : 'Address'}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Subject */}
+                      <div className="mb-4">
+                        <label className="block text-olive-300 font-medium mb-2">Subject</label>
+                        <input
+                          type="text"
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="Enter email subject..."
+                          className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Rich Text Editor */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-olive-300 font-medium">Message</label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-olive-500">Insert:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {templateVariables.map(v => (
+                                <button
+                                  key={v.key}
+                                  type="button"
+                                  onClick={() => setTextToInsert(v.key)}
+                                  className="px-2 py-1 text-xs bg-olive-800 hover:bg-olive-700 text-gold-400 rounded transition-colors"
+                                  title={v.description}
+                                >
+                                  {v.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <RichTextEditor
+                          onHtmlChange={setEmailHtmlContent}
+                          placeholder="Write your message to guests..."
+                          shouldClear={clearEditor}
+                          onCleared={() => setClearEditor(false)}
+                          textToInsert={textToInsert}
+                          onInserted={() => setTextToInsert(null)}
+                        />
+                        <p className="text-olive-500 text-sm mt-2">
+                          Your message will be wrapped in our branded email template. Use the insert buttons above to add personalized fields.
+                        </p>
+                      </div>
+
+                      {/* Send Button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={sendBulkEmail}
+                          disabled={sendingEmail || selectedRecipients.size === 0}
+                          className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-colors ${
+                            sendingEmail || selectedRecipients.size === 0
+                              ? 'bg-olive-700 text-olive-400 cursor-not-allowed'
+                              : 'bg-gold-500 text-black hover:bg-gold-400'
+                          }`}
+                        >
+                          {sendingEmail ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-olive-400 border-t-transparent rounded-full animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                              </svg>
+                              Send to {selectedRecipients.size} Recipient{selectedRecipients.size === 1 ? '' : 's'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Email History */}
               {loading ? (
                 <div className="text-center py-12">
                   <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
                 </div>
               ) : error ? (
                 <div className="text-center py-12 text-red-400">{error}</div>
-              ) : emails.length === 0 ? (
-                <div className="text-center py-12 text-olive-400">No emails sent yet</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-olive-700">
-                        <th className="p-3 text-olive-300 font-medium">Direction</th>
-                        <th className="p-3 text-olive-300 font-medium">To</th>
-                        <th className="p-3 text-olive-300 font-medium">Subject</th>
-                        <th className="p-3 text-olive-300 font-medium">Type</th>
-                        <th className="p-3 text-olive-300 font-medium">Status</th>
-                        <th className="p-3 text-olive-300 font-medium">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {emails.map((email) => (
-                        <tr key={email.id} className="border-b border-olive-800 hover:bg-olive-900/30">
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              email.direction === 'outbound'
-                                ? 'bg-blue-500/20 text-blue-400'
-                                : 'bg-purple-500/20 text-purple-400'
-                            }`}>
-                              {email.direction === 'outbound' ? 'Sent' : 'Received'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-cream">{email.to_address}</td>
-                          <td className="p-3 text-olive-300 max-w-xs truncate">{email.subject || '-'}</td>
-                          <td className="p-3 text-olive-400 capitalize">{email.email_type?.replace(/_/g, ' ') || '-'}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              email.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
-                              email.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
-                              email.status === 'opened' ? 'bg-purple-500/20 text-purple-400' :
-                              email.status === 'bounced' ? 'bg-red-500/20 text-red-400' :
-                              email.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                              'bg-olive-500/20 text-olive-400'
-                            }`}>
-                              {email.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-olive-500 text-sm">{formatDate(email.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <h3 className="text-lg font-heading text-olive-300 mb-4">Email History</h3>
+                  {emails.length === 0 ? (
+                    <div className="text-center py-12 text-olive-400">No emails sent yet</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-olive-700">
+                            <th className="p-3 text-olive-300 font-medium">Direction</th>
+                            <th className="p-3 text-olive-300 font-medium">To</th>
+                            <th className="p-3 text-olive-300 font-medium">Subject</th>
+                            <th className="p-3 text-olive-300 font-medium">Type</th>
+                            <th className="p-3 text-olive-300 font-medium">Status</th>
+                            <th className="p-3 text-olive-300 font-medium">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {emails.map((email) => (
+                            <tr key={email.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  email.direction === 'outbound'
+                                    ? 'bg-blue-500/20 text-blue-400'
+                                    : 'bg-purple-500/20 text-purple-400'
+                                }`}>
+                                  {email.direction === 'outbound' ? 'Sent' : 'Received'}
+                                </span>
+                              </td>
+                              <td className="p-3 text-cream">{email.to_address}</td>
+                              <td className="p-3 text-olive-300 max-w-xs truncate">{email.subject || '-'}</td>
+                              <td className="p-3 text-olive-400 capitalize">{email.email_type?.replace(/_/g, ' ') || '-'}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  email.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                                  email.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                                  email.status === 'opened' ? 'bg-purple-500/20 text-purple-400' :
+                                  email.status === 'bounced' ? 'bg-red-500/20 text-red-400' :
+                                  email.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                  'bg-olive-500/20 text-olive-400'
+                                }`}>
+                                  {email.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-olive-500 text-sm">{formatDate(email.created_at)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}

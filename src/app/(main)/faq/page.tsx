@@ -17,7 +17,7 @@ const faqs = [
       },
       {
         question: 'What time should I arrive?',
-        answer: 'We recommend arriving 30 minutes before the ceremony begins. The exact time will be shared once finalized.',
+        answer: 'Please arrive by 3:30 PM. The ceremony begins at 4:00 PM, and we ask that all guests be seated by 3:45 PM.',
       },
     ],
   },
@@ -26,7 +26,7 @@ const faqs = [
     questions: [
       {
         question: 'When do I need to RSVP by?',
-        answer: 'The RSVP deadline will be announced with the formal invitations. We\'ll send save the dates first!',
+        answer: 'Please RSVP by September 1, 2027. RSVPs open on April 1, 2027.',
       },
       {
         question: 'Can I bring a date?',
@@ -60,11 +60,11 @@ const faqs = [
     questions: [
       {
         question: 'Do you have a registry?',
-        answer: 'We\'re still setting up our registry and will share the details soon. Your presence at our wedding is the greatest gift of all!',
+        answer: 'Yes! We\'re registered at Amazon, Crate & Barrel, Williams Sonoma, and Target. We also have a honeymoon fund. Visit our Registry page for links. Your presence at our wedding is the greatest gift of all!',
       },
       {
         question: 'Can I send a gift if I can\'t attend?',
-        answer: 'While we\'ll miss you if you can\'t make it, gifts are never expected. If you\'d like to send something, our registry information will be available on this site soon.',
+        answer: 'While we\'ll miss you if you can\'t make it, gifts are never expected. If you\'d like to send something, you can find our registry links on the Registry page of this site.',
       },
     ],
   },
