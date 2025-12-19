@@ -5,12 +5,19 @@ export const siteConfig = {
       firstName: 'Nate',
       lastName: 'Bullock',
       fullName: 'Nate Bullock',
+      phone: '(417) 380-9953',
     },
     person2: {
       firstName: 'Blake',
       lastName: 'Moore',
       fullName: 'Blake Moore',
+      phone: '(816) 352-9593',
     },
+  },
+
+  // Contact Information
+  contact: {
+    email: 'nateandblakesayido@outlook.com',
   },
 
   // Wedding Details

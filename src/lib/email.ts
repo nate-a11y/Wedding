@@ -17,6 +17,7 @@ async function sendEmail(options: {
   to: string[];
   subject: string;
   html: string;
+  replyTo?: string;
 }): Promise<{ id?: string; error?: string }> {
   if (!RESEND_API_KEY) {
     return { error: 'API key not configured' };
@@ -34,6 +35,7 @@ async function sendEmail(options: {
         to: options.to,
         subject: options.subject,
         html: options.html,
+        reply_to: options.replyTo || 'nateandblakesayido@outlook.com',
       }),
     });
 
@@ -524,10 +526,17 @@ async function sendBatchEmails(emails: Array<{
   to: string[];
   subject: string;
   html: string;
+  reply_to?: string;
 }>): Promise<{ data?: Array<{ id: string }>; error?: string }> {
   if (!RESEND_API_KEY) {
     return { error: 'API key not configured' };
   }
+
+  // Add reply_to to all emails if not specified
+  const emailsWithReplyTo = emails.map(email => ({
+    ...email,
+    reply_to: email.reply_to || 'nateandblakesayido@outlook.com',
+  }));
 
   try {
     const response = await fetch('https://api.resend.com/emails/batch', {
@@ -536,7 +545,7 @@ async function sendBatchEmails(emails: Array<{
         'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(emails),
+      body: JSON.stringify(emailsWithReplyTo),
     });
 
     const data = await response.json();
