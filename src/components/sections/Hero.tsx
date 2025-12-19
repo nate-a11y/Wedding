@@ -100,26 +100,11 @@ function Sparkle({ style, delay }: { style: React.CSSProperties; delay: number }
   );
 }
 
-// Letter animation component
-function AnimatedText({ text, className, delay = 0 }: { text: string; className?: string; delay?: number }) {
+// Letter animation component - renders text with optional animation
+function AnimatedText({ text, className }: { text: string; className?: string; delay?: number }) {
   return (
     <span className={className}>
-      {text.split('').map((char, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.4,
-            delay: delay + i * 0.05,
-            ease: 'easeOut',
-          }}
-          className="inline-block"
-          style={{ display: char === ' ' ? 'inline' : 'inline-block' }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </motion.span>
-      ))}
+      {text}
     </span>
   );
 }
@@ -230,13 +215,7 @@ export function Hero() {
           />
 
           {/* Decorative Top Element */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-6 md:mb-8 relative"
-          >
+          <div className="mb-6 md:mb-8 relative">
             <motion.span
               className="text-olive-400 text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
               animate={{ opacity: [0.7, 1, 0.7] }}
@@ -244,37 +223,26 @@ export function Hero() {
             >
               We&apos;re Getting Married
             </motion.span>
-          </motion.div>
+          </div>
 
           {/* Names with letter animation */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, amount: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="mb-4 md:mb-6 relative"
-          >
+          <div className="mb-4 md:mb-6 relative">
             <h1 className="font-accent text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] mb-4 md:mb-6">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
                 delay={0.3}
               />
-              <motion.span
-                className="text-olive-500 mx-2 md:mx-3 inline-block"
-                initial={{ opacity: 0, scale: 0, rotate: -180 }}
-                animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                transition={{ duration: 0.6, delay: 0.6, type: 'spring' }}
-              >
-                &
-              </motion.span>
+              <span className="text-olive-500 mx-2 md:mx-3 inline-block">
+                &amp;
+              </span>
               <AnimatedText
                 text={siteConfig.couple.person2.firstName}
                 className="text-gold-500"
                 delay={0.7}
               />
             </h1>
-          </motion.div>
+          </div>
 
           {/* Animated Gold Line */}
           <div className="relative mb-8 md:mb-10 flex justify-center">
