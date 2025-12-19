@@ -34,7 +34,7 @@ const faqs = [
       },
       {
         question: 'Are kids welcome?',
-        answer: 'Absolutely! Children are welcome to celebrate with us. Please include all family members, including children, when you RSVP so we can plan accordingly.',
+        answer: 'Children are welcome to join us! We just ask that little ones be prepared for a formal evening. If your child needs a break during the ceremony or reception, we appreciate parents stepping out briefly. Please include all children when you RSVP so we can plan accordingly.',
       },
     ],
   },
