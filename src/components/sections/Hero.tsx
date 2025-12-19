@@ -259,7 +259,7 @@ export function Hero() {
                 delay={0.3}
               />
               <motion.span
-                className="text-olive-500 mx-2 md:mx-3 inline-block text-5xl sm:text-6xl md:text-7xl lg:text-8xl"
+                className="text-olive-500 mx-2 md:mx-3 inline-block"
                 initial={{ opacity: 0, scale: 0, rotate: -180 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ duration: 0.6, delay: 0.6, type: 'spring' }}
