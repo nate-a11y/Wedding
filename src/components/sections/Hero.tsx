@@ -252,7 +252,7 @@ export function Hero() {
             transition={{ duration: 0.3, delay: 0.2 }}
             className="mb-2 md:mb-4 relative"
           >
-            <h1 className="font-accent text-6xl sm:text-7xl md:text-8xl lg:text-9xl mb-2 md:mb-4">
+            <h1 className="font-accent text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] mb-2 md:mb-4">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
