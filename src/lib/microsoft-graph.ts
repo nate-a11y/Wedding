@@ -408,10 +408,13 @@ export async function sendEmail(
     toRecipients: options.to.map(email => ({
       emailAddress: { address: email },
     })),
-    // Request receipts for tracking (like Resend tracking)
-    isDeliveryReceiptRequested: options.requestReceipts !== false, // Default to true
-    isReadReceiptRequested: options.requestReceipts !== false, // Default to true
   };
+
+  // Only add receipt requests if explicitly enabled (not supported on consumer Outlook.com accounts)
+  if (options.requestReceipts === true) {
+    message.isDeliveryReceiptRequested = true;
+    message.isReadReceiptRequested = true;
+  }
 
   if (options.replyTo) {
     message.replyTo = [{
