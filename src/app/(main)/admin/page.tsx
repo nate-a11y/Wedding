@@ -306,9 +306,15 @@ function downloadCSV(data: string, filename: string) {
 }
 
 export default function AdminPage() {
-  // Initialize tabs from localStorage (with SSR safety)
+  // Initialize tabs from URL params, fallback to localStorage
   const [activeTab, setActiveTab] = useState<Tab>(() => {
+    // Check URL params first
     if (typeof window !== 'undefined') {
+      const urlTab = new URLSearchParams(window.location.search).get('tab');
+      if (urlTab && ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning'].includes(urlTab)) {
+        return urlTab as Tab;
+      }
+      // Fallback to localStorage
       const saved = localStorage.getItem('admin_active_tab');
       if (saved && ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning'].includes(saved)) {
         return saved as Tab;
@@ -342,9 +348,15 @@ export default function AdminPage() {
   const [clearEditor, setClearEditor] = useState(false);
   const [textToInsert, setTextToInsert] = useState<string | null>(null);
 
-  // Couple Dashboard / Planning state (with localStorage persistence)
+  // Couple Dashboard / Planning state (with URL and localStorage persistence)
   const [planningSubTab, setPlanningSubTab] = useState<PlanningSubTab>(() => {
     if (typeof window !== 'undefined') {
+      // Check URL params first
+      const urlSubtab = new URLSearchParams(window.location.search).get('subtab');
+      if (urlSubtab && ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'].includes(urlSubtab)) {
+        return urlSubtab as PlanningSubTab;
+      }
+      // Fallback to localStorage
       const saved = localStorage.getItem('admin_planning_subtab');
       if (saved && ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'].includes(saved)) {
         return saved as PlanningSubTab;
@@ -377,15 +389,33 @@ export default function AdminPage() {
   const [editingTimelineId, setEditingTimelineId] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingGiftId, setEditingGiftId] = useState<string | null>(null);
 
-  // Persist tab state to localStorage
+  // Persist tab state to localStorage and URL
   useEffect(() => {
     localStorage.setItem('admin_active_tab', activeTab);
+    // Update URL without navigation
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', activeTab);
+    if (activeTab !== 'planning') {
+      params.delete('subtab');
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
   }, [activeTab]);
 
   useEffect(() => {
     localStorage.setItem('admin_planning_subtab', planningSubTab);
-  }, [planningSubTab]);
+    // Update URL without navigation
+    if (activeTab === 'planning') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', 'planning');
+      params.set('subtab', planningSubTab);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [planningSubTab, activeTab]);
 
   // Refetch helper functions for real-time updates
   const refetchBudget = useCallback(async () => {
@@ -1318,6 +1348,24 @@ export default function AdminPage() {
     }
   };
 
+  // Update task (full edit)
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    try {
+      const response = await fetch('/api/admin/tasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      const data = await response.json();
+      if (!data.error && data.task) {
+        setTasks(prev => prev.map(t => t.id === id ? data.task : t));
+        setEditingTaskId(null);
+      }
+    } catch (err) {
+      console.error('Failed to update task:', err);
+    }
+  };
+
   const toggleThankYou = async (gift: Gift) => {
     try {
       const response = await fetch('/api/admin/gifts', {
@@ -1335,6 +1383,34 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error('Failed to toggle thank you:', err);
+    }
+  };
+
+  // Update gift (full edit)
+  const updateGift = async (id: string, updates: Partial<Gift>) => {
+    try {
+      const response = await fetch('/api/admin/gifts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      });
+      const data = await response.json();
+      if (!data.error && data.gift) {
+        const oldGift = gifts.find(g => g.id === id);
+        setGifts(prev => prev.map(g => g.id === id ? data.gift : g));
+        // Recalculate gift totals
+        if (oldGift) {
+          const oldAmount = (oldGift.gift_type === 'cash' || oldGift.gift_type === 'check') ? (oldGift.amount || 0) : 0;
+          const newAmount = (data.gift.gift_type === 'cash' || data.gift.gift_type === 'check') ? (data.gift.amount || 0) : 0;
+          setGiftTotals(prev => ({
+            ...prev,
+            totalCash: prev.totalCash - oldAmount + newAmount,
+          }));
+        }
+        setEditingGiftId(null);
+      }
+    } catch (err) {
+      console.error('Failed to update gift:', err);
     }
   };
 
@@ -3356,32 +3432,132 @@ export default function AdminPage() {
                               </tr>
                             </thead>
                             <tbody>
-                              {gifts.map((gift) => (
-                                <tr key={gift.id} className="border-b border-olive-800 hover:bg-olive-900/30">
-                                  <td className="p-3 text-cream">{gift.giver_name}</td>
-                                  <td className="p-3 text-olive-400 capitalize">{gift.gift_type}</td>
-                                  <td className="p-3 text-olive-400">{gift.description || '-'}</td>
-                                  <td className="p-3 text-cream">{gift.amount ? formatCurrency(gift.amount) : '-'}</td>
-                                  <td className="p-3 text-olive-400 text-sm">{formatShortDate(gift.received_date)}</td>
-                                  <td className="p-3">
-                                    <button
-                                      onClick={() => toggleThankYou(gift)}
-                                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                        gift.thank_you_sent ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
-                                      }`}
-                                    >
-                                      {gift.thank_you_sent ? 'Sent' : 'Mark Sent'}
-                                    </button>
-                                  </td>
-                                  <td className="p-3">
-                                    <button onClick={() => deleteGift(gift.id)} className="text-red-400 hover:text-red-300">
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
+                              {gifts.map((gift) => {
+                                if (editingGiftId === gift.id) {
+                                  // Edit mode row
+                                  return (
+                                    <tr key={gift.id} className="border-b border-olive-800 bg-olive-900/50">
+                                      <td colSpan={7} className="p-3">
+                                        <form onSubmit={async (e) => {
+                                          e.preventDefault();
+                                          const form = e.target as HTMLFormElement;
+                                          const formData = new FormData(form);
+                                          await updateGift(gift.id, {
+                                            giver_name: formData.get('giver_name') as string,
+                                            gift_type: formData.get('gift_type') as Gift['gift_type'],
+                                            description: (formData.get('description') as string) || undefined,
+                                            amount: parseFloat(formData.get('amount') as string) || undefined,
+                                            received_date: (formData.get('received_date') as string) || undefined,
+                                            notes: (formData.get('notes') as string) || undefined,
+                                          });
+                                        }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                          <div>
+                                            <label className="text-olive-400 text-xs">From</label>
+                                            <input
+                                              name="giver_name"
+                                              defaultValue={gift.giver_name}
+                                              required
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-400 text-xs">Type</label>
+                                            <select
+                                              name="gift_type"
+                                              defaultValue={gift.gift_type}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            >
+                                              <option value="physical">Physical Gift</option>
+                                              <option value="cash">Cash</option>
+                                              <option value="check">Check</option>
+                                              <option value="registry">Registry Item</option>
+                                              <option value="experience">Experience</option>
+                                              <option value="other">Other</option>
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-400 text-xs">Description</label>
+                                            <input
+                                              name="description"
+                                              defaultValue={gift.description || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-400 text-xs">Amount</label>
+                                            <input
+                                              name="amount"
+                                              type="number"
+                                              step="0.01"
+                                              defaultValue={gift.amount || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-400 text-xs">Date Received</label>
+                                            <input
+                                              name="received_date"
+                                              type="date"
+                                              defaultValue={gift.received_date || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div className="col-span-2">
+                                            <label className="text-olive-400 text-xs">Notes</label>
+                                            <input
+                                              name="notes"
+                                              defaultValue={gift.notes || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div className="flex items-end gap-2">
+                                            <button type="submit" className="px-3 py-1 bg-gold-500 text-black rounded text-sm font-medium">
+                                              Save
+                                            </button>
+                                            <button type="button" onClick={() => setEditingGiftId(null)} className="px-3 py-1 bg-olive-700 text-cream rounded text-sm">
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </form>
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+                                return (
+                                  <tr key={gift.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                                    <td className="p-3 text-cream">{gift.giver_name}</td>
+                                    <td className="p-3 text-olive-400 capitalize">{gift.gift_type}</td>
+                                    <td className="p-3 text-olive-400">{gift.description || '-'}</td>
+                                    <td className="p-3 text-cream">{gift.amount ? formatCurrency(gift.amount) : '-'}</td>
+                                    <td className="p-3 text-olive-400 text-sm">{formatShortDate(gift.received_date)}</td>
+                                    <td className="p-3">
+                                      <button
+                                        onClick={() => toggleThankYou(gift)}
+                                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                          gift.thank_you_sent ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                                        }`}
+                                      >
+                                        {gift.thank_you_sent ? 'Sent' : 'Mark Sent'}
+                                      </button>
+                                    </td>
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => setEditingGiftId(gift.id)}
+                                          className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button onClick={() => deleteGift(gift.id)} className="text-red-400 hover:text-red-300">
+                                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -3488,6 +3664,68 @@ export default function AdminPage() {
                         <div className="space-y-2">
                           {tasks.map((task) => {
                             const isOverdue = task.due_date && !task.completed && new Date(task.due_date) < new Date();
+
+                            if (editingTaskId === task.id) {
+                              // Edit mode
+                              return (
+                                <div key={task.id} className="bg-black/50 border border-olive-600 rounded-lg p-4">
+                                  <form onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const form = e.target as HTMLFormElement;
+                                    const formData = new FormData(form);
+                                    await updateTask(task.id, {
+                                      title: formData.get('title') as string,
+                                      description: formData.get('description') as string || null,
+                                      category_id: formData.get('category_id') as string || null,
+                                      due_date: formData.get('due_date') as string || null,
+                                      priority: formData.get('priority') as Task['priority'],
+                                      assigned_to: formData.get('assigned_to') as string || null,
+                                    });
+                                  }} className="grid md:grid-cols-3 gap-3">
+                                    <input
+                                      name="title"
+                                      defaultValue={task.title}
+                                      placeholder="Task Title"
+                                      required
+                                      className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2"
+                                    />
+                                    <select name="priority" defaultValue={task.priority} className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
+                                      <option value="low">Low Priority</option>
+                                      <option value="medium">Medium Priority</option>
+                                      <option value="high">High Priority</option>
+                                      <option value="urgent">Urgent</option>
+                                    </select>
+                                    <input
+                                      name="description"
+                                      defaultValue={task.description || ''}
+                                      placeholder="Description (optional)"
+                                      className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2"
+                                    />
+                                    <input
+                                      name="due_date"
+                                      type="date"
+                                      defaultValue={task.due_date || ''}
+                                      className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                                    />
+                                    <select name="category_id" defaultValue={task.category_id || ''} className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
+                                      <option value="">Select Category</option>
+                                      {budgetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </select>
+                                    <select name="assigned_to" defaultValue={task.assigned_to || ''} className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
+                                      <option value="">Assign To</option>
+                                      <option value="nate">Nate</option>
+                                      <option value="blake">Blake</option>
+                                      <option value="both">Both</option>
+                                    </select>
+                                    <div className="flex gap-2">
+                                      <button type="submit" className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium">Save</button>
+                                      <button type="button" onClick={() => setEditingTaskId(null)} className="px-4 py-2 bg-olive-700 text-cream rounded-lg">Cancel</button>
+                                    </div>
+                                  </form>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div key={task.id} className={`bg-black/50 border rounded-lg p-4 flex items-start gap-4 ${
                                 task.completed ? 'border-olive-800 opacity-60' : isOverdue ? 'border-red-500/50' : 'border-olive-700'
@@ -3527,11 +3765,19 @@ export default function AdminPage() {
                                     )}
                                   </div>
                                 </div>
-                                <button onClick={() => deleteTask(task.id)} className="text-red-400 hover:text-red-300">
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => setEditingTaskId(task.id)}
+                                    className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button onClick={() => deleteTask(task.id)} className="text-red-400 hover:text-red-300">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
                             );
                           })}
