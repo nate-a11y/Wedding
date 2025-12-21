@@ -3666,7 +3666,7 @@ export default function AdminPage() {
                             <div
                               key={event.id}
                               className={`bg-black/50 border rounded-lg p-4 ${
-                                event.is_milestone ? 'border-gold-500/50 bg-gold-500/5' : 'border-olive-700'
+                                event.is_milestone ? 'border-gold-400 bg-gold-500/10' : 'border-olive-700'
                               }`}
                             >
                               {editingTimelineId === event.id ? (
@@ -3732,7 +3732,7 @@ export default function AdminPage() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="text-cream font-medium">{event.title}</span>
                                       {event.is_milestone && (
-                                        <span className="px-2 py-0.5 rounded text-xs bg-gold-500/20 text-gold-400 border border-gold-500/50">
+                                        <span className="px-2 py-0.5 rounded text-xs bg-gold-500/30 text-gold-300 border border-gold-400 font-medium">
                                           Key Moment
                                         </span>
                                       )}
