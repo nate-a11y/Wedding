@@ -357,6 +357,7 @@ export default function AdminPage() {
   // Edit states
   const [editingTimelineId, setEditingTimelineId] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
 
   // Get all unique email recipients from addresses and RSVPs with full data
   const availableRecipients = useMemo(() => {
@@ -628,10 +629,50 @@ export default function AdminPage() {
       }
     }
 
-    if (activeTab !== 'overview') {
-      fetchData();
+    if (activeTab === 'overview') {
+      // Fetch planning data for dashboard summaries
+      async function fetchPlanningForDashboard() {
+        try {
+          const [expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes] = await Promise.all([
+            fetch('/api/admin/expenses'),
+            fetch('/api/admin/vendors'),
+            fetch('/api/admin/gifts'),
+            fetch('/api/admin/tasks'),
+            fetch('/api/admin/timeline'),
+          ]);
+          const [expensesData, vendorsData, giftsData, tasksData, timelineData] = await Promise.all([
+            expensesRes.json(),
+            vendorsRes.json(),
+            giftsRes.json(),
+            tasksRes.json(),
+            timelineRes.json(),
+          ]);
+          if (!expensesData.error) {
+            setExpenses(expensesData.expenses || []);
+            setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+          }
+          if (!vendorsData.error) {
+            setVendors(vendorsData.vendors || []);
+            setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+          }
+          if (!giftsData.error) {
+            setGifts(giftsData.gifts || []);
+            setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
+          }
+          if (!tasksData.error) {
+            setTasks(tasksData.tasks || []);
+          }
+          if (!timelineData.error) {
+            setTimelineEvents(timelineData.events || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch planning data for dashboard:', err);
+        }
+        setLoading(false);
+      }
+      fetchPlanningForDashboard();
     } else {
-      setLoading(false);
+      fetchData();
     }
   }, [activeTab]);
 
@@ -2648,12 +2689,15 @@ export default function AdminPage() {
                                   email: formData.get('email') || null,
                                   phone: formData.get('phone') || null,
                                   contract_amount: parseFloat(formData.get('contract_amount') as string) || 0,
+                                  amount_paid: parseFloat(formData.get('amount_paid') as string) || 0,
                                   status: formData.get('status') || 'researching',
                                 }),
                               });
                               const data = await response.json();
                               if (!data.error) {
-                                setVendors(prev => [data.vendor, ...prev]);
+                                const newVendors = [data.vendor, ...vendors];
+                                setVendors(newVendors);
+                                recalculateVendorTotals(newVendors);
                                 setShowAddVendor(false);
                                 form.reset();
                               }
@@ -2668,6 +2712,7 @@ export default function AdminPage() {
                             <input name="email" type="email" placeholder="Email" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="phone" placeholder="Phone" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="contract_amount" type="number" step="0.01" placeholder="Contract Amount" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="amount_paid" type="number" step="0.01" placeholder="Amount Paid" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <select name="status" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
                               <option value="researching">Researching</option>
                               <option value="contacted">Contacted</option>
@@ -2690,55 +2735,218 @@ export default function AdminPage() {
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {vendors.map((vendor) => (
                             <div key={vendor.id} className="bg-black/50 border border-olive-700 rounded-lg p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <div>
-                                  <h4 className="text-cream font-medium">{vendor.name}</h4>
-                                  <p className="text-olive-500 text-sm">{vendor.category?.name || 'Uncategorized'}</p>
-                                </div>
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  vendor.status === 'booked' || vendor.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                                  vendor.status === 'contacted' ? 'bg-blue-500/20 text-blue-400' :
-                                  vendor.status === 'completed' ? 'bg-purple-500/20 text-purple-400' :
-                                  'bg-olive-500/20 text-olive-400'
-                                }`}>{vendor.status}</span>
-                              </div>
-                              {vendor.contact_name && <p className="text-olive-400 text-sm">{vendor.contact_name}</p>}
-                              {vendor.email && <p className="text-olive-500 text-sm">{vendor.email}</p>}
-                              {vendor.phone && <p className="text-olive-500 text-sm">{vendor.phone}</p>}
-                              <div className="mt-3 pt-3 border-t border-olive-700">
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span className="text-olive-400">Contract:</span>
-                                  <span className="text-cream">{formatCurrency(vendor.contract_amount)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm mb-1">
-                                  <span className="text-olive-400">Paid:</span>
-                                  <span className="text-green-400">{formatCurrency(vendor.amount_paid || 0)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm mb-2">
-                                  <span className="text-olive-400">Balance:</span>
-                                  <span className={vendor.contract_amount - (vendor.amount_paid || 0) > 0 ? 'text-yellow-400' : 'text-green-400'}>
-                                    {formatCurrency(vendor.contract_amount - (vendor.amount_paid || 0))}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                  {vendor.status !== 'paid' && vendor.contract_amount > (vendor.amount_paid || 0) && (
-                                    <button
-                                      onClick={() => markVendorPaid(vendor)}
-                                      className="px-2 py-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded"
-                                    >
-                                      Mark Paid
+                              {editingVendorId === vendor.id ? (
+                                /* Editing Mode */
+                                <form onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  const form = e.target as HTMLFormElement;
+                                  const formData = new FormData(form);
+                                  await updateVendor(vendor.id, {
+                                    name: formData.get('name') as string,
+                                    category_id: formData.get('category_id') as string || null,
+                                    contact_name: formData.get('contact_name') as string || null,
+                                    email: formData.get('email') as string || null,
+                                    phone: formData.get('phone') as string || null,
+                                    website: formData.get('website') as string || null,
+                                    contract_amount: parseFloat(formData.get('contract_amount') as string) || 0,
+                                    amount_paid: parseFloat(formData.get('amount_paid') as string) || 0,
+                                    deposit_amount: parseFloat(formData.get('deposit_amount') as string) || 0,
+                                    deposit_paid: formData.get('deposit_paid') === 'on',
+                                    status: formData.get('status') as Vendor['status'],
+                                    notes: formData.get('notes') as string || null,
+                                  });
+                                  setEditingVendorId(null);
+                                }} className="space-y-3">
+                                  <input
+                                    name="name"
+                                    defaultValue={vendor.name}
+                                    placeholder="Vendor Name"
+                                    required
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <select
+                                    name="category_id"
+                                    defaultValue={vendor.category_id || ''}
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  >
+                                    <option value="">Select Category</option>
+                                    {budgetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                  </select>
+                                  <input
+                                    name="contact_name"
+                                    defaultValue={vendor.contact_name || ''}
+                                    placeholder="Contact Name"
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <input
+                                    name="email"
+                                    type="email"
+                                    defaultValue={vendor.email || ''}
+                                    placeholder="Email"
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <input
+                                    name="phone"
+                                    defaultValue={vendor.phone || ''}
+                                    placeholder="Phone"
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <input
+                                    name="website"
+                                    defaultValue={vendor.website || ''}
+                                    placeholder="Website"
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="text-olive-500 text-xs">Contract Amount</label>
+                                      <input
+                                        name="contract_amount"
+                                        type="number"
+                                        step="0.01"
+                                        defaultValue={vendor.contract_amount || 0}
+                                        className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-olive-500 text-xs">Amount Paid</label>
+                                      <input
+                                        name="amount_paid"
+                                        type="number"
+                                        step="0.01"
+                                        defaultValue={vendor.amount_paid || 0}
+                                        className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="text-olive-500 text-xs">Deposit Amount</label>
+                                      <input
+                                        name="deposit_amount"
+                                        type="number"
+                                        step="0.01"
+                                        defaultValue={vendor.deposit_amount || 0}
+                                        className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                      />
+                                    </div>
+                                    <div className="flex items-end pb-1">
+                                      <label className="flex items-center gap-2 text-olive-500 text-xs">
+                                        <input
+                                          name="deposit_paid"
+                                          type="checkbox"
+                                          defaultChecked={vendor.deposit_paid}
+                                          className="rounded"
+                                        />
+                                        Deposit Paid
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <select
+                                    name="status"
+                                    defaultValue={vendor.status}
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  >
+                                    <option value="researching">Researching</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="booked">Booked</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                  <textarea
+                                    name="notes"
+                                    defaultValue={vendor.notes || ''}
+                                    placeholder="Notes"
+                                    rows={2}
+                                    className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button type="submit" className="flex-1 px-3 py-1.5 bg-gold-500 text-black rounded text-sm font-medium">
+                                      Save
                                     </button>
+                                    <button type="button" onClick={() => setEditingVendorId(null)} className="flex-1 px-3 py-1.5 bg-olive-700 text-cream rounded text-sm">
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </form>
+                              ) : (
+                                /* Display Mode */
+                                <>
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <h4 className="text-cream font-medium">{vendor.name}</h4>
+                                      <p className="text-olive-500 text-sm">{vendor.category?.name || 'Uncategorized'}</p>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      vendor.status === 'booked' || vendor.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                                      vendor.status === 'contacted' ? 'bg-blue-500/20 text-blue-400' :
+                                      vendor.status === 'completed' ? 'bg-purple-500/20 text-purple-400' :
+                                      vendor.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                      'bg-olive-500/20 text-olive-400'
+                                    }`}>{vendor.status}</span>
+                                  </div>
+                                  {vendor.contact_name && <p className="text-olive-400 text-sm">{vendor.contact_name}</p>}
+                                  {vendor.email && <p className="text-olive-500 text-sm">{vendor.email}</p>}
+                                  {vendor.phone && <p className="text-olive-500 text-sm">{vendor.phone}</p>}
+                                  {vendor.website && (
+                                    <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-gold-500 text-sm hover:underline block truncate">
+                                      {vendor.website}
+                                    </a>
                                   )}
-                                  {(vendor.status === 'paid' || vendor.contract_amount <= (vendor.amount_paid || 0)) && (
-                                    <span className="text-green-400 text-xs">✓ Paid in Full</span>
-                                  )}
-                                  <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-300 ml-auto">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
+                                  <div className="mt-3 pt-3 border-t border-olive-700">
+                                    <div className="flex justify-between text-sm mb-1">
+                                      <span className="text-olive-400">Contract:</span>
+                                      <span className="text-cream">{formatCurrency(vendor.contract_amount)}</span>
+                                    </div>
+                                    {vendor.deposit_amount > 0 && (
+                                      <div className="flex justify-between text-sm mb-1">
+                                        <span className="text-olive-400">Deposit:</span>
+                                        <span className={vendor.deposit_paid ? 'text-green-400' : 'text-yellow-400'}>
+                                          {formatCurrency(vendor.deposit_amount)} {vendor.deposit_paid ? '✓' : '(due)'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between text-sm mb-1">
+                                      <span className="text-olive-400">Paid:</span>
+                                      <span className="text-green-400">{formatCurrency(vendor.amount_paid || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                      <span className="text-olive-400">Balance:</span>
+                                      <span className={vendor.contract_amount - (vendor.amount_paid || 0) > 0 ? 'text-yellow-400' : 'text-green-400'}>
+                                        {formatCurrency(vendor.contract_amount - (vendor.amount_paid || 0))}
+                                      </span>
+                                    </div>
+                                    {vendor.notes && (
+                                      <p className="text-olive-500 text-xs mb-2 italic">{vendor.notes}</p>
+                                    )}
+                                    <div className="flex justify-between items-center gap-2">
+                                      <button
+                                        onClick={() => setEditingVendorId(vendor.id)}
+                                        className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
+                                      >
+                                        Edit
+                                      </button>
+                                      {vendor.status !== 'paid' && vendor.contract_amount > (vendor.amount_paid || 0) && (
+                                        <button
+                                          onClick={() => markVendorPaid(vendor)}
+                                          className="px-2 py-1 text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded"
+                                        >
+                                          Mark Paid
+                                        </button>
+                                      )}
+                                      {(vendor.status === 'paid' || vendor.contract_amount <= (vendor.amount_paid || 0)) && (
+                                        <span className="text-green-400 text-xs">✓ Paid in Full</span>
+                                      )}
+                                      <button onClick={() => deleteVendor(vendor.id)} className="text-red-400 hover:text-red-300 ml-auto">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           ))}
                         </div>
