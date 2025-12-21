@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-// Separate passwords for guest site and admin
-const GUEST_PASSWORD = process.env.GUEST_PASSWORD || process.env.SITE_PASSWORD || 'Honey2027!';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin2027!';
+// Separate passwords for guest site and admin (must be set via environment variables)
+const GUEST_PASSWORD = process.env.GUEST_PASSWORD || process.env.SITE_PASSWORD;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +11,15 @@ export async function POST(request: Request) {
     const isAdmin = type === 'admin';
 
     const correctPassword = isAdmin ? ADMIN_PASSWORD : GUEST_PASSWORD;
+
+    // Ensure password is configured
+    if (!correctPassword) {
+      console.error(`${isAdmin ? 'ADMIN' : 'GUEST'}_PASSWORD environment variable not set`);
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
     const cookieName = isAdmin ? 'wedding-admin-auth' : 'wedding-guest-auth';
 
     if (password === correctPassword) {
