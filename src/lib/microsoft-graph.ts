@@ -11,7 +11,7 @@ const REDIRECT_URI = process.env.NODE_ENV === 'production'
   ? 'https://nateandblake.me/api/auth/microsoft/callback'
   : 'http://localhost:3000/api/auth/microsoft/callback';
 
-const SCOPES = ['Tasks.ReadWrite', 'User.Read', 'offline_access'];
+const SCOPES = ['Tasks.ReadWrite', 'User.Read', 'Mail.Send', 'offline_access'];
 
 export interface MicrosoftTokens {
   access_token: string;
@@ -342,4 +342,102 @@ export function fromMicrosoftTask(msTask: TodoTask): {
               msTask.importance === 'low' ? 'low' : 'medium',
     completed_date: msTask.completedDateTime?.dateTime?.split('T')[0] || null,
   };
+}
+
+// =====================================================
+// EMAIL FUNCTIONS (using Mail.Send permission)
+// =====================================================
+
+export interface EmailMessage {
+  subject: string;
+  body: {
+    contentType: 'Text' | 'HTML';
+    content: string;
+  };
+  toRecipients: Array<{
+    emailAddress: {
+      address: string;
+      name?: string;
+    };
+  }>;
+  ccRecipients?: Array<{
+    emailAddress: {
+      address: string;
+      name?: string;
+    };
+  }>;
+  replyTo?: Array<{
+    emailAddress: {
+      address: string;
+      name?: string;
+    };
+  }>;
+  saveToSentItems?: boolean;
+}
+
+/**
+ * Send an email using Microsoft Graph API
+ * Emails are sent from the authenticated user's account (nateandblakesayido@outlook.com)
+ */
+export async function sendEmail(
+  accessToken: string,
+  options: {
+    to: string[];
+    subject: string;
+    html: string;
+    replyTo?: string;
+    saveToSent?: boolean;
+  }
+): Promise<void> {
+  const message: EmailMessage = {
+    subject: options.subject,
+    body: {
+      contentType: 'HTML',
+      content: options.html,
+    },
+    toRecipients: options.to.map(email => ({
+      emailAddress: { address: email },
+    })),
+    saveToSentItems: options.saveToSent !== false, // Default to true
+  };
+
+  if (options.replyTo) {
+    message.replyTo = [{
+      emailAddress: { address: options.replyTo },
+    }];
+  }
+
+  await graphRequest(accessToken, '/me/sendMail', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+/**
+ * Send multiple emails (one at a time, with small delay to avoid throttling)
+ */
+export async function sendBulkEmails(
+  accessToken: string,
+  emails: Array<{
+    to: string[];
+    subject: string;
+    html: string;
+    replyTo?: string;
+  }>
+): Promise<{ success: number; failed: number; errors: string[] }> {
+  const results = { success: 0, failed: 0, errors: [] as string[] };
+
+  for (const email of emails) {
+    try {
+      await sendEmail(accessToken, email);
+      results.success++;
+      // Small delay between emails to avoid throttling
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      results.failed++;
+      results.errors.push(`Failed to send to ${email.to.join(', ')}: ${error}`);
+    }
+  }
+
+  return results;
 }
