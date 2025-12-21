@@ -4,54 +4,68 @@ import type { NextRequest } from 'next/server';
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/api/auth', '/login', '/address', '/api/address'];
 
+// Routes that require authentication (protected)
+const PROTECTED_ROUTES = ['/admin'];
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
 
-  // Handle admin subdomain routing
-  if (hostname.startsWith('admin.')) {
-    // If accessing root of admin subdomain, rewrite to /admin
-    if (pathname === '/') {
-      url.pathname = '/admin';
-      return NextResponse.rewrite(url);
-    }
+  // Determine if this is an admin subdomain request
+  const isAdminSubdomain = hostname.startsWith('admin.');
 
-    // If accessing any path on admin subdomain that doesn't start with /admin,
-    // prefix it with /admin (except for static files and API routes)
-    if (
-      !pathname.startsWith('/admin') &&
-      !pathname.startsWith('/api') &&
-      !pathname.startsWith('/_next') &&
-      !pathname.startsWith('/icons') &&
-      !pathname.includes('.')
-    ) {
-      url.pathname = `/admin${pathname}`;
-      return NextResponse.rewrite(url);
-    }
-  }
-
-  // Allow public routes
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
-  }
-
-  // Allow static files and Next.js internals
+  // Allow static files and Next.js internals first
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.')
+    pathname.startsWith('/icons') ||
+    (pathname.includes('.') && !pathname.startsWith('/api'))
   ) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie
-  const isAuthenticated = request.cookies.get('wedding-auth')?.value === 'authenticated';
+  // Allow public routes (but NOT on admin subdomain)
+  if (!isAdminSubdomain && PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
-  if (!isAuthenticated) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+  // Check authentication for:
+  // 1. Admin subdomain (always requires auth)
+  // 2. Protected routes like /admin
+  // 3. All other non-public routes
+  const needsAuth = isAdminSubdomain ||
+                    PROTECTED_ROUTES.some(route => pathname.startsWith(route)) ||
+                    !PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+
+  if (needsAuth) {
+    const isAuthenticated = request.cookies.get('wedding-auth')?.value === 'authenticated';
+
+    if (!isAuthenticated) {
+      // For admin subdomain, redirect to main site login
+      const loginUrl = isAdminSubdomain
+        ? new URL('/login', `https://nateandblake.me`)
+        : new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', isAdminSubdomain ? '/admin' : pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Handle admin subdomain routing (after auth check passes)
+  if (isAdminSubdomain) {
+    if (pathname === '/' || pathname === '') {
+      url.pathname = '/admin';
+      return NextResponse.rewrite(url);
+    }
+
+    // Rewrite non-admin paths to /admin prefix
+    if (
+      !pathname.startsWith('/admin') &&
+      !pathname.startsWith('/api')
+    ) {
+      url.pathname = `/admin${pathname}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
   return NextResponse.next();
