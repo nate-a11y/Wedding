@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Wedding Planner | Nate & Blake',
   description: 'Wedding planning dashboard for Nate & Blake',
-  manifest: '/admin-manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -21,5 +20,12 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      <head>
+        <link rel="manifest" href="/admin-manifest.json" />
+      </head>
+      {children}
+    </>
+  );
 }
