@@ -1,5 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import {
+  refreshAccessToken,
+  createTodoTask,
+  updateTodoTask,
+  deleteTodoTask,
+  toMicrosoftTask,
+} from '@/lib/microsoft-graph';
+
+interface MicrosoftAuth {
+  access_token: string;
+  refresh_token: string;
+  expires_at: string;
+  todo_list_id: string;
+}
+
+/**
+ * Get valid Microsoft access token (refresh if needed)
+ * Returns null if not connected to Microsoft
+ */
+async function getMicrosoftAuth(): Promise<{ token: string; listId: string } | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+
+  try {
+    const { data: auth, error } = await supabase
+      .from('microsoft_auth')
+      .select('*')
+      .single();
+
+    if (error || !auth) return null;
+
+    const msAuth = auth as MicrosoftAuth;
+    const expiresAt = new Date(msAuth.expires_at);
+
+    // If token expires in less than 5 minutes, refresh it
+    if (expiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
+      const newTokens = await refreshAccessToken(msAuth.refresh_token);
+
+      await supabase
+        .from('microsoft_auth')
+        .update({
+          access_token: newTokens.access_token,
+          refresh_token: newTokens.refresh_token,
+          expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
+        })
+        .eq('id', auth.id);
+
+      return { token: newTokens.access_token, listId: msAuth.todo_list_id };
+    }
+
+    return { token: msAuth.access_token, listId: msAuth.todo_list_id };
+  } catch {
+    return null;
+  }
+}
 
 // Get all tasks
 export async function GET() {
@@ -107,6 +161,33 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // Sync to Microsoft To Do if connected
+    const msAuth = await getMicrosoftAuth();
+    if (msAuth && data) {
+      try {
+        const msTask = await createTodoTask(
+          msAuth.token,
+          msAuth.listId,
+          toMicrosoftTask(data)
+        );
+
+        // Update local task with Microsoft ID
+        await supabase
+          .from('tasks')
+          .update({
+            microsoft_todo_id: msTask.id,
+            microsoft_list_id: msAuth.listId,
+            last_synced_at: new Date().toISOString(),
+          })
+          .eq('id', data.id);
+
+        data.microsoft_todo_id = msTask.id;
+      } catch (msError) {
+        console.error('Failed to sync task to Microsoft:', msError);
+        // Don't fail the request, just log the error
+      }
+    }
+
     return NextResponse.json({ task: data });
   } catch (error) {
     console.error('Task create error:', error);
@@ -151,6 +232,27 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    // Sync to Microsoft To Do if connected and task is linked
+    const msAuth = await getMicrosoftAuth();
+    if (msAuth && data?.microsoft_todo_id) {
+      try {
+        await updateTodoTask(
+          msAuth.token,
+          data.microsoft_list_id || msAuth.listId,
+          data.microsoft_todo_id,
+          toMicrosoftTask(data)
+        );
+
+        // Update sync timestamp
+        await supabase
+          .from('tasks')
+          .update({ last_synced_at: new Date().toISOString() })
+          .eq('id', data.id);
+      } catch (msError) {
+        console.error('Failed to sync task update to Microsoft:', msError);
+      }
+    }
+
     return NextResponse.json({ task: data });
   } catch (error) {
     console.error('Task update error:', error);
@@ -173,12 +275,33 @@ export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
 
+    // Get task to check for Microsoft ID before deleting
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('microsoft_todo_id, microsoft_list_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    // Delete from Microsoft To Do if connected
+    const msAuth = await getMicrosoftAuth();
+    if (msAuth && task?.microsoft_todo_id) {
+      try {
+        await deleteTodoTask(
+          msAuth.token,
+          task.microsoft_list_id || msAuth.listId,
+          task.microsoft_todo_id
+        );
+      } catch (msError) {
+        console.error('Failed to delete task from Microsoft:', msError);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
