@@ -264,6 +264,12 @@ interface ExpenseTotals {
   countPaid: number;
 }
 
+interface StandaloneExpenseTotals {
+  totalAmount: number;
+  totalPaid: number;
+  totalBalance: number;
+}
+
 interface VendorTotals {
   totalContracted: number;
   totalPaid: number;
@@ -374,6 +380,7 @@ export default function AdminPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskStats, setTaskStats] = useState<TaskStats>({ total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
   const [expenseTotals, setExpenseTotals] = useState<ExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+  const [standaloneExpenseTotals, setStandaloneExpenseTotals] = useState<StandaloneExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0 });
   const [vendorTotals, setVendorTotals] = useState<VendorTotals>({ totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
@@ -441,6 +448,7 @@ export default function AdminPage() {
       if (!data.error) {
         setExpenses(data.expenses || []);
         setExpenseTotals(data.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+        setStandaloneExpenseTotals(data.standaloneTotals || { totalAmount: 0, totalPaid: 0, totalBalance: 0 });
       }
     } catch (err) {
       console.error('Failed to refetch expenses:', err);
@@ -1426,6 +1434,11 @@ export default function AdminPage() {
       countPartial: 0,
       countPaid: 0,
     };
+    const standalone = {
+      totalAmount: 0,
+      totalPaid: 0,
+      totalBalance: 0,
+    };
     expensesList.forEach(expense => {
       const amount = Number(expense.amount) || 0;
       const paid = Number(expense.amount_paid) || 0;
@@ -1435,8 +1448,15 @@ export default function AdminPage() {
       if (expense.payment_status === 'pending') totals.countPending++;
       else if (expense.payment_status === 'partial') totals.countPartial++;
       else if (expense.payment_status === 'paid') totals.countPaid++;
+      // Standalone totals (expenses not linked to vendors)
+      if (!expense.vendor_id) {
+        standalone.totalAmount += amount;
+        standalone.totalPaid += paid;
+        standalone.totalBalance += (amount - paid);
+      }
     });
     setExpenseTotals(totals);
+    setStandaloneExpenseTotals(standalone);
   };
 
   // Helper to recalculate vendor totals
@@ -1846,16 +1866,16 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Budget Summary - Combined Expenses + Vendors */}
+              {/* Budget Summary - Standalone Expenses + Vendors (no double-counting) */}
               <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
                 <div className="text-4xl font-heading text-gold-500 mb-2">
-                  {formatCurrency(expenseTotals.totalAmount + vendorTotals.totalContracted)}
+                  {formatCurrency(standaloneExpenseTotals.totalAmount + vendorTotals.totalContracted)}
                 </div>
                 <div className="text-olive-300">Total Committed</div>
                 <div className="text-olive-400 text-sm mt-1">
-                  <span className="text-green-400">{formatCurrency(expenseTotals.totalPaid + vendorTotals.totalPaid)} paid</span>
-                  {(expenseTotals.totalBalance + vendorTotals.totalBalance) > 0 && (
-                    <span className="text-yellow-400"> · {formatCurrency(expenseTotals.totalBalance + vendorTotals.totalBalance)} due</span>
+                  <span className="text-green-400">{formatCurrency(standaloneExpenseTotals.totalPaid + vendorTotals.totalPaid)} paid</span>
+                  {(standaloneExpenseTotals.totalBalance + vendorTotals.totalBalance) > 0 && (
+                    <span className="text-yellow-400"> · {formatCurrency(standaloneExpenseTotals.totalBalance + vendorTotals.totalBalance)} due</span>
                   )}
                 </div>
               </div>

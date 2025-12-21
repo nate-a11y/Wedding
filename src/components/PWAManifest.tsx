@@ -1,11 +1,19 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export function PWAManifest() {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
+  const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
+
+  useEffect(() => {
+    // Check if we're on the admin subdomain
+    setIsAdminSubdomain(window.location.hostname.startsWith('admin.'));
+  }, []);
+
+  // Admin subdomain OR /admin path = admin manifest
+  const isAdmin = isAdminSubdomain || pathname?.startsWith('/admin');
   const manifestUrl = isAdmin ? '/admin-manifest.json' : '/manifest.json';
 
   useEffect(() => {

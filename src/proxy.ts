@@ -6,6 +6,30 @@ const PUBLIC_ROUTES = ['/api/auth', '/login', '/address', '/api/address'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hostname = request.headers.get('host') || '';
+  const url = request.nextUrl.clone();
+
+  // Handle admin subdomain routing
+  if (hostname.startsWith('admin.')) {
+    // If accessing root of admin subdomain, rewrite to /admin
+    if (pathname === '/') {
+      url.pathname = '/admin';
+      return NextResponse.rewrite(url);
+    }
+
+    // If accessing any path on admin subdomain that doesn't start with /admin,
+    // prefix it with /admin (except for static files and API routes)
+    if (
+      !pathname.startsWith('/admin') &&
+      !pathname.startsWith('/api') &&
+      !pathname.startsWith('/_next') &&
+      !pathname.startsWith('/icons') &&
+      !pathname.includes('.')
+    ) {
+      url.pathname = `/admin${pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
 
   // Allow public routes
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
