@@ -150,6 +150,7 @@ interface Expense {
   id: string;
   description: string;
   amount: number;
+  amount_paid: number;
   category_id: string | null;
   vendor_id: string | null;
   payment_status: 'pending' | 'partial' | 'paid' | 'refunded';
@@ -172,9 +173,12 @@ interface Vendor {
   website: string | null;
   address: string | null;
   contract_amount: number;
+  amount_paid: number;
   deposit_amount: number;
   deposit_paid: boolean;
   deposit_paid_date: string | null;
+  payment_due_date: string | null;
+  final_payment_date: string | null;
   notes: string | null;
   status: 'researching' | 'contacted' | 'booked' | 'paid' | 'completed' | 'cancelled';
   created_at: string;
@@ -227,8 +231,48 @@ interface GiftTotals {
   thankYouPending: number;
 }
 
+interface TimelineEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  location_notes: string | null;
+  responsible_person: string | null;
+  participants: string | null;
+  vendor_id: string | null;
+  category: 'preparation' | 'ceremony' | 'cocktail_hour' | 'reception' | 'photos' | 'transportation' | 'vendor_arrival' | 'other';
+  is_milestone: boolean;
+  color: string | null;
+  notes: string | null;
+  staff_notes: string | null;
+  sort_order: number;
+  created_at: string;
+  vendor?: { id: string; name: string; phone: string | null; email: string | null } | null;
+}
+
+interface ExpenseTotals {
+  totalAmount: number;
+  totalPaid: number;
+  totalBalance: number;
+  countPending: number;
+  countPartial: number;
+  countPaid: number;
+}
+
+interface VendorTotals {
+  totalContracted: number;
+  totalPaid: number;
+  totalBalance: number;
+  countBooked: number;
+  countPaid: number;
+  countResearching: number;
+}
+
 type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning';
-type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks';
+type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -297,6 +341,9 @@ export default function AdminPage() {
   const [giftTotals, setGiftTotals] = useState<GiftTotals>({ totalCash: 0, totalGifts: 0, thankYouPending: 0 });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskStats, setTaskStats] = useState<TaskStats>({ total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
+  const [expenseTotals, setExpenseTotals] = useState<ExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+  const [vendorTotals, setVendorTotals] = useState<VendorTotals>({ totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+  const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [newBudgetAmount, setNewBudgetAmount] = useState('');
   // Form states for adding items
@@ -304,6 +351,7 @@ export default function AdminPage() {
   const [showAddVendor, setShowAddVendor] = useState(false);
   const [showAddGift, setShowAddGift] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [showAddTimeline, setShowAddTimeline] = useState(false);
 
   // Get all unique email recipients from addresses and RSVPs with full data
   const availableRecipients = useMemo(() => {
@@ -527,27 +575,35 @@ export default function AdminPage() {
           setUnassignedGuests(data.unassignedGuests);
         } else if (activeTab === 'planning') {
           // Fetch all planning data in parallel
-          const [budgetRes, expensesRes, vendorsRes, giftsRes, tasksRes] = await Promise.all([
+          const [budgetRes, expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes] = await Promise.all([
             fetch('/api/admin/budget'),
             fetch('/api/admin/expenses'),
             fetch('/api/admin/vendors'),
             fetch('/api/admin/gifts'),
             fetch('/api/admin/tasks'),
+            fetch('/api/admin/timeline'),
           ]);
-          const [budgetData, expensesData, vendorsData, giftsData, tasksData] = await Promise.all([
+          const [budgetData, expensesData, vendorsData, giftsData, tasksData, timelineData] = await Promise.all([
             budgetRes.json(),
             expensesRes.json(),
             vendorsRes.json(),
             giftsRes.json(),
             tasksRes.json(),
+            timelineRes.json(),
           ]);
           if (!budgetData.error) {
             setBudgetSettings(budgetData.settings);
             setBudgetCategories(budgetData.categories || []);
             setBudgetTotals(budgetData.totals);
           }
-          if (!expensesData.error) setExpenses(expensesData.expenses || []);
-          if (!vendorsData.error) setVendors(vendorsData.vendors || []);
+          if (!expensesData.error) {
+            setExpenses(expensesData.expenses || []);
+            setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+          }
+          if (!vendorsData.error) {
+            setVendors(vendorsData.vendors || []);
+            setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+          }
           if (!giftsData.error) {
             setGifts(giftsData.gifts || []);
             setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
@@ -555,6 +611,9 @@ export default function AdminPage() {
           if (!tasksData.error) {
             setTasks(tasksData.tasks || []);
             setTaskStats(tasksData.stats || { total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
+          }
+          if (!timelineData.error) {
+            setTimelineEvents(timelineData.events || []);
           }
         }
       } catch (err) {
@@ -945,6 +1004,15 @@ export default function AdminPage() {
         </svg>
       ),
     },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
   ];
 
   // Helper functions for planning
@@ -1086,6 +1154,140 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Failed to delete task:', err);
     }
+  };
+
+  const deleteTimelineEvent = async (id: string) => {
+    if (!confirm('Delete this timeline event?')) return;
+    try {
+      await fetch('/api/admin/timeline', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      setTimelineEvents(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error('Failed to delete timeline event:', err);
+    }
+  };
+
+  const toggleMilestone = async (event: TimelineEvent) => {
+    try {
+      const response = await fetch('/api/admin/timeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: event.id, is_milestone: !event.is_milestone }),
+      });
+      const data = await response.json();
+      if (!data.error) {
+        setTimelineEvents(prev => prev.map(e => e.id === event.id ? data.event : e));
+      }
+    } catch (err) {
+      console.error('Failed to toggle milestone:', err);
+    }
+  };
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      preparation: 'Preparation',
+      ceremony: 'Ceremony',
+      cocktail_hour: 'Cocktail Hour',
+      reception: 'Reception',
+      photos: 'Photos',
+      transportation: 'Transportation',
+      vendor_arrival: 'Vendor Arrival',
+      other: 'Other',
+    };
+    return labels[category] || category;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      preparation: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+      ceremony: 'bg-gold-500/20 text-gold-400 border-gold-500/50',
+      cocktail_hour: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+      reception: 'bg-green-500/20 text-green-400 border-green-500/50',
+      photos: 'bg-pink-500/20 text-pink-400 border-pink-500/50',
+      transportation: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+      vendor_arrival: 'bg-teal-500/20 text-teal-400 border-teal-500/50',
+      other: 'bg-olive-500/20 text-olive-400 border-olive-500/50',
+    };
+    return colors[category] || colors.other;
+  };
+
+  // PDF Export for Timeline
+  const exportTimelinePDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to export PDF');
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Wedding Day Timeline - Nate & Blake</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Georgia, serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          h1 { text-align: center; font-size: 28px; margin-bottom: 5px; color: #536537; }
+          h2 { text-align: center; font-size: 18px; color: #666; font-weight: normal; margin-bottom: 30px; }
+          .event { display: flex; margin-bottom: 12px; page-break-inside: avoid; }
+          .time { width: 100px; font-weight: bold; color: #d4af37; flex-shrink: 0; }
+          .details { flex: 1; border-left: 2px solid #d4af37; padding-left: 15px; }
+          .title { font-weight: bold; font-size: 14px; }
+          .milestone { background: #d4af37; color: white; padding: 2px 8px; font-size: 11px; border-radius: 3px; margin-left: 8px; }
+          .meta { font-size: 12px; color: #666; margin-top: 3px; }
+          .location { color: #536537; }
+          .category { display: inline-block; padding: 2px 8px; font-size: 10px; border-radius: 3px; background: #f0f0f0; margin-top: 5px; }
+          .notes { font-style: italic; font-size: 12px; color: #888; margin-top: 5px; }
+          .staff-notes { background: #fff3cd; padding: 8px; font-size: 11px; margin-top: 5px; border-radius: 3px; }
+          .staff-notes strong { color: #856404; }
+          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #ddd; padding-top: 20px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <h1>Wedding Day Timeline</h1>
+        <h2>Nate & Blake | October 31, 2027</h2>
+        ${timelineEvents.map(event => `
+          <div class="event">
+            <div class="time">${formatTime(event.start_time)}${event.end_time ? ` - ${formatTime(event.end_time)}` : ''}</div>
+            <div class="details">
+              <div class="title">
+                ${event.title}
+                ${event.is_milestone ? '<span class="milestone">KEY MOMENT</span>' : ''}
+              </div>
+              ${event.location ? `<div class="meta location">📍 ${event.location}${event.location_notes ? ` (${event.location_notes})` : ''}</div>` : ''}
+              ${event.responsible_person ? `<div class="meta">👤 ${event.responsible_person}</div>` : ''}
+              ${event.participants ? `<div class="meta">👥 ${event.participants}</div>` : ''}
+              ${event.vendor ? `<div class="meta">🏢 ${event.vendor.name}${event.vendor.phone ? ` | ${event.vendor.phone}` : ''}</div>` : ''}
+              <div class="category">${getCategoryLabel(event.category)}</div>
+              ${event.notes ? `<div class="notes">${event.notes}</div>` : ''}
+              ${event.staff_notes ? `<div class="staff-notes"><strong>Staff Notes:</strong> ${event.staff_notes}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+        <div class="footer">
+          Generated on ${new Date().toLocaleDateString()} | Wedding Planning Dashboard
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   return (
@@ -2034,6 +2236,26 @@ export default function AdminPage() {
                   {/* Expenses Sub-tab */}
                   {planningSubTab === 'expenses' && (
                     <div className="space-y-4">
+                      {/* Expense Totals */}
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-cream">{formatCurrency(expenseTotals.totalAmount)}</div>
+                          <div className="text-olive-400 text-sm">Total Amount</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-green-400">{formatCurrency(expenseTotals.totalPaid)}</div>
+                          <div className="text-olive-400 text-sm">Total Paid</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-yellow-400">{formatCurrency(expenseTotals.totalBalance)}</div>
+                          <div className="text-olive-400 text-sm">Balance Due</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-cream">{expenseTotals.countPending + expenseTotals.countPartial}</div>
+                          <div className="text-olive-400 text-sm">Pending Payments</div>
+                        </div>
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-heading text-gold-400">Expenses</h3>
                         <button
@@ -2061,6 +2283,7 @@ export default function AdminPage() {
                                 body: JSON.stringify({
                                   description: formData.get('description'),
                                   amount: parseFloat(formData.get('amount') as string) || 0,
+                                  amount_paid: parseFloat(formData.get('amount_paid') as string) || 0,
                                   category_id: formData.get('category_id') || null,
                                   vendor_id: formData.get('vendor_id') || null,
                                   payment_status: formData.get('payment_status') || 'pending',
@@ -2074,9 +2297,10 @@ export default function AdminPage() {
                                 form.reset();
                               }
                             } catch (err) { console.error(err); }
-                          }} className="grid md:grid-cols-3 gap-4">
+                          }} className="grid md:grid-cols-4 gap-4">
                             <input name="description" placeholder="Description" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
-                            <input name="amount" type="number" step="0.01" placeholder="Amount" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="amount" type="number" step="0.01" placeholder="Total Amount" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="amount_paid" type="number" step="0.01" placeholder="Amount Paid" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <select name="category_id" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
                               <option value="">Select Category</option>
                               {budgetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -2085,13 +2309,8 @@ export default function AdminPage() {
                               <option value="">Select Vendor</option>
                               {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                             </select>
-                            <select name="payment_status" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
-                              <option value="pending">Pending</option>
-                              <option value="partial">Partial</option>
-                              <option value="paid">Paid</option>
-                            </select>
-                            <input name="due_date" type="date" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
-                            <div className="md:col-span-3 flex gap-2">
+                            <input name="due_date" type="date" placeholder="Due Date" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <div className="md:col-span-2 flex gap-2">
                               <button type="submit" className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium">Add Expense</button>
                               <button type="button" onClick={() => setShowAddExpense(false)} className="px-4 py-2 bg-olive-700 text-cream rounded-lg">Cancel</button>
                             </div>
@@ -2109,37 +2328,42 @@ export default function AdminPage() {
                               <tr className="border-b border-olive-700">
                                 <th className="p-3 text-olive-300 font-medium">Description</th>
                                 <th className="p-3 text-olive-300 font-medium">Amount</th>
+                                <th className="p-3 text-olive-300 font-medium">Paid</th>
+                                <th className="p-3 text-olive-300 font-medium">Balance</th>
                                 <th className="p-3 text-olive-300 font-medium">Category</th>
-                                <th className="p-3 text-olive-300 font-medium">Vendor</th>
                                 <th className="p-3 text-olive-300 font-medium">Status</th>
                                 <th className="p-3 text-olive-300 font-medium">Due</th>
                                 <th className="p-3 text-olive-300 font-medium">Actions</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {expenses.map((expense) => (
-                                <tr key={expense.id} className="border-b border-olive-800 hover:bg-olive-900/30">
-                                  <td className="p-3 text-cream">{expense.description}</td>
-                                  <td className="p-3 text-cream">{formatCurrency(expense.amount)}</td>
-                                  <td className="p-3 text-olive-400">{expense.category?.name || '-'}</td>
-                                  <td className="p-3 text-olive-400">{expense.vendor?.name || '-'}</td>
-                                  <td className="p-3">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      expense.payment_status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                                      expense.payment_status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
-                                      'bg-olive-500/20 text-olive-400'
-                                    }`}>{expense.payment_status}</span>
-                                  </td>
-                                  <td className="p-3 text-olive-500 text-sm">{formatShortDate(expense.due_date)}</td>
-                                  <td className="p-3">
-                                    <button onClick={() => deleteExpense(expense.id)} className="text-red-400 hover:text-red-300">
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                      </svg>
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
+                              {expenses.map((expense) => {
+                                const balance = expense.amount - (expense.amount_paid || 0);
+                                return (
+                                  <tr key={expense.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                                    <td className="p-3 text-cream">{expense.description}</td>
+                                    <td className="p-3 text-cream">{formatCurrency(expense.amount)}</td>
+                                    <td className="p-3 text-green-400">{formatCurrency(expense.amount_paid || 0)}</td>
+                                    <td className={`p-3 ${balance > 0 ? 'text-yellow-400' : 'text-green-400'}`}>{formatCurrency(balance)}</td>
+                                    <td className="p-3 text-olive-400">{expense.category?.name || '-'}</td>
+                                    <td className="p-3">
+                                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                        expense.payment_status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                                        expense.payment_status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
+                                        'bg-olive-500/20 text-olive-400'
+                                      }`}>{expense.payment_status}</span>
+                                    </td>
+                                    <td className="p-3 text-olive-500 text-sm">{formatShortDate(expense.due_date)}</td>
+                                    <td className="p-3">
+                                      <button onClick={() => deleteExpense(expense.id)} className="text-red-400 hover:text-red-300">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
@@ -2150,6 +2374,26 @@ export default function AdminPage() {
                   {/* Vendors Sub-tab */}
                   {planningSubTab === 'vendors' && (
                     <div className="space-y-4">
+                      {/* Vendor Totals */}
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-cream">{formatCurrency(vendorTotals.totalContracted)}</div>
+                          <div className="text-olive-400 text-sm">Total Contracted</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-green-400">{formatCurrency(vendorTotals.totalPaid)}</div>
+                          <div className="text-olive-400 text-sm">Total Paid</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-yellow-400">{formatCurrency(vendorTotals.totalBalance)}</div>
+                          <div className="text-olive-400 text-sm">Balance Due</div>
+                        </div>
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
+                          <div className="text-2xl font-heading text-cream">{vendorTotals.countBooked}</div>
+                          <div className="text-olive-400 text-sm">Booked Vendors</div>
+                        </div>
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-heading text-gold-400">Vendors</h3>
                         <button
@@ -2537,6 +2781,183 @@ export default function AdminPage() {
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Timeline Sub-tab */}
+                  {planningSubTab === 'timeline' && (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center flex-wrap gap-4">
+                        <div>
+                          <h3 className="text-lg font-heading text-gold-400">Wedding Day Timeline</h3>
+                          <p className="text-olive-400 text-sm">{timelineEvents.length} events • {timelineEvents.filter(e => e.is_milestone).length} key moments</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={exportTimelinePDF}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-olive-700 text-cream rounded-lg hover:bg-olive-600 transition-colors text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Export PDF
+                          </button>
+                          <button
+                            onClick={() => setShowAddTimeline(!showAddTimeline)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Event
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Add Timeline Event Form */}
+                      {showAddTimeline && (
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4">
+                          <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const form = e.target as HTMLFormElement;
+                            const formData = new FormData(form);
+                            try {
+                              const response = await fetch('/api/admin/timeline', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  title: formData.get('title'),
+                                  start_time: formData.get('start_time'),
+                                  end_time: formData.get('end_time') || null,
+                                  location: formData.get('location') || null,
+                                  responsible_person: formData.get('responsible_person') || null,
+                                  category: formData.get('category') || 'other',
+                                  is_milestone: formData.get('is_milestone') === 'on',
+                                  notes: formData.get('notes') || null,
+                                  staff_notes: formData.get('staff_notes') || null,
+                                }),
+                              });
+                              const data = await response.json();
+                              if (!data.error) {
+                                setTimelineEvents(prev => [...prev, data.event].sort((a, b) => a.start_time.localeCompare(b.start_time)));
+                                setShowAddTimeline(false);
+                                form.reset();
+                              }
+                            } catch (err) { console.error(err); }
+                          }} className="grid md:grid-cols-4 gap-4">
+                            <input name="title" placeholder="Event Title" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2" />
+                            <input name="start_time" type="time" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="end_time" type="time" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="location" placeholder="Location" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="responsible_person" placeholder="Responsible Person" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <select name="category" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
+                              <option value="preparation">Preparation</option>
+                              <option value="ceremony">Ceremony</option>
+                              <option value="cocktail_hour">Cocktail Hour</option>
+                              <option value="reception">Reception</option>
+                              <option value="photos">Photos</option>
+                              <option value="transportation">Transportation</option>
+                              <option value="vendor_arrival">Vendor Arrival</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <label className="flex items-center gap-2 text-cream">
+                              <input name="is_milestone" type="checkbox" className="w-4 h-4 rounded border-olive-600 text-gold-500 focus:ring-gold-500 bg-charcoal" />
+                              Key Moment
+                            </label>
+                            <input name="notes" placeholder="Notes (visible to all)" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2" />
+                            <input name="staff_notes" placeholder="Staff Notes (private)" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2" />
+                            <div className="md:col-span-4 flex gap-2">
+                              <button type="submit" className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium">Add Event</button>
+                              <button type="button" onClick={() => setShowAddTimeline(false)} className="px-4 py-2 bg-olive-700 text-cream rounded-lg">Cancel</button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+
+                      {/* Timeline Display */}
+                      {timelineEvents.length === 0 ? (
+                        <div className="text-center py-12 text-olive-400">No timeline events yet. Add your wedding day schedule!</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {timelineEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className={`bg-black/50 border rounded-lg p-4 ${
+                                event.is_milestone ? 'border-gold-500/50 bg-gold-500/5' : 'border-olive-700'
+                              }`}
+                            >
+                              <div className="flex items-start gap-4">
+                                {/* Time Column */}
+                                <div className="w-24 flex-shrink-0 text-center">
+                                  <div className="text-gold-400 font-medium">{formatTime(event.start_time)}</div>
+                                  {event.end_time && (
+                                    <div className="text-olive-500 text-sm">to {formatTime(event.end_time)}</div>
+                                  )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-cream font-medium">{event.title}</span>
+                                    {event.is_milestone && (
+                                      <span className="px-2 py-0.5 rounded text-xs bg-gold-500/20 text-gold-400 border border-gold-500/50">
+                                        Key Moment
+                                      </span>
+                                    )}
+                                    <span className={`px-2 py-0.5 rounded text-xs border ${getCategoryColor(event.category)}`}>
+                                      {getCategoryLabel(event.category)}
+                                    </span>
+                                  </div>
+                                  {event.location && (
+                                    <div className="text-olive-400 text-sm mt-1">
+                                      📍 {event.location}
+                                      {event.location_notes && <span className="text-olive-500"> ({event.location_notes})</span>}
+                                    </div>
+                                  )}
+                                  {event.responsible_person && (
+                                    <div className="text-olive-400 text-sm">👤 {event.responsible_person}</div>
+                                  )}
+                                  {event.vendor && (
+                                    <div className="text-olive-400 text-sm">
+                                      🏢 {event.vendor.name}
+                                      {event.vendor.phone && <span className="text-olive-500"> | {event.vendor.phone}</span>}
+                                    </div>
+                                  )}
+                                  {event.notes && (
+                                    <div className="text-olive-500 text-sm mt-1 italic">{event.notes}</div>
+                                  )}
+                                  {event.staff_notes && (
+                                    <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-400 text-sm">
+                                      <strong>Staff:</strong> {event.staff_notes}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => toggleMilestone(event)}
+                                    className={`p-1.5 rounded ${event.is_milestone ? 'text-gold-400' : 'text-olive-500 hover:text-gold-400'}`}
+                                    title={event.is_milestone ? 'Remove milestone' : 'Mark as milestone'}
+                                  >
+                                    <svg className="w-5 h-5" fill={event.is_milestone ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => deleteTimelineEvent(event.id)}
+                                    className="p-1.5 text-red-400 hover:text-red-300"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
