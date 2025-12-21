@@ -30,11 +30,18 @@ export async function GET() {
     // Fetch expenses for spending totals
     const { data: expenses, error: expensesError } = await supabase
       .from('expenses')
-      .select('category_id, amount, payment_status');
+      .select('category_id, amount, amount_paid, payment_status');
 
     if (expensesError) throw expensesError;
 
-    // Calculate spending by category
+    // Fetch vendors for contract/payment tracking
+    const { data: vendors, error: vendorsError } = await supabase
+      .from('vendors')
+      .select('category_id, contract_amount, amount_paid, status');
+
+    if (vendorsError) throw vendorsError;
+
+    // Calculate spending by category from expenses
     const spendingByCategory: Record<string, { total: number; paid: number }> = {};
     expenses?.forEach(expense => {
       if (expense.category_id) {
@@ -42,9 +49,19 @@ export async function GET() {
           spendingByCategory[expense.category_id] = { total: 0, paid: 0 };
         }
         spendingByCategory[expense.category_id].total += Number(expense.amount) || 0;
-        if (expense.payment_status === 'paid') {
-          spendingByCategory[expense.category_id].paid += Number(expense.amount) || 0;
+        // Use amount_paid field for partial payments
+        spendingByCategory[expense.category_id].paid += Number(expense.amount_paid) || 0;
+      }
+    });
+
+    // Add vendor contracts to category totals
+    vendors?.forEach(vendor => {
+      if (vendor.category_id) {
+        if (!spendingByCategory[vendor.category_id]) {
+          spendingByCategory[vendor.category_id] = { total: 0, paid: 0 };
         }
+        spendingByCategory[vendor.category_id].total += Number(vendor.contract_amount) || 0;
+        spendingByCategory[vendor.category_id].paid += Number(vendor.amount_paid) || 0;
       }
     });
 
@@ -55,7 +72,7 @@ export async function GET() {
       paid: spendingByCategory[cat.id]?.paid || 0,
     }));
 
-    // Calculate totals
+    // Calculate totals from both expenses and vendors
     const totalEstimated = categories?.reduce((sum, cat) => sum + (Number(cat.estimated_amount) || 0), 0) || 0;
     const totalSpent = Object.values(spendingByCategory).reduce((sum, s) => sum + s.total, 0);
     const totalPaid = Object.values(spendingByCategory).reduce((sum, s) => sum + s.paid, 0);
