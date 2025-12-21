@@ -18,8 +18,8 @@ export async function GET() {
         vendor:vendors(id, name, phone, email)
       `)
       .order('event_date', { ascending: true })
-      .order('sort_order', { ascending: true })
-      .order('start_time', { ascending: true });
+      .order('start_time', { ascending: true })
+      .order('sort_order', { ascending: true });
 
     if (error) throw error;
 
