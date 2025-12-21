@@ -9,6 +9,7 @@ import {
   toMicrosoftTask,
   fromMicrosoftTask,
   createWebhookSubscription,
+  renewWebhookSubscription,
 } from '@/lib/microsoft-graph';
 
 interface MicrosoftAuth {
@@ -217,7 +218,7 @@ export async function POST() {
 
 /**
  * GET /api/admin/tasks/sync
- * Check Microsoft connection status
+ * Check Microsoft connection status and renew webhook if needed
  */
 export async function GET() {
   if (!isSupabaseConfigured() || !supabase) {
@@ -231,11 +232,46 @@ export async function GET() {
       return NextResponse.json({ connected: false, reason: 'not_authenticated' });
     }
 
-    // Get list info
+    // Get auth info including webhook
     const { data } = await supabase
       .from('microsoft_auth')
-      .select('todo_list_name, webhook_subscription_id, webhook_expires_at')
+      .select('todo_list_name, todo_list_id, webhook_subscription_id, webhook_expires_at')
       .single();
+
+    // Auto-renew webhook if expiring within 24 hours or missing
+    if (data) {
+      const webhookExpires = data.webhook_expires_at ? new Date(data.webhook_expires_at) : null;
+      const needsRenewal = !webhookExpires || (webhookExpires.getTime() - Date.now() < 24 * 60 * 60 * 1000);
+
+      if (needsRenewal) {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nateandblake.me';
+          const webhookUrl = `${baseUrl}/api/webhooks/microsoft`;
+
+          if (data.webhook_subscription_id) {
+            // Try to renew existing subscription
+            const renewed = await renewWebhookSubscription(auth.token, data.webhook_subscription_id);
+            await supabase
+              .from('microsoft_auth')
+              .update({ webhook_expires_at: renewed.expirationDateTime })
+              .eq('todo_list_id', data.todo_list_id);
+          } else {
+            // Create new subscription
+            const subscription = await createWebhookSubscription(auth.token, data.todo_list_id, webhookUrl);
+            await supabase
+              .from('microsoft_auth')
+              .update({
+                webhook_subscription_id: subscription.id,
+                webhook_expires_at: subscription.expirationDateTime,
+              })
+              .eq('todo_list_id', data.todo_list_id);
+          }
+        } catch (webhookErr) {
+          console.error('Failed to renew/create webhook:', webhookErr);
+          // Don't fail the whole request
+        }
+      }
+    }
 
     return NextResponse.json({
       connected: true,
