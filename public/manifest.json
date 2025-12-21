@@ -1,8 +1,10 @@
 {
+  "id": "nate-blake-wedding-guest",
   "name": "Nate & Blake Say I Do",
   "short_name": "N&B Wedding",
   "description": "Wedding website for Nate & Blake - October 31, 2027",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",
   "theme_color": "#1a1a1a",
