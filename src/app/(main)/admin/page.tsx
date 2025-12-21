@@ -384,6 +384,7 @@ export default function AdminPage() {
   const [showAddGift, setShowAddGift] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddTimeline, setShowAddTimeline] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
 
   // Edit states
   const [editingTimelineId, setEditingTimelineId] = useState<string | null>(null);
@@ -391,6 +392,7 @@ export default function AdminPage() {
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingGiftId, setEditingGiftId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   // Persist tab state to localStorage and URL
   useEffect(() => {
@@ -2718,36 +2720,187 @@ export default function AdminPage() {
 
                       {/* Budget by Category */}
                       <div className="bg-black/50 border border-olive-700 rounded-lg p-6">
-                        <h3 className="text-lg font-heading text-gold-400 mb-4">Budget by Category</h3>
-                        <div className="space-y-4">
-                          {budgetCategories.map((category) => {
-                            const percentSpent = category.estimated_amount > 0 ? (category.spent / category.estimated_amount) * 100 : 0;
-                            return (
-                              <div key={category.id} className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-cream">{category.name}</span>
-                                  <div className="flex items-center gap-4 text-sm">
-                                    <span className="text-olive-400">
-                                      {formatCurrency(category.spent)} / {formatCurrency(category.estimated_amount)}
-                                    </span>
-                                    <input
-                                      type="number"
-                                      value={category.estimated_amount}
-                                      onChange={(e) => updateCategoryBudget(category.id, parseFloat(e.target.value) || 0)}
-                                      className="w-24 px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-heading text-gold-400">Budget by Category</h3>
+                          <button
+                            onClick={() => setShowAddCategory(!showAddCategory)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Category
+                          </button>
+                        </div>
+
+                        {/* Add Category Form */}
+                        {showAddCategory && (
+                          <div className="mb-4 p-4 bg-olive-900/30 border border-olive-600 rounded-lg">
+                            <form onSubmit={async (e) => {
+                              e.preventDefault();
+                              const form = e.target as HTMLFormElement;
+                              const formData = new FormData(form);
+                              try {
+                                const response = await fetch('/api/admin/budget/categories', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    name: formData.get('name'),
+                                    estimated_amount: parseFloat(formData.get('estimated_amount') as string) || 0,
+                                  }),
+                                });
+                                const data = await response.json();
+                                if (!data.error) {
+                                  setBudgetCategories(prev => [...prev, { ...data.category, spent: 0, paid: 0 }]);
+                                  setShowAddCategory(false);
+                                  form.reset();
+                                }
+                              } catch (err) { console.error(err); }
+                            }} className="flex flex-wrap gap-3 items-end">
+                              <div className="flex-1 min-w-[200px]">
+                                <label className="text-olive-400 text-xs block mb-1">Category Name</label>
+                                <input
+                                  name="name"
+                                  placeholder="e.g., Venue, Catering, Photography"
+                                  required
+                                  className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                                />
+                              </div>
+                              <div className="w-32">
+                                <label className="text-olive-400 text-xs block mb-1">Budget Amount</label>
+                                <input
+                                  name="estimated_amount"
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                                />
+                              </div>
+                              <button type="submit" className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium">Add</button>
+                              <button type="button" onClick={() => setShowAddCategory(false)} className="px-4 py-2 bg-olive-700 text-cream rounded-lg">Cancel</button>
+                            </form>
+                          </div>
+                        )}
+
+                        {budgetCategories.length === 0 ? (
+                          <div className="text-center py-8 text-olive-400">
+                            No categories yet. Add categories to track your budget by type (Venue, Catering, etc.)
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {budgetCategories.map((category) => {
+                              const percentSpent = category.estimated_amount > 0 ? (category.spent / category.estimated_amount) * 100 : 0;
+
+                              if (editingCategoryId === category.id) {
+                                // Edit mode
+                                return (
+                                  <div key={category.id} className="p-3 bg-olive-900/30 border border-olive-600 rounded-lg">
+                                    <form onSubmit={async (e) => {
+                                      e.preventDefault();
+                                      const form = e.target as HTMLFormElement;
+                                      const formData = new FormData(form);
+                                      try {
+                                        const response = await fetch('/api/admin/budget/categories', {
+                                          method: 'PATCH',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            id: category.id,
+                                            name: formData.get('name'),
+                                            estimated_amount: parseFloat(formData.get('estimated_amount') as string) || 0,
+                                          }),
+                                        });
+                                        const data = await response.json();
+                                        if (!data.error) {
+                                          setBudgetCategories(prev => prev.map(c =>
+                                            c.id === category.id ? { ...data.category, spent: category.spent, paid: category.paid } : c
+                                          ));
+                                          setEditingCategoryId(null);
+                                        }
+                                      } catch (err) { console.error(err); }
+                                    }} className="flex flex-wrap gap-3 items-end">
+                                      <div className="flex-1 min-w-[150px]">
+                                        <input
+                                          name="name"
+                                          defaultValue={category.name}
+                                          required
+                                          className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                                        />
+                                      </div>
+                                      <div className="w-32">
+                                        <input
+                                          name="estimated_amount"
+                                          type="number"
+                                          step="0.01"
+                                          defaultValue={category.estimated_amount}
+                                          className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                                        />
+                                      </div>
+                                      <button type="submit" className="px-3 py-2 bg-gold-500 text-black rounded-lg font-medium text-sm">Save</button>
+                                      <button type="button" onClick={() => setEditingCategoryId(null)} className="px-3 py-2 bg-olive-700 text-cream rounded-lg text-sm">Cancel</button>
+                                    </form>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div key={category.id} className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-cream">{category.name}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-olive-400 text-sm">
+                                        {formatCurrency(category.spent)} / {formatCurrency(category.estimated_amount)}
+                                      </span>
+                                      <input
+                                        type="number"
+                                        value={category.estimated_amount}
+                                        onChange={(e) => updateCategoryBudget(category.id, parseFloat(e.target.value) || 0)}
+                                        className="w-24 px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                      />
+                                      <button
+                                        onClick={() => setEditingCategoryId(category.id)}
+                                        className="p-1 text-olive-400 hover:text-gold-400"
+                                        title="Edit category"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          if (confirm(`Delete "${category.name}" category? This won't delete associated expenses.`)) {
+                                            try {
+                                              const response = await fetch('/api/admin/budget/categories', {
+                                                method: 'DELETE',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ id: category.id }),
+                                              });
+                                              const data = await response.json();
+                                              if (!data.error) {
+                                                setBudgetCategories(prev => prev.filter(c => c.id !== category.id));
+                                              }
+                                            } catch (err) { console.error(err); }
+                                          }
+                                        }}
+                                        className="p-1 text-olive-400 hover:text-red-400"
+                                        title="Delete category"
+                                      >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="h-2 bg-olive-800 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full transition-all ${percentSpent > 100 ? 'bg-red-500' : percentSpent > 80 ? 'bg-yellow-500' : 'bg-gold-500'}`}
+                                      style={{ width: `${Math.min(percentSpent, 100)}%` }}
                                     />
                                   </div>
                                 </div>
-                                <div className="h-2 bg-olive-800 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full transition-all ${percentSpent > 100 ? 'bg-red-500' : percentSpent > 80 ? 'bg-yellow-500' : 'bg-gold-500'}`}
-                                    style={{ width: `${Math.min(percentSpent, 100)}%` }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
