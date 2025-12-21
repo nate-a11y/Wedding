@@ -88,12 +88,18 @@ export default function RSVPPage() {
   // RSVP availability windows
   const now = new Date();
 
+  // Testing window: Nov 30, 2025 - Jan 1, 2026
+  const testStart = new Date('2025-11-30T00:00:00');
+  const testEnd = new Date('2026-01-01T23:59:59');
+  const inTestWindow = now >= testStart && now <= testEnd;
+
   // Production window: April 1, 2027 - Sept 1, 2027
   const prodStart = new Date('2027-04-01T00:00:00');
   const prodEnd = new Date('2027-09-01T23:59:59');
   const inProdWindow = now >= prodStart && now <= prodEnd;
 
-  const rsvpStatus = inProdWindow ? 'open' : now < prodStart ? 'not-yet' : 'closed';
+  const rsvpOpen = inTestWindow || inProdWindow;
+  const rsvpStatus = rsvpOpen ? 'open' : now < prodStart ? 'not-yet' : 'closed';
 
   // Before April 1, 2027 - not yet accepting RSVPs
   if (rsvpStatus === 'not-yet') {
