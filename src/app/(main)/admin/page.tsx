@@ -1718,7 +1718,7 @@ export default function AdminPage() {
                   {stats?.rsvps.totalGuests || 0}
                 </div>
                 <div className="text-olive-300">Total Guests</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.additionalGuests || stats?.rsvps.plusOnes || 0} guests
                 </div>
               </div>
@@ -1763,7 +1763,7 @@ export default function AdminPage() {
                   {stats?.addresses?.total || 0}
                 </div>
                 <div className="text-olive-300">Addresses Collected</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   {stats?.addresses?.linked || 0} linked to RSVPs
                 </div>
               </div>
@@ -1774,7 +1774,7 @@ export default function AdminPage() {
                   {formatCurrency(expenseTotals.totalAmount + vendorTotals.totalContracted)}
                 </div>
                 <div className="text-olive-300">Total Committed</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   <span className="text-green-400">{formatCurrency(expenseTotals.totalPaid + vendorTotals.totalPaid)} paid</span>
                   {(expenseTotals.totalBalance + vendorTotals.totalBalance) > 0 && (
                     <span className="text-yellow-400"> · {formatCurrency(expenseTotals.totalBalance + vendorTotals.totalBalance)} due</span>
@@ -1788,7 +1788,7 @@ export default function AdminPage() {
                   {vendors.length}
                 </div>
                 <div className="text-olive-300">Vendors</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   <span className="text-green-400">{vendorTotals.countPaid + vendorTotals.countBooked} booked</span>
                   {vendorTotals.totalBalance > 0 && (
                     <span className="text-yellow-400"> · {formatCurrency(vendorTotals.totalBalance)} due</span>
@@ -1802,7 +1802,7 @@ export default function AdminPage() {
                   {timelineEvents.length}
                 </div>
                 <div className="text-olive-300">Timeline Events</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   {timelineEvents.filter(e => e.is_milestone).length} key moments
                 </div>
               </div>
@@ -1813,7 +1813,7 @@ export default function AdminPage() {
                   {tasks.filter(t => t.completed).length}/{tasks.length}
                 </div>
                 <div className="text-olive-300">Tasks Complete</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   {tasks.filter(t => !t.completed).length} pending
                 </div>
               </div>
@@ -1824,7 +1824,7 @@ export default function AdminPage() {
                   {formatCurrency(giftTotals.totalCash)}
                 </div>
                 <div className="text-olive-300">Gifts Received</div>
-                <div className="text-olive-500 text-sm mt-1">
+                <div className="text-olive-400 text-sm mt-1">
                   {giftTotals.totalGifts} gifts · {giftTotals.thankYouPending} thank yous pending
                 </div>
               </div>
@@ -1892,7 +1892,7 @@ export default function AdminPage() {
                             <td className="p-3 text-cream">
                               {rsvp.name}
                               {guests.length > 0 && (
-                                <div className="text-xs text-olive-500 mt-1">
+                                <div className="text-xs text-olive-400 mt-1">
                                   +{guests.map(g => g.name).join(', ')}
                                 </div>
                               )}
@@ -1914,7 +1914,7 @@ export default function AdminPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="p-3 text-olive-500 text-sm">{formatDate(rsvp.created_at)}</td>
+                            <td className="p-3 text-olive-400 text-sm">{formatDate(rsvp.created_at)}</td>
                             <td className="p-3">
                               <button
                                 onClick={() => deleteRsvp(rsvp.id)}
@@ -1984,7 +1984,7 @@ export default function AdminPage() {
                           <td className="p-3 text-cream">
                             {addr.name}
                             {addr.phone && (
-                              <div className="text-xs text-olive-500 mt-1">{addr.phone}</div>
+                              <div className="text-xs text-olive-400 mt-1">{addr.phone}</div>
                             )}
                           </td>
                           <td className="p-3 text-olive-400">{addr.email}</td>
@@ -2007,7 +2007,7 @@ export default function AdminPage() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-olive-500 text-sm">{formatDate(addr.created_at)}</td>
+                          <td className="p-3 text-olive-400 text-sm">{formatDate(addr.created_at)}</td>
                           <td className="p-3">
                             <button
                               onClick={() => deleteAddress(addr.id)}
@@ -2087,7 +2087,7 @@ export default function AdminPage() {
                         </h3>
                         <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                           {unassignedGuests.length === 0 ? (
-                            <p className="text-olive-500 text-sm">All guests assigned!</p>
+                            <p className="text-olive-400 text-sm">All guests assigned!</p>
                           ) : (
                             unassignedGuests.map((guest, idx) => {
                               const dropdownId = `${guest.name}-${idx}`;
@@ -2100,7 +2100,7 @@ export default function AdminPage() {
                                   <span className="text-cream text-sm">
                                     {guest.name}
                                     {guest.isAdditionalGuest && (
-                                      <span className="text-olive-500 text-xs ml-1">(+1)</span>
+                                      <span className="text-olive-400 text-xs ml-1">(+1)</span>
                                     )}
                                   </span>
                                   <div className="relative">
@@ -2120,7 +2120,7 @@ export default function AdminPage() {
                                         {/* Dropdown menu */}
                                         <div className="absolute right-0 bottom-full mb-1 bg-charcoal border border-olive-600 rounded-lg shadow-lg z-50 min-w-[150px] max-h-[200px] overflow-y-auto">
                                           {seatingTables.length === 0 ? (
-                                            <p className="px-3 py-2 text-olive-500 text-sm">No tables yet</p>
+                                            <p className="px-3 py-2 text-olive-400 text-sm">No tables yet</p>
                                           ) : (
                                             seatingTables.map(table => (
                                               <button
@@ -2168,7 +2168,7 @@ export default function AdminPage() {
                                 <div className="flex justify-between items-start mb-3">
                                   <div>
                                     <h4 className="text-cream font-medium">{table.name}</h4>
-                                    <p className={`text-sm ${isFull ? 'text-gold-400' : 'text-olive-500'}`}>
+                                    <p className={`text-sm ${isFull ? 'text-gold-400' : 'text-olive-400'}`}>
                                       {assignments.length} / {table.capacity} seats
                                     </p>
                                   </div>
@@ -2191,12 +2191,12 @@ export default function AdminPage() {
                                       <span className="text-olive-300">
                                         {assignment.guest_name}
                                         {assignment.is_additional_guest && (
-                                          <span className="text-olive-500 text-xs ml-1">(+1)</span>
+                                          <span className="text-olive-400 text-xs ml-1">(+1)</span>
                                         )}
                                       </span>
                                       <button
                                         onClick={() => unassignGuest(assignment)}
-                                        className="text-olive-500 hover:text-red-400"
+                                        className="text-olive-400 hover:text-red-400"
                                         title="Remove from table"
                                       >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2206,7 +2206,7 @@ export default function AdminPage() {
                                     </div>
                                   ))}
                                   {assignments.length === 0 && (
-                                    <p className="text-olive-600 text-sm italic">No guests assigned</p>
+                                    <p className="text-olive-400 text-sm italic">No guests assigned</p>
                                   )}
                                 </div>
                               </div>
@@ -2244,7 +2244,7 @@ export default function AdminPage() {
                       <div>
                         <p className="text-cream font-medium">{entry.name}</p>
                         <p className="text-olive-300 mt-1">{entry.message}</p>
-                        <p className="text-olive-500 text-sm mt-2">{formatDate(entry.created_at)}</p>
+                        <p className="text-olive-400 text-sm mt-2">{formatDate(entry.created_at)}</p>
                       </div>
                       <button
                         onClick={() => deleteGuestbookEntry(entry.id)}
@@ -2316,7 +2316,7 @@ export default function AdminPage() {
                       </div>
                       <div className="mt-2">
                         <p className="text-cream text-sm truncate">{photo.guest_name}</p>
-                        <p className="text-olive-500 text-xs">{formatDate(photo.created_at)}</p>
+                        <p className="text-olive-400 text-xs">{formatDate(photo.created_at)}</p>
                       </div>
                     </div>
                   ))}
@@ -2385,7 +2385,7 @@ export default function AdminPage() {
                         </div>
                         <div className="bg-charcoal border border-olive-600 rounded-lg p-3 max-h-48 overflow-y-auto">
                           {availableRecipients.length === 0 ? (
-                            <p className="text-olive-500 text-sm">No recipients available. Add addresses or RSVPs first.</p>
+                            <p className="text-olive-400 text-sm">No recipients available. Add addresses or RSVPs first.</p>
                           ) : (
                             <div className="space-y-1">
                               {availableRecipients.map(recipient => (
@@ -2400,7 +2400,7 @@ export default function AdminPage() {
                                     className="w-4 h-4 rounded border-olive-600 text-gold-500 focus:ring-gold-500 bg-charcoal"
                                   />
                                   <span className="text-cream">{recipient.name}</span>
-                                  <span className="text-olive-500 text-sm">{recipient.email}</span>
+                                  <span className="text-olive-400 text-sm">{recipient.email}</span>
                                   <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
                                     recipient.source === 'both' ? 'bg-purple-500/20 text-purple-400' :
                                     recipient.source === 'rsvp' ? 'bg-blue-500/20 text-blue-400' :
@@ -2433,7 +2433,7 @@ export default function AdminPage() {
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-olive-300 font-medium">Message</label>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-olive-500">Insert:</span>
+                            <span className="text-xs text-olive-400">Insert:</span>
                             <div className="flex flex-wrap gap-1">
                               {templateVariables.map(v => (
                                 <button
@@ -2457,7 +2457,7 @@ export default function AdminPage() {
                           textToInsert={textToInsert}
                           onInserted={() => setTextToInsert(null)}
                         />
-                        <p className="text-olive-500 text-sm mt-2">
+                        <p className="text-olive-400 text-sm mt-2">
                           Your message will be wrapped in our branded email template. Use the insert buttons above to add personalized fields.
                         </p>
                       </div>
@@ -2545,7 +2545,7 @@ export default function AdminPage() {
                                   {email.status}
                                 </span>
                               </td>
-                              <td className="p-3 text-olive-500 text-sm">{formatDate(email.created_at)}</td>
+                              <td className="p-3 text-olive-400 text-sm">{formatDate(email.created_at)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2614,7 +2614,7 @@ export default function AdminPage() {
                               <div className="text-2xl font-heading text-gold-500">{formatCurrency(budgetTotals.budget)}</div>
                               <button
                                 onClick={() => { setNewBudgetAmount(String(budgetTotals.budget)); setEditingBudget(true); }}
-                                className="text-olive-500 hover:text-gold-400"
+                                className="text-olive-400 hover:text-gold-400"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -2626,7 +2626,7 @@ export default function AdminPage() {
                         <div className="bg-black/50 border border-olive-700 rounded-lg p-4">
                           <div className="text-olive-400 text-sm mb-1">Total Spent</div>
                           <div className="text-2xl font-heading text-cream">{formatCurrency(budgetTotals.spent)}</div>
-                          <div className="text-sm text-olive-500">{budgetTotals.budget > 0 ? Math.round((budgetTotals.spent / budgetTotals.budget) * 100) : 0}% of budget</div>
+                          <div className="text-sm text-olive-400">{budgetTotals.budget > 0 ? Math.round((budgetTotals.spent / budgetTotals.budget) * 100) : 0}% of budget</div>
                         </div>
                         <div className="bg-black/50 border border-olive-700 rounded-lg p-4">
                           <div className="text-olive-400 text-sm mb-1">Paid</div>
@@ -2812,7 +2812,7 @@ export default function AdminPage() {
                                           setEditingExpenseId(null);
                                         }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                           <div className="col-span-2">
-                                            <label className="text-olive-500 text-xs">Description</label>
+                                            <label className="text-olive-400 text-xs">Description</label>
                                             <input
                                               name="description"
                                               defaultValue={expense.description}
@@ -2821,7 +2821,7 @@ export default function AdminPage() {
                                             />
                                           </div>
                                           <div>
-                                            <label className="text-olive-500 text-xs">Amount</label>
+                                            <label className="text-olive-400 text-xs">Amount</label>
                                             <input
                                               name="amount"
                                               type="number"
@@ -2832,7 +2832,7 @@ export default function AdminPage() {
                                             />
                                           </div>
                                           <div>
-                                            <label className="text-olive-500 text-xs">Amount Paid</label>
+                                            <label className="text-olive-400 text-xs">Amount Paid</label>
                                             <input
                                               name="amount_paid"
                                               type="number"
@@ -2842,7 +2842,7 @@ export default function AdminPage() {
                                             />
                                           </div>
                                           <div>
-                                            <label className="text-olive-500 text-xs">Category</label>
+                                            <label className="text-olive-400 text-xs">Category</label>
                                             <select
                                               name="category_id"
                                               defaultValue={expense.category_id || ''}
@@ -2853,7 +2853,7 @@ export default function AdminPage() {
                                             </select>
                                           </div>
                                           <div>
-                                            <label className="text-olive-500 text-xs">Due Date</label>
+                                            <label className="text-olive-400 text-xs">Due Date</label>
                                             <input
                                               name="due_date"
                                               type="date"
@@ -2862,7 +2862,7 @@ export default function AdminPage() {
                                             />
                                           </div>
                                           <div className="col-span-2 md:col-span-1">
-                                            <label className="text-olive-500 text-xs">Notes</label>
+                                            <label className="text-olive-400 text-xs">Notes</label>
                                             <input
                                               name="notes"
                                               defaultValue={expense.notes || ''}
@@ -2897,7 +2897,7 @@ export default function AdminPage() {
                                         'bg-olive-500/20 text-olive-400'
                                       }`}>{expense.payment_status}</span>
                                     </td>
-                                    <td className="p-3 text-olive-500 text-sm">{formatShortDate(expense.due_date)}</td>
+                                    <td className="p-3 text-olive-400 text-sm">{formatShortDate(expense.due_date)}</td>
                                     <td className="p-3">
                                       <div className="flex items-center gap-2">
                                         <button
@@ -3096,7 +3096,7 @@ export default function AdminPage() {
                                   />
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <label className="text-olive-500 text-xs">Contract Amount</label>
+                                      <label className="text-olive-400 text-xs">Contract Amount</label>
                                       <input
                                         name="contract_amount"
                                         type="number"
@@ -3106,7 +3106,7 @@ export default function AdminPage() {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-olive-500 text-xs">Amount Paid</label>
+                                      <label className="text-olive-400 text-xs">Amount Paid</label>
                                       <input
                                         name="amount_paid"
                                         type="number"
@@ -3118,7 +3118,7 @@ export default function AdminPage() {
                                   </div>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <label className="text-olive-500 text-xs">Deposit Amount</label>
+                                      <label className="text-olive-400 text-xs">Deposit Amount</label>
                                       <input
                                         name="deposit_amount"
                                         type="number"
@@ -3128,7 +3128,7 @@ export default function AdminPage() {
                                       />
                                     </div>
                                     <div className="flex items-end pb-1">
-                                      <label className="flex items-center gap-2 text-olive-500 text-xs">
+                                      <label className="flex items-center gap-2 text-olive-400 text-xs">
                                         <input
                                           name="deposit_paid"
                                           type="checkbox"
@@ -3173,7 +3173,7 @@ export default function AdminPage() {
                                   <div className="flex justify-between items-start mb-2">
                                     <div>
                                       <h4 className="text-cream font-medium">{vendor.name}</h4>
-                                      <p className="text-olive-500 text-sm">{vendor.category?.name || 'Uncategorized'}</p>
+                                      <p className="text-olive-400 text-sm">{vendor.category?.name || 'Uncategorized'}</p>
                                     </div>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                                       vendor.status === 'booked' || vendor.status === 'paid' ? 'bg-green-500/20 text-green-400' :
@@ -3184,8 +3184,8 @@ export default function AdminPage() {
                                     }`}>{vendor.status}</span>
                                   </div>
                                   {vendor.contact_name && <p className="text-olive-400 text-sm">{vendor.contact_name}</p>}
-                                  {vendor.email && <p className="text-olive-500 text-sm">{vendor.email}</p>}
-                                  {vendor.phone && <p className="text-olive-500 text-sm">{vendor.phone}</p>}
+                                  {vendor.email && <p className="text-olive-400 text-sm">{vendor.email}</p>}
+                                  {vendor.phone && <p className="text-olive-400 text-sm">{vendor.phone}</p>}
                                   {vendor.website && (
                                     <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-gold-500 text-sm hover:underline block truncate">
                                       {vendor.website}
@@ -3215,7 +3215,7 @@ export default function AdminPage() {
                                       </span>
                                     </div>
                                     {vendor.notes && (
-                                      <p className="text-olive-500 text-xs mb-2 italic">{vendor.notes}</p>
+                                      <p className="text-olive-400 text-xs mb-2 italic">{vendor.notes}</p>
                                     )}
                                     <div className="flex justify-between items-center gap-2">
                                       <button
@@ -3362,7 +3362,7 @@ export default function AdminPage() {
                                   <td className="p-3 text-olive-400 capitalize">{gift.gift_type}</td>
                                   <td className="p-3 text-olive-400">{gift.description || '-'}</td>
                                   <td className="p-3 text-cream">{gift.amount ? formatCurrency(gift.amount) : '-'}</td>
-                                  <td className="p-3 text-olive-500 text-sm">{formatShortDate(gift.received_date)}</td>
+                                  <td className="p-3 text-olive-400 text-sm">{formatShortDate(gift.received_date)}</td>
                                   <td className="p-3">
                                     <button
                                       onClick={() => toggleThankYou(gift)}
@@ -3506,7 +3506,7 @@ export default function AdminPage() {
                                 </button>
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className={`font-medium ${task.completed ? 'text-olive-500 line-through' : 'text-cream'}`}>{task.title}</span>
+                                    <span className={`font-medium ${task.completed ? 'text-olive-400 line-through' : 'text-cream'}`}>{task.title}</span>
                                     <span className={`px-2 py-0.5 rounded text-xs ${
                                       task.priority === 'urgent' ? 'bg-red-500/20 text-red-400' :
                                       task.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
@@ -3519,9 +3519,9 @@ export default function AdminPage() {
                                   </div>
                                   {task.description && <p className="text-olive-400 text-sm mt-1">{task.description}</p>}
                                   <div className="flex items-center gap-4 mt-2 text-sm">
-                                    {task.category && <span className="text-olive-500">{task.category.name}</span>}
+                                    {task.category && <span className="text-olive-400">{task.category.name}</span>}
                                     {task.due_date && (
-                                      <span className={isOverdue ? 'text-red-400' : 'text-olive-500'}>
+                                      <span className={isOverdue ? 'text-red-400' : 'text-olive-400'}>
                                         Due: {formatShortDate(task.due_date)}
                                       </span>
                                     )}
@@ -3723,7 +3723,7 @@ export default function AdminPage() {
                                   <div className="w-24 flex-shrink-0 text-center">
                                     <div className="text-gold-400 font-medium">{formatTime(event.start_time)}</div>
                                     {event.end_time && (
-                                      <div className="text-olive-500 text-sm">to {formatTime(event.end_time)}</div>
+                                      <div className="text-olive-400 text-sm">to {formatTime(event.end_time)}</div>
                                     )}
                                   </div>
 
@@ -3743,7 +3743,7 @@ export default function AdminPage() {
                                     {event.location && (
                                       <div className="text-olive-400 text-sm mt-1">
                                         📍 {event.location}
-                                        {event.location_notes && <span className="text-olive-500"> ({event.location_notes})</span>}
+                                        {event.location_notes && <span className="text-olive-400"> ({event.location_notes})</span>}
                                       </div>
                                     )}
                                     {event.responsible_person && (
@@ -3752,11 +3752,11 @@ export default function AdminPage() {
                                     {event.vendor && (
                                       <div className="text-olive-400 text-sm">
                                         🏢 {event.vendor.name}
-                                        {event.vendor.phone && <span className="text-olive-500"> | {event.vendor.phone}</span>}
+                                        {event.vendor.phone && <span className="text-olive-400"> | {event.vendor.phone}</span>}
                                       </div>
                                     )}
                                     {event.notes && (
-                                      <div className="text-olive-500 text-sm mt-1 italic">{event.notes}</div>
+                                      <div className="text-olive-400 text-sm mt-1 italic">{event.notes}</div>
                                     )}
                                     {event.staff_notes && (
                                       <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-400 text-sm">
@@ -3769,7 +3769,7 @@ export default function AdminPage() {
                                   <div className="flex items-center gap-2 flex-shrink-0">
                                     <button
                                       onClick={() => setEditingTimelineId(event.id)}
-                                      className="p-1.5 text-olive-500 hover:text-cream"
+                                      className="p-1.5 text-olive-400 hover:text-cream"
                                       title="Edit event"
                                     >
                                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3778,7 +3778,7 @@ export default function AdminPage() {
                                     </button>
                                     <button
                                       onClick={() => toggleMilestone(event)}
-                                      className={`p-1.5 rounded ${event.is_milestone ? 'text-gold-400' : 'text-olive-500 hover:text-gold-400'}`}
+                                      className={`p-1.5 rounded ${event.is_milestone ? 'text-gold-400' : 'text-olive-400 hover:text-gold-400'}`}
                                       title={event.is_milestone ? 'Remove milestone' : 'Mark as milestone'}
                                     >
                                       <svg className="w-5 h-5" fill={event.is_milestone ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
