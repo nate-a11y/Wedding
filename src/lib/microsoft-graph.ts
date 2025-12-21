@@ -150,8 +150,8 @@ async function graphRequest<T>(
     throw new Error(`Graph API error (${response.status}): ${error.error?.message || error.error?.code || response.statusText}`);
   }
 
-  // Handle 204 No Content
-  if (response.status === 204) {
+  // Handle responses with no body (202 Accepted, 204 No Content)
+  if (response.status === 202 || response.status === 204) {
     return {} as T;
   }
 
