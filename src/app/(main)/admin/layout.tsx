@@ -20,12 +20,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <>
-      <head>
-        <link rel="manifest" href="/admin-manifest.json" />
-      </head>
-      {children}
-    </>
-  );
+  return children;
 }
