@@ -141,7 +141,13 @@ async function graphRequest<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(`Graph API error: ${error.error?.message || response.statusText}`);
+    console.error('Graph API error details:', {
+      status: response.status,
+      statusText: response.statusText,
+      endpoint,
+      error: JSON.stringify(error, null, 2),
+    });
+    throw new Error(`Graph API error (${response.status}): ${error.error?.message || error.error?.code || response.statusText}`);
   }
 
   // Handle 204 No Content
@@ -372,7 +378,6 @@ export interface EmailMessage {
       name?: string;
     };
   }>;
-  saveToSentItems?: boolean;
   // Receipt tracking - request delivery and read confirmations
   isDeliveryReceiptRequested?: boolean;
   isReadReceiptRequested?: boolean;
@@ -403,7 +408,6 @@ export async function sendEmail(
     toRecipients: options.to.map(email => ({
       emailAddress: { address: email },
     })),
-    saveToSentItems: options.saveToSent !== false, // Default to true
     // Request receipts for tracking (like Resend tracking)
     isDeliveryReceiptRequested: options.requestReceipts !== false, // Default to true
     isReadReceiptRequested: options.requestReceipts !== false, // Default to true
@@ -415,9 +419,13 @@ export async function sendEmail(
     }];
   }
 
+  // Note: saveToSentItems is a request-level property, not inside the message object
   await graphRequest(accessToken, '/me/sendMail', {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      saveToSentItems: options.saveToSent !== false, // Default to true
+    }),
   });
 }
 
