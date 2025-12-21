@@ -14,6 +14,9 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
 
+  // Determine if this is admin login based on redirect
+  const isAdminLogin = redirect.startsWith('/admin');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -23,14 +26,22 @@ export function LoginForm() {
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({
+          password,
+          type: isAdminLogin ? 'admin' : 'guest',
+        }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        router.push(redirect);
-        router.refresh();
+        // For admin, redirect to admin subdomain if possible
+        if (isAdminLogin && typeof window !== 'undefined') {
+          window.location.href = 'https://admin.nateandblake.me';
+        } else {
+          router.push(redirect);
+          router.refresh();
+        }
       } else {
         setError('Incorrect password. Please try again.');
       }
@@ -96,7 +107,9 @@ export function LoginForm() {
           className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8"
         >
           <p className="text-center text-olive-300 mb-6">
-            Please enter the password to view our wedding website.
+            {isAdminLogin
+              ? 'Enter the admin password to access the wedding planner.'
+              : 'Please enter the password to view our wedding website.'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">

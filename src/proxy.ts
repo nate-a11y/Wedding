@@ -27,14 +27,18 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check authentication for ALL routes (both guest site and admin)
-  const isAuthenticated = request.cookies.get('wedding-auth')?.value === 'authenticated';
+  // Check if this is an admin route (subdomain or /admin path)
+  const isAdminRoute = isAdminSubdomain || pathname.startsWith('/admin');
+
+  // Use different cookies for guest vs admin
+  const cookieName = isAdminRoute ? 'wedding-admin-auth' : 'wedding-guest-auth';
+  const isAuthenticated = request.cookies.get(cookieName)?.value === 'authenticated';
 
   if (!isAuthenticated) {
     // Redirect to login on the main domain
     const loginUrl = new URL('/login', 'https://nateandblake.me');
     // Preserve where they were trying to go
-    if (isAdminSubdomain) {
+    if (isAdminRoute) {
       loginUrl.searchParams.set('redirect', '/admin');
     } else {
       loginUrl.searchParams.set('redirect', pathname);
