@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokens, getTodoLists, createTodoList } from '@/lib/microsoft-graph';
+import { exchangeCodeForTokens, getTodoLists, createTodoList, createWebhookSubscription } from '@/lib/microsoft-graph';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 /**
@@ -67,6 +67,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL('/admin?tab=tasks&error=db_save_failed', baseUrl)
       );
+    }
+
+    // Set up webhook for real-time sync from Microsoft
+    try {
+      const webhookUrl = `${baseUrl}/api/webhooks/microsoft`;
+      const subscription = await createWebhookSubscription(
+        tokens.access_token,
+        weddingList.id,
+        webhookUrl
+      );
+
+      // Store webhook subscription info
+      await supabase
+        .from('microsoft_auth')
+        .update({
+          webhook_subscription_id: subscription.id,
+          webhook_expires_at: subscription.expirationDateTime,
+        })
+        .eq('id', '00000000-0000-0000-0000-000000000001');
+    } catch (webhookError) {
+      // Don't fail the whole flow if webhook setup fails
+      console.error('Failed to set up webhook (sync will still work manually):', webhookError);
     }
 
     // Redirect back to tasks tab with success
