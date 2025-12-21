@@ -41,7 +41,7 @@ export async function GET() {
 
     if (error) throw error;
 
-    // Calculate totals
+    // Calculate totals for all expenses
     const totals = {
       totalAmount: 0,
       totalPaid: 0,
@@ -51,9 +51,19 @@ export async function GET() {
       countPaid: 0,
     };
 
+    // Calculate totals for standalone expenses only (not linked to vendors)
+    // Used to avoid double-counting when combined with vendor totals
+    const standaloneTotals = {
+      totalAmount: 0,
+      totalPaid: 0,
+      totalBalance: 0,
+    };
+
     data?.forEach(expense => {
       const amount = Number(expense.amount) || 0;
       const paid = Number(expense.amount_paid) || 0;
+
+      // All expenses totals
       totals.totalAmount += amount;
       totals.totalPaid += paid;
       totals.totalBalance += (amount - paid);
@@ -61,11 +71,19 @@ export async function GET() {
       if (expense.payment_status === 'pending') totals.countPending++;
       else if (expense.payment_status === 'partial') totals.countPartial++;
       else if (expense.payment_status === 'paid') totals.countPaid++;
+
+      // Standalone totals (expenses without vendor_id)
+      if (!expense.vendor_id) {
+        standaloneTotals.totalAmount += amount;
+        standaloneTotals.totalPaid += paid;
+        standaloneTotals.totalBalance += (amount - paid);
+      }
     });
 
     return NextResponse.json({
       expenses: data || [],
       totals,
+      standaloneTotals,
     });
   } catch (error) {
     console.error('Expenses fetch error:', error);
