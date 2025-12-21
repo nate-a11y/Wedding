@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RichTextEditor } from '@/components/ui';
+import { supabase } from '@/lib/supabase';
 
 interface Stats {
   rsvps: {
@@ -305,7 +306,17 @@ function downloadCSV(data: string, filename: string) {
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  // Initialize tabs from localStorage (with SSR safety)
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_active_tab');
+      if (saved && ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning'].includes(saved)) {
+        return saved as Tab;
+      }
+    }
+    return 'overview';
+  });
+
   const [stats, setStats] = useState<Stats | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
   const [guestbook, setGuestbook] = useState<GuestbookEntry[]>([]);
@@ -331,8 +342,16 @@ export default function AdminPage() {
   const [clearEditor, setClearEditor] = useState(false);
   const [textToInsert, setTextToInsert] = useState<string | null>(null);
 
-  // Couple Dashboard / Planning state
-  const [planningSubTab, setPlanningSubTab] = useState<PlanningSubTab>('budget');
+  // Couple Dashboard / Planning state (with localStorage persistence)
+  const [planningSubTab, setPlanningSubTab] = useState<PlanningSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_planning_subtab');
+      if (saved && ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'].includes(saved)) {
+        return saved as PlanningSubTab;
+      }
+    }
+    return 'budget';
+  });
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettings>({ total_budget: 0, currency: 'USD' });
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [budgetTotals, setBudgetTotals] = useState<BudgetTotals>({ budget: 0, estimated: 0, spent: 0, paid: 0, remaining: 0 });
@@ -358,6 +377,179 @@ export default function AdminPage() {
   const [editingTimelineId, setEditingTimelineId] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+
+  // Persist tab state to localStorage
+  useEffect(() => {
+    localStorage.setItem('admin_active_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('admin_planning_subtab', planningSubTab);
+  }, [planningSubTab]);
+
+  // Refetch helper functions for real-time updates
+  const refetchBudget = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/budget');
+      const data = await response.json();
+      if (!data.error) {
+        setBudgetSettings(data.settings);
+        setBudgetCategories(data.categories || []);
+        setBudgetTotals(data.totals);
+      }
+    } catch (err) {
+      console.error('Failed to refetch budget:', err);
+    }
+  }, []);
+
+  const refetchExpenses = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/expenses');
+      const data = await response.json();
+      if (!data.error) {
+        setExpenses(data.expenses || []);
+        setExpenseTotals(data.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+      }
+    } catch (err) {
+      console.error('Failed to refetch expenses:', err);
+    }
+  }, []);
+
+  const refetchVendors = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/vendors');
+      const data = await response.json();
+      if (!data.error) {
+        setVendors(data.vendors || []);
+        setVendorTotals(data.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+      }
+    } catch (err) {
+      console.error('Failed to refetch vendors:', err);
+    }
+  }, []);
+
+  const refetchGifts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/gifts');
+      const data = await response.json();
+      if (!data.error) {
+        setGifts(data.gifts || []);
+        setGiftTotals(data.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
+      }
+    } catch (err) {
+      console.error('Failed to refetch gifts:', err);
+    }
+  }, []);
+
+  const refetchTasks = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/tasks');
+      const data = await response.json();
+      if (!data.error) {
+        setTasks(data.tasks || []);
+        setTaskStats(data.stats || { total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
+      }
+    } catch (err) {
+      console.error('Failed to refetch tasks:', err);
+    }
+  }, []);
+
+  const refetchTimeline = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/timeline');
+      const data = await response.json();
+      if (!data.error) {
+        setTimelineEvents(data.events || []);
+      }
+    } catch (err) {
+      console.error('Failed to refetch timeline:', err);
+    }
+  }, []);
+
+  const refetchRsvps = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/rsvps');
+      const data = await response.json();
+      if (!data.error) {
+        setRsvps(data.rsvps || []);
+      }
+    } catch (err) {
+      console.error('Failed to refetch rsvps:', err);
+    }
+  }, []);
+
+  const refetchStats = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/stats');
+      const data = await response.json();
+      if (!data.error) {
+        setStats(data);
+      }
+    } catch (err) {
+      console.error('Failed to refetch stats:', err);
+    }
+  }, []);
+
+  // Real-time subscriptions for planning tables
+  useEffect(() => {
+    if (!supabase) return;
+
+    // Subscribe to all planning-related tables
+    const channel = supabase
+      .channel('admin-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+        refetchExpenses();
+        refetchBudget(); // Budget totals depend on expenses
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendors' }, () => {
+        refetchVendors();
+        refetchBudget(); // Budget totals depend on vendors
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_settings' }, () => {
+        refetchBudget();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_categories' }, () => {
+        refetchBudget();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gifts' }, () => {
+        refetchGifts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        refetchTasks();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_events' }, () => {
+        refetchTimeline();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, () => {
+        refetchRsvps();
+        refetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guestbook' }, async () => {
+        try {
+          const response = await fetch('/api/admin/guestbook');
+          const data = await response.json();
+          if (!data.error) setGuestbook(data.entries || []);
+        } catch (err) {
+          console.error('Failed to refetch guestbook:', err);
+        }
+        refetchStats();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, async () => {
+        try {
+          const response = await fetch('/api/admin/photos');
+          const data = await response.json();
+          if (!data.error) setPhotos(data.photos || []);
+        } catch (err) {
+          console.error('Failed to refetch photos:', err);
+        }
+        refetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase?.removeChannel(channel);
+    };
+  }, [refetchBudget, refetchExpenses, refetchVendors, refetchGifts, refetchTasks, refetchTimeline, refetchRsvps, refetchStats]);
 
   // Get all unique email recipients from addresses and RSVPs with full data
   const availableRecipients = useMemo(() => {
