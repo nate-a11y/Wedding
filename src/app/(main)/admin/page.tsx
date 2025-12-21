@@ -1576,16 +1576,16 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Budget Summary */}
+              {/* Budget Summary - Combined Expenses + Vendors */}
               <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
                 <div className="text-4xl font-heading text-gold-500 mb-2">
-                  {formatCurrency(expenseTotals.totalAmount)}
+                  {formatCurrency(expenseTotals.totalAmount + vendorTotals.totalContracted)}
                 </div>
-                <div className="text-olive-300">Total Budget</div>
+                <div className="text-olive-300">Total Committed</div>
                 <div className="text-olive-500 text-sm mt-1">
-                  <span className="text-green-400">{formatCurrency(expenseTotals.totalPaid)} paid</span>
-                  {expenseTotals.totalBalance > 0 && (
-                    <span className="text-yellow-400"> · {formatCurrency(expenseTotals.totalBalance)} due</span>
+                  <span className="text-green-400">{formatCurrency(expenseTotals.totalPaid + vendorTotals.totalPaid)} paid</span>
+                  {(expenseTotals.totalBalance + vendorTotals.totalBalance) > 0 && (
+                    <span className="text-yellow-400"> · {formatCurrency(expenseTotals.totalBalance + vendorTotals.totalBalance)} due</span>
                   )}
                 </div>
               </div>
@@ -2592,6 +2592,105 @@ export default function AdminPage() {
                             <tbody>
                               {expenses.map((expense) => {
                                 const balance = expense.amount - (expense.amount_paid || 0);
+
+                                if (editingExpenseId === expense.id) {
+                                  // Edit mode row
+                                  return (
+                                    <tr key={expense.id} className="border-b border-olive-800 bg-olive-900/50">
+                                      <td colSpan={8} className="p-3">
+                                        <form onSubmit={async (e) => {
+                                          e.preventDefault();
+                                          const form = e.target as HTMLFormElement;
+                                          const formData = new FormData(form);
+                                          const amountPaid = parseFloat(formData.get('amount_paid') as string) || 0;
+                                          const amount = parseFloat(formData.get('amount') as string) || 0;
+                                          let status: 'pending' | 'partial' | 'paid' = 'pending';
+                                          if (amountPaid >= amount) status = 'paid';
+                                          else if (amountPaid > 0) status = 'partial';
+
+                                          await updateExpense(expense.id, {
+                                            description: formData.get('description') as string,
+                                            amount,
+                                            amount_paid: amountPaid,
+                                            category_id: formData.get('category_id') as string || null,
+                                            payment_status: status,
+                                            due_date: formData.get('due_date') as string || null,
+                                            notes: formData.get('notes') as string || null,
+                                          });
+                                          setEditingExpenseId(null);
+                                        }} className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                          <div className="col-span-2">
+                                            <label className="text-olive-500 text-xs">Description</label>
+                                            <input
+                                              name="description"
+                                              defaultValue={expense.description}
+                                              required
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-500 text-xs">Amount</label>
+                                            <input
+                                              name="amount"
+                                              type="number"
+                                              step="0.01"
+                                              defaultValue={expense.amount}
+                                              required
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-500 text-xs">Amount Paid</label>
+                                            <input
+                                              name="amount_paid"
+                                              type="number"
+                                              step="0.01"
+                                              defaultValue={expense.amount_paid || 0}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-500 text-xs">Category</label>
+                                            <select
+                                              name="category_id"
+                                              defaultValue={expense.category_id || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            >
+                                              <option value="">No Category</option>
+                                              {budgetCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                          </div>
+                                          <div>
+                                            <label className="text-olive-500 text-xs">Due Date</label>
+                                            <input
+                                              name="due_date"
+                                              type="date"
+                                              defaultValue={expense.due_date || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div className="col-span-2 md:col-span-1">
+                                            <label className="text-olive-500 text-xs">Notes</label>
+                                            <input
+                                              name="notes"
+                                              defaultValue={expense.notes || ''}
+                                              className="w-full px-2 py-1 bg-charcoal border border-olive-600 rounded text-cream text-sm"
+                                            />
+                                          </div>
+                                          <div className="col-span-2 md:col-span-1 flex items-end gap-2">
+                                            <button type="submit" className="px-3 py-1 bg-gold-500 text-black rounded text-sm font-medium">
+                                              Save
+                                            </button>
+                                            <button type="button" onClick={() => setEditingExpenseId(null)} className="px-3 py-1 bg-olive-700 text-cream rounded text-sm">
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </form>
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+
                                 return (
                                   <tr key={expense.id} className="border-b border-olive-800 hover:bg-olive-900/30">
                                     <td className="p-3 text-cream">{expense.description}</td>
@@ -2609,6 +2708,12 @@ export default function AdminPage() {
                                     <td className="p-3 text-olive-500 text-sm">{formatShortDate(expense.due_date)}</td>
                                     <td className="p-3">
                                       <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => setEditingExpenseId(expense.id)}
+                                          className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
+                                        >
+                                          Edit
+                                        </button>
                                         {expense.payment_status !== 'paid' && (
                                           <button
                                             onClick={() => markExpensePaid(expense)}

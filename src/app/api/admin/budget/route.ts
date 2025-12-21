@@ -42,26 +42,46 @@ export async function GET() {
     if (vendorsError) throw vendorsError;
 
     // Calculate spending by category from expenses
+    // Track uncategorized items separately for overall totals
     const spendingByCategory: Record<string, { total: number; paid: number }> = {};
+    let uncategorizedExpenseTotal = 0;
+    let uncategorizedExpensePaid = 0;
+
     expenses?.forEach(expense => {
+      const amount = Number(expense.amount) || 0;
+      const amountPaid = Number(expense.amount_paid) || 0;
+
       if (expense.category_id) {
         if (!spendingByCategory[expense.category_id]) {
           spendingByCategory[expense.category_id] = { total: 0, paid: 0 };
         }
-        spendingByCategory[expense.category_id].total += Number(expense.amount) || 0;
-        // Use amount_paid field for partial payments
-        spendingByCategory[expense.category_id].paid += Number(expense.amount_paid) || 0;
+        spendingByCategory[expense.category_id].total += amount;
+        spendingByCategory[expense.category_id].paid += amountPaid;
+      } else {
+        // Track uncategorized expenses for overall totals
+        uncategorizedExpenseTotal += amount;
+        uncategorizedExpensePaid += amountPaid;
       }
     });
 
     // Add vendor contracts to category totals
+    let uncategorizedVendorTotal = 0;
+    let uncategorizedVendorPaid = 0;
+
     vendors?.forEach(vendor => {
+      const contractAmount = Number(vendor.contract_amount) || 0;
+      const amountPaid = Number(vendor.amount_paid) || 0;
+
       if (vendor.category_id) {
         if (!spendingByCategory[vendor.category_id]) {
           spendingByCategory[vendor.category_id] = { total: 0, paid: 0 };
         }
-        spendingByCategory[vendor.category_id].total += Number(vendor.contract_amount) || 0;
-        spendingByCategory[vendor.category_id].paid += Number(vendor.amount_paid) || 0;
+        spendingByCategory[vendor.category_id].total += contractAmount;
+        spendingByCategory[vendor.category_id].paid += amountPaid;
+      } else {
+        // Track uncategorized vendors for overall totals
+        uncategorizedVendorTotal += contractAmount;
+        uncategorizedVendorPaid += amountPaid;
       }
     });
 
@@ -72,10 +92,12 @@ export async function GET() {
       paid: spendingByCategory[cat.id]?.paid || 0,
     }));
 
-    // Calculate totals from both expenses and vendors
+    // Calculate totals from both expenses and vendors (including uncategorized)
     const totalEstimated = categories?.reduce((sum, cat) => sum + (Number(cat.estimated_amount) || 0), 0) || 0;
-    const totalSpent = Object.values(spendingByCategory).reduce((sum, s) => sum + s.total, 0);
-    const totalPaid = Object.values(spendingByCategory).reduce((sum, s) => sum + s.paid, 0);
+    const categorizedSpent = Object.values(spendingByCategory).reduce((sum, s) => sum + s.total, 0);
+    const categorizedPaid = Object.values(spendingByCategory).reduce((sum, s) => sum + s.paid, 0);
+    const totalSpent = categorizedSpent + uncategorizedExpenseTotal + uncategorizedVendorTotal;
+    const totalPaid = categorizedPaid + uncategorizedExpensePaid + uncategorizedVendorPaid;
 
     return NextResponse.json({
       settings: settings || { total_budget: 0, currency: 'USD' },
