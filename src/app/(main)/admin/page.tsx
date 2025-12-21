@@ -401,6 +401,12 @@ export default function AdminPage() {
   const [editingGiftId, setEditingGiftId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
+  // Microsoft To Do sync state
+  const [microsoftConnected, setMicrosoftConnected] = useState(false);
+  const [microsoftListName, setMicrosoftListName] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
   // Persist tab state to localStorage and URL
   useEffect(() => {
     localStorage.setItem('admin_active_tab', activeTab);
@@ -425,6 +431,77 @@ export default function AdminPage() {
       window.history.replaceState({}, '', newUrl);
     }
   }, [planningSubTab, activeTab]);
+
+  // Check Microsoft To Do connection status
+  useEffect(() => {
+    async function checkMicrosoftStatus() {
+      try {
+        const response = await fetch('/api/admin/tasks/sync');
+        const data = await response.json();
+        setMicrosoftConnected(data.connected);
+        setMicrosoftListName(data.listName || null);
+      } catch {
+        setMicrosoftConnected(false);
+      }
+    }
+    checkMicrosoftStatus();
+
+    // Check URL params for Microsoft callback status
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('microsoft') === 'connected') {
+      setSyncMessage('Microsoft To Do connected successfully!');
+      setMicrosoftConnected(true);
+      // Clean up URL
+      params.delete('microsoft');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+      setTimeout(() => setSyncMessage(null), 3000);
+    }
+    if (params.get('error')) {
+      setSyncMessage(`Connection failed: ${params.get('error')}`);
+      params.delete('error');
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+      setTimeout(() => setSyncMessage(null), 5000);
+    }
+  }, []);
+
+  // Sync tasks with Microsoft To Do
+  const syncWithMicrosoft = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const response = await fetch('/api/admin/tasks/sync', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        const { results } = data;
+        setSyncMessage(`Synced! ${results.pushed} pushed, ${results.pulled} pulled, ${results.updated} updated`);
+        // Refresh tasks after sync
+        refetchTasks();
+      } else {
+        setSyncMessage(data.error || 'Sync failed');
+      }
+    } catch {
+      setSyncMessage('Sync failed - network error');
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncMessage(null), 4000);
+    }
+  };
+
+  // Disconnect Microsoft To Do
+  const disconnectMicrosoft = async () => {
+    if (!confirm('Disconnect Microsoft To Do? Tasks will remain but no longer sync.')) return;
+    try {
+      await fetch('/api/admin/tasks/sync', { method: 'DELETE' });
+      setMicrosoftConnected(false);
+      setMicrosoftListName(null);
+      setSyncMessage('Disconnected from Microsoft To Do');
+      setTimeout(() => setSyncMessage(null), 3000);
+    } catch {
+      setSyncMessage('Failed to disconnect');
+    }
+  };
 
   // Refetch helper functions for real-time updates
   const refetchBudget = useCallback(async () => {
@@ -3761,17 +3838,67 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-heading text-gold-400">Wedding Checklist</h3>
-                        <button
-                          onClick={() => setShowAddTask(!showAddTask)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                          </svg>
-                          Add Task
-                        </button>
+                      {/* Microsoft To Do Sync Banner */}
+                      {syncMessage && (
+                        <div className={`px-4 py-2 rounded-lg text-sm ${syncMessage.includes('failed') || syncMessage.includes('error') ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-green-500/20 text-green-300 border border-green-500/30'}`}>
+                          {syncMessage}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                          <h3 className="text-lg font-heading text-gold-400">Wedding Checklist</h3>
+                          {microsoftConnected && microsoftListName && (
+                            <div className="flex items-center gap-2 text-xs text-olive-400 mt-1">
+                              <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.5 3v8.5H3V3h8.5zm0 18H3v-8.5h8.5V21zm1-18H21v8.5h-8.5V3zm8.5 9.5V21h-8.5v-8.5H21z"/>
+                              </svg>
+                              <span>Synced with "{microsoftListName}"</span>
+                              <button
+                                onClick={disconnectMicrosoft}
+                                className="text-olive-500 hover:text-red-400 transition-colors"
+                                title="Disconnect"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {microsoftConnected ? (
+                            <button
+                              onClick={syncWithMicrosoft}
+                              disabled={isSyncing}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm font-medium disabled:opacity-50"
+                            >
+                              <svg className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              {isSyncing ? 'Syncing...' : 'Sync Now'}
+                            </button>
+                          ) : (
+                            <a
+                              href="/api/auth/microsoft"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors text-sm font-medium"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.5 3v8.5H3V3h8.5zm0 18H3v-8.5h8.5V21zm1-18H21v8.5h-8.5V3zm8.5 9.5V21h-8.5v-8.5H21z"/>
+                              </svg>
+                              Connect Microsoft To Do
+                            </a>
+                          )}
+                          <button
+                            onClick={() => setShowAddTask(!showAddTask)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add Task
+                          </button>
+                        </div>
                       </div>
 
                       {/* Add Task Form */}
