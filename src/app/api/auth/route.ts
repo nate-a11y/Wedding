@@ -1,22 +1,30 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-const SITE_PASSWORD = process.env.SITE_PASSWORD || 'Honey2027!';
+// Separate passwords for guest site and admin
+const GUEST_PASSWORD = process.env.GUEST_PASSWORD || process.env.SITE_PASSWORD || 'Honey2027!';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin2027!';
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
+    const { password, type } = await request.json();
+    const isAdmin = type === 'admin';
 
-    if (password === SITE_PASSWORD) {
+    const correctPassword = isAdmin ? ADMIN_PASSWORD : GUEST_PASSWORD;
+    const cookieName = isAdmin ? 'wedding-admin-auth' : 'wedding-guest-auth';
+
+    if (password === correctPassword) {
       const cookieStore = await cookies();
 
       // Set auth cookie - expires in 30 days
-      cookieStore.set('wedding-auth', 'authenticated', {
+      // Use domain to share across subdomains
+      cookieStore.set(cookieName, 'authenticated', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 30, // 30 days
         path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.nateandblake.me' : undefined,
       });
 
       return NextResponse.json({ success: true });
@@ -36,7 +44,8 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   const cookieStore = await cookies();
-  cookieStore.delete('wedding-auth');
+  cookieStore.delete('wedding-guest-auth');
+  cookieStore.delete('wedding-admin-auth');
 
   return NextResponse.json({ success: true });
 }

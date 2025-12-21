@@ -2,56 +2,62 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/api/auth', '/login', '/address', '/api/address'];
+const PUBLIC_ROUTES = ['/api/auth', '/login'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
 
-  // Handle admin subdomain routing
-  if (hostname.startsWith('admin.')) {
-    // If accessing root of admin subdomain, rewrite to /admin
-    if (pathname === '/') {
-      url.pathname = '/admin';
-      return NextResponse.rewrite(url);
-    }
-
-    // If accessing any path on admin subdomain that doesn't start with /admin,
-    // prefix it with /admin (except for static files and API routes)
-    if (
-      !pathname.startsWith('/admin') &&
-      !pathname.startsWith('/api') &&
-      !pathname.startsWith('/_next') &&
-      !pathname.startsWith('/icons') &&
-      !pathname.includes('.')
-    ) {
-      url.pathname = `/admin${pathname}`;
-      return NextResponse.rewrite(url);
-    }
-  }
-
-  // Allow public routes
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
-  }
+  // Determine if this is an admin subdomain request
+  const isAdminSubdomain = hostname.startsWith('admin.');
 
   // Allow static files and Next.js internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.')
+    pathname.startsWith('/icons') ||
+    (pathname.includes('.') && !pathname.startsWith('/api'))
   ) {
     return NextResponse.next();
   }
 
-  // Check for auth cookie
-  const isAuthenticated = request.cookies.get('wedding-auth')?.value === 'authenticated';
+  // Allow public routes (login, auth API)
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Check if this is an admin route (subdomain or /admin path)
+  const isAdminRoute = isAdminSubdomain || pathname.startsWith('/admin');
+
+  // Use different cookies for guest vs admin
+  const cookieName = isAdminRoute ? 'wedding-admin-auth' : 'wedding-guest-auth';
+  const isAuthenticated = request.cookies.get(cookieName)?.value === 'authenticated';
 
   if (!isAuthenticated) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
+    // Redirect to login on the main domain
+    const loginUrl = new URL('/login', 'https://nateandblake.me');
+    // Preserve where they were trying to go
+    if (isAdminRoute) {
+      loginUrl.searchParams.set('redirect', '/admin');
+    } else {
+      loginUrl.searchParams.set('redirect', pathname);
+    }
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Handle admin subdomain routing (after auth check passes)
+  if (isAdminSubdomain) {
+    if (pathname === '/' || pathname === '') {
+      url.pathname = '/admin';
+      return NextResponse.rewrite(url);
+    }
+
+    // Rewrite non-admin paths to /admin prefix
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api')) {
+      url.pathname = `/admin${pathname}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
   return NextResponse.next();
