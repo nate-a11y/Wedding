@@ -628,10 +628,50 @@ export default function AdminPage() {
       }
     }
 
-    if (activeTab !== 'overview') {
-      fetchData();
+    if (activeTab === 'overview') {
+      // Fetch planning data for dashboard summaries
+      async function fetchPlanningForDashboard() {
+        try {
+          const [expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes] = await Promise.all([
+            fetch('/api/admin/expenses'),
+            fetch('/api/admin/vendors'),
+            fetch('/api/admin/gifts'),
+            fetch('/api/admin/tasks'),
+            fetch('/api/admin/timeline'),
+          ]);
+          const [expensesData, vendorsData, giftsData, tasksData, timelineData] = await Promise.all([
+            expensesRes.json(),
+            vendorsRes.json(),
+            giftsRes.json(),
+            tasksRes.json(),
+            timelineRes.json(),
+          ]);
+          if (!expensesData.error) {
+            setExpenses(expensesData.expenses || []);
+            setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+          }
+          if (!vendorsData.error) {
+            setVendors(vendorsData.vendors || []);
+            setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+          }
+          if (!giftsData.error) {
+            setGifts(giftsData.gifts || []);
+            setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
+          }
+          if (!tasksData.error) {
+            setTasks(tasksData.tasks || []);
+          }
+          if (!timelineData.error) {
+            setTimelineEvents(timelineData.events || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch planning data for dashboard:', err);
+        }
+        setLoading(false);
+      }
+      fetchPlanningForDashboard();
     } else {
-      setLoading(false);
+      fetchData();
     }
   }, [activeTab]);
 
@@ -2648,12 +2688,15 @@ export default function AdminPage() {
                                   email: formData.get('email') || null,
                                   phone: formData.get('phone') || null,
                                   contract_amount: parseFloat(formData.get('contract_amount') as string) || 0,
+                                  amount_paid: parseFloat(formData.get('amount_paid') as string) || 0,
                                   status: formData.get('status') || 'researching',
                                 }),
                               });
                               const data = await response.json();
                               if (!data.error) {
-                                setVendors(prev => [data.vendor, ...prev]);
+                                const newVendors = [data.vendor, ...vendors];
+                                setVendors(newVendors);
+                                recalculateVendorTotals(newVendors);
                                 setShowAddVendor(false);
                                 form.reset();
                               }
@@ -2668,6 +2711,7 @@ export default function AdminPage() {
                             <input name="email" type="email" placeholder="Email" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="phone" placeholder="Phone" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="contract_amount" type="number" step="0.01" placeholder="Contract Amount" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
+                            <input name="amount_paid" type="number" step="0.01" placeholder="Amount Paid" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <select name="status" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
                               <option value="researching">Researching</option>
                               <option value="contacted">Contacted</option>
