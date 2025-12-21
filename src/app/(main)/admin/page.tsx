@@ -235,6 +235,7 @@ interface TimelineEvent {
   id: string;
   title: string;
   description: string | null;
+  event_date: string | null;
   start_time: string;
   end_time: string | null;
   duration_minutes: number | null;
@@ -1230,16 +1231,33 @@ export default function AdminPage() {
       return;
     }
 
+    // Group events by date
+    const eventsByDate = timelineEvents.reduce((acc, event) => {
+      const date = event.event_date || '2027-10-31';
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(event);
+      return acc;
+    }, {} as Record<string, TimelineEvent[]>);
+
+    const getDateLabel = (date: string) => {
+      if (date === '2027-10-30') return 'Friday, October 30 — Rehearsal';
+      if (date === '2027-10-31') return 'Saturday, October 31 — Wedding Day';
+      if (date === '2027-11-01') return 'Sunday, November 1 — After Midnight';
+      return new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    };
+
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Wedding Day Timeline - Nate & Blake</title>
+        <title>Wedding Timeline - Nate & Blake</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Georgia, serif; padding: 40px; max-width: 800px; margin: 0 auto; }
           h1 { text-align: center; font-size: 28px; margin-bottom: 5px; color: #536537; }
           h2 { text-align: center; font-size: 18px; color: #666; font-weight: normal; margin-bottom: 30px; }
+          .date-section { margin-bottom: 30px; }
+          .date-header { background: #536537; color: white; padding: 10px 15px; font-size: 16px; font-weight: bold; margin-bottom: 15px; }
           .event { display: flex; margin-bottom: 12px; page-break-inside: avoid; }
           .time { width: 100px; font-weight: bold; color: #d4af37; flex-shrink: 0; }
           .details { flex: 1; border-left: 2px solid #d4af37; padding-left: 15px; }
@@ -1252,28 +1270,33 @@ export default function AdminPage() {
           .staff-notes { background: #fff3cd; padding: 8px; font-size: 11px; margin-top: 5px; border-radius: 3px; }
           .staff-notes strong { color: #856404; }
           .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #ddd; padding-top: 20px; }
-          @media print { body { padding: 20px; } }
+          @media print { body { padding: 20px; } .date-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
         </style>
       </head>
       <body>
-        <h1>Wedding Day Timeline</h1>
-        <h2>Nate & Blake | October 31, 2027</h2>
-        ${timelineEvents.map(event => `
-          <div class="event">
-            <div class="time">${formatTime(event.start_time)}${event.end_time ? ` - ${formatTime(event.end_time)}` : ''}</div>
-            <div class="details">
-              <div class="title">
-                ${event.title}
-                ${event.is_milestone ? '<span class="milestone">KEY MOMENT</span>' : ''}
+        <h1>Wedding Timeline</h1>
+        <h2>Nate & Blake | October 30-31, 2027</h2>
+        ${Object.entries(eventsByDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, events]) => `
+          <div class="date-section">
+            <div class="date-header">${getDateLabel(date)}</div>
+            ${events.map(event => `
+              <div class="event">
+                <div class="time">${formatTime(event.start_time)}${event.end_time ? ` - ${formatTime(event.end_time)}` : ''}</div>
+                <div class="details">
+                  <div class="title">
+                    ${event.title}
+                    ${event.is_milestone ? '<span class="milestone">KEY MOMENT</span>' : ''}
+                  </div>
+                  ${event.location ? `<div class="meta location">📍 ${event.location}${event.location_notes ? ` (${event.location_notes})` : ''}</div>` : ''}
+                  ${event.responsible_person ? `<div class="meta">👤 ${event.responsible_person}</div>` : ''}
+                  ${event.participants ? `<div class="meta">👥 ${event.participants}</div>` : ''}
+                  ${event.vendor ? `<div class="meta">🏢 ${event.vendor.name}${event.vendor.phone ? ` | ${event.vendor.phone}` : ''}</div>` : ''}
+                  <div class="category">${getCategoryLabel(event.category)}</div>
+                  ${event.notes ? `<div class="notes">${event.notes}</div>` : ''}
+                  ${event.staff_notes ? `<div class="staff-notes"><strong>Staff Notes:</strong> ${event.staff_notes}</div>` : ''}
+                </div>
               </div>
-              ${event.location ? `<div class="meta location">📍 ${event.location}${event.location_notes ? ` (${event.location_notes})` : ''}</div>` : ''}
-              ${event.responsible_person ? `<div class="meta">👤 ${event.responsible_person}</div>` : ''}
-              ${event.participants ? `<div class="meta">👥 ${event.participants}</div>` : ''}
-              ${event.vendor ? `<div class="meta">🏢 ${event.vendor.name}${event.vendor.phone ? ` | ${event.vendor.phone}` : ''}</div>` : ''}
-              <div class="category">${getCategoryLabel(event.category)}</div>
-              ${event.notes ? `<div class="notes">${event.notes}</div>` : ''}
-              ${event.staff_notes ? `<div class="staff-notes"><strong>Staff Notes:</strong> ${event.staff_notes}</div>` : ''}
-            </div>
+            `).join('')}
           </div>
         `).join('')}
         <div class="footer">
@@ -2829,6 +2852,7 @@ export default function AdminPage() {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   title: formData.get('title'),
+                                  event_date: formData.get('event_date') || '2027-10-31',
                                   start_time: formData.get('start_time'),
                                   end_time: formData.get('end_time') || null,
                                   location: formData.get('location') || null,
@@ -2848,6 +2872,12 @@ export default function AdminPage() {
                             } catch (err) { console.error(err); }
                           }} className="grid md:grid-cols-4 gap-4">
                             <input name="title" placeholder="Event Title" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream md:col-span-2" />
+                            <select name="event_date" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream">
+                              <option value="2027-10-30">Oct 30 - Rehearsal</option>
+                              <option value="2027-10-31" selected>Oct 31 - Wedding Day</option>
+                              <option value="2027-11-01">Nov 1 - After Midnight</option>
+                            </select>
+                            <div></div>
                             <input name="start_time" type="time" required className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="end_time" type="time" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
                             <input name="location" placeholder="Location" className="px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream" />
@@ -2880,8 +2910,28 @@ export default function AdminPage() {
                       {timelineEvents.length === 0 ? (
                         <div className="text-center py-12 text-olive-400">No timeline events yet. Add your wedding day schedule!</div>
                       ) : (
-                        <div className="space-y-2">
-                          {timelineEvents.map((event) => (
+                        <div className="space-y-4">
+                          {/* Group events by date */}
+                          {Object.entries(
+                            timelineEvents.reduce((acc, event) => {
+                              const date = event.event_date || '2027-10-31';
+                              if (!acc[date]) acc[date] = [];
+                              acc[date].push(event);
+                              return acc;
+                            }, {} as Record<string, TimelineEvent[]>)
+                          ).sort(([a], [b]) => a.localeCompare(b)).map(([date, events]) => (
+                            <div key={date} className="space-y-2">
+                              {/* Date Header */}
+                              <div className="sticky top-0 bg-charcoal/95 backdrop-blur py-2 px-3 rounded-lg border border-olive-600 z-10">
+                                <h4 className="text-gold-400 font-semibold">
+                                  {date === '2027-10-30' && 'Friday, October 30 — Rehearsal'}
+                                  {date === '2027-10-31' && 'Saturday, October 31 — Wedding Day'}
+                                  {date === '2027-11-01' && 'Sunday, November 1 — After Midnight'}
+                                  {!['2027-10-30', '2027-10-31', '2027-11-01'].includes(date) && new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                </h4>
+                              </div>
+                              {/* Events for this date */}
+                              {events.map((event) => (
                             <div
                               key={event.id}
                               className={`bg-black/50 border rounded-lg p-4 ${
@@ -2956,6 +3006,8 @@ export default function AdminPage() {
                                   </button>
                                 </div>
                               </div>
+                            </div>
+                          ))}
                             </div>
                           ))}
                         </div>
