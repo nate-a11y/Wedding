@@ -17,8 +17,9 @@ export async function GET() {
         *,
         vendor:vendors(id, name, phone, email)
       `)
-      .order('start_time', { ascending: true })
-      .order('sort_order', { ascending: true });
+      .order('event_date', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .order('start_time', { ascending: true });
 
     if (error) throw error;
 
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       description,
+      event_date,
       start_time,
       end_time,
       duration_minutes,
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
       .insert({
         title,
         description: description || null,
+        event_date: event_date || '2027-10-31',
         start_time,
         end_time: end_time || null,
         duration_minutes: duration_minutes || null,
