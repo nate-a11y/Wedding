@@ -21,7 +21,32 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ vendors: data || [] });
+    // Calculate totals
+    const totals = {
+      totalContracted: 0,
+      totalPaid: 0,
+      totalBalance: 0,
+      countBooked: 0,
+      countPaid: 0,
+      countResearching: 0,
+    };
+
+    data?.forEach(vendor => {
+      const contracted = Number(vendor.contract_amount) || 0;
+      const paid = Number(vendor.amount_paid) || 0;
+      totals.totalContracted += contracted;
+      totals.totalPaid += paid;
+      totals.totalBalance += (contracted - paid);
+
+      if (vendor.status === 'booked') totals.countBooked++;
+      else if (vendor.status === 'paid' || vendor.status === 'completed') totals.countPaid++;
+      else if (vendor.status === 'researching') totals.countResearching++;
+    });
+
+    return NextResponse.json({
+      vendors: data || [],
+      totals,
+    });
   } catch (error) {
     console.error('Vendors fetch error:', error);
     return NextResponse.json(
@@ -51,9 +76,12 @@ export async function POST(request: NextRequest) {
       website,
       address,
       contract_amount,
+      amount_paid,
       deposit_amount,
       deposit_paid,
       deposit_paid_date,
+      payment_due_date,
+      final_payment_date,
       notes,
       status,
     } = body;
@@ -69,9 +97,12 @@ export async function POST(request: NextRequest) {
         website: website || null,
         address: address || null,
         contract_amount: contract_amount || 0,
+        amount_paid: amount_paid || 0,
         deposit_amount: deposit_amount || 0,
         deposit_paid: deposit_paid || false,
         deposit_paid_date: deposit_paid_date || null,
+        payment_due_date: payment_due_date || null,
+        final_payment_date: final_payment_date || null,
         notes: notes || null,
         status: status || 'researching',
       })

@@ -22,7 +22,32 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ expenses: data || [] });
+    // Calculate totals
+    const totals = {
+      totalAmount: 0,
+      totalPaid: 0,
+      totalBalance: 0,
+      countPending: 0,
+      countPartial: 0,
+      countPaid: 0,
+    };
+
+    data?.forEach(expense => {
+      const amount = Number(expense.amount) || 0;
+      const paid = Number(expense.amount_paid) || 0;
+      totals.totalAmount += amount;
+      totals.totalPaid += paid;
+      totals.totalBalance += (amount - paid);
+
+      if (expense.payment_status === 'pending') totals.countPending++;
+      else if (expense.payment_status === 'partial') totals.countPartial++;
+      else if (expense.payment_status === 'paid') totals.countPaid++;
+    });
+
+    return NextResponse.json({
+      expenses: data || [],
+      totals,
+    });
   } catch (error) {
     console.error('Expenses fetch error:', error);
     return NextResponse.json(
@@ -46,6 +71,7 @@ export async function POST(request: NextRequest) {
     const {
       description,
       amount,
+      amount_paid,
       category_id,
       vendor_id,
       payment_status,
@@ -55,14 +81,25 @@ export async function POST(request: NextRequest) {
       notes,
     } = body;
 
+    // Auto-determine payment status based on amounts
+    let finalStatus = payment_status || 'pending';
+    const amountNum = parseFloat(amount) || 0;
+    const paidNum = parseFloat(amount_paid) || 0;
+    if (paidNum >= amountNum && amountNum > 0) {
+      finalStatus = 'paid';
+    } else if (paidNum > 0) {
+      finalStatus = 'partial';
+    }
+
     const { data, error } = await supabase
       .from('expenses')
       .insert({
         description,
         amount,
+        amount_paid: amount_paid || 0,
         category_id: category_id || null,
         vendor_id: vendor_id || null,
-        payment_status: payment_status || 'pending',
+        payment_status: finalStatus,
         payment_date: payment_date || null,
         payment_method: payment_method || null,
         due_date: due_date || null,
@@ -99,6 +136,27 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, ...updates } = body;
+
+    // If amount or amount_paid is being updated, recalculate status
+    if (updates.amount !== undefined || updates.amount_paid !== undefined) {
+      // Get current expense to know full amounts
+      const { data: current } = await supabase
+        .from('expenses')
+        .select('amount, amount_paid')
+        .eq('id', id)
+        .single();
+
+      const amountNum = parseFloat(updates.amount ?? current?.amount) || 0;
+      const paidNum = parseFloat(updates.amount_paid ?? current?.amount_paid) || 0;
+
+      if (paidNum >= amountNum && amountNum > 0) {
+        updates.payment_status = 'paid';
+      } else if (paidNum > 0) {
+        updates.payment_status = 'partial';
+      } else {
+        updates.payment_status = 'pending';
+      }
+    }
 
     const { data, error } = await supabase
       .from('expenses')
