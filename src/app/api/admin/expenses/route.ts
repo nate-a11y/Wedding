@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
+// Helper function to recalculate and update a vendor's amount_paid based on linked expenses
+async function updateVendorPaidAmount(vendorId: string) {
+  if (!supabase) return;
+
+  // Sum all amount_paid from expenses linked to this vendor
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('amount_paid')
+    .eq('vendor_id', vendorId);
+
+  const totalPaid = expenses?.reduce((sum, e) => sum + (Number(e.amount_paid) || 0), 0) || 0;
+
+  // Update the vendor's amount_paid
+  await supabase
+    .from('vendors')
+    .update({ amount_paid: totalPaid })
+    .eq('id', vendorId);
+}
+
 // Get all expenses
 export async function GET() {
   if (!isSupabaseConfigured() || !supabase) {
@@ -114,6 +133,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // If expense is linked to a vendor, update vendor's paid amount
+    if (vendor_id && data) {
+      await updateVendorPaidAmount(vendor_id);
+    }
+
     return NextResponse.json({ expense: data });
   } catch (error) {
     console.error('Expense create error:', error);
@@ -137,15 +161,17 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { id, ...updates } = body;
 
+    // Get current expense to know old vendor and amounts
+    const { data: current } = await supabase
+      .from('expenses')
+      .select('amount, amount_paid, vendor_id')
+      .eq('id', id)
+      .single();
+
+    const oldVendorId = current?.vendor_id;
+
     // If amount or amount_paid is being updated, recalculate status
     if (updates.amount !== undefined || updates.amount_paid !== undefined) {
-      // Get current expense to know full amounts
-      const { data: current } = await supabase
-        .from('expenses')
-        .select('amount, amount_paid')
-        .eq('id', id)
-        .single();
-
       const amountNum = parseFloat(updates.amount ?? current?.amount) || 0;
       const paidNum = parseFloat(updates.amount_paid ?? current?.amount_paid) || 0;
 
@@ -171,6 +197,19 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    // Update vendor paid amounts if vendor changed or amount changed
+    const newVendorId = data?.vendor_id;
+
+    // If old vendor exists and is different from new, update old vendor
+    if (oldVendorId && oldVendorId !== newVendorId) {
+      await updateVendorPaidAmount(oldVendorId);
+    }
+
+    // If new vendor exists, update new vendor
+    if (newVendorId) {
+      await updateVendorPaidAmount(newVendorId);
+    }
+
     return NextResponse.json({ expense: data });
   } catch (error) {
     console.error('Expense update error:', error);
@@ -193,12 +232,26 @@ export async function DELETE(request: NextRequest) {
   try {
     const { id } = await request.json();
 
+    // Get the expense's vendor_id before deleting
+    const { data: expense } = await supabase
+      .from('expenses')
+      .select('vendor_id')
+      .eq('id', id)
+      .single();
+
+    const vendorId = expense?.vendor_id;
+
     const { error } = await supabase
       .from('expenses')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    // If expense was linked to a vendor, recalculate vendor's paid amount
+    if (vendorId) {
+      await updateVendorPaidAmount(vendorId);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

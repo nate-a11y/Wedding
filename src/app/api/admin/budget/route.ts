@@ -28,9 +28,10 @@ export async function GET() {
     if (categoriesError) throw categoriesError;
 
     // Fetch expenses for spending totals
+    // Include vendor_id to filter out expenses linked to vendors (those are counted via vendor.amount_paid)
     const { data: expenses, error: expensesError } = await supabase
       .from('expenses')
-      .select('category_id, amount, amount_paid, payment_status');
+      .select('category_id, amount, amount_paid, payment_status, vendor_id');
 
     if (expensesError) throw expensesError;
 
@@ -42,12 +43,16 @@ export async function GET() {
     if (vendorsError) throw vendorsError;
 
     // Calculate spending by category from expenses
-    // Track uncategorized items separately for overall totals
+    // Only count standalone expenses (not linked to vendors) to avoid double-counting
+    // Expenses linked to vendors are reflected in vendor.amount_paid (synced automatically)
     const spendingByCategory: Record<string, { total: number; paid: number }> = {};
     let uncategorizedExpenseTotal = 0;
     let uncategorizedExpensePaid = 0;
 
     expenses?.forEach(expense => {
+      // Skip expenses linked to vendors - their amounts are tracked via vendor.amount_paid
+      if (expense.vendor_id) return;
+
       const amount = Number(expense.amount) || 0;
       const amountPaid = Number(expense.amount_paid) || 0;
 
