@@ -7,11 +7,21 @@ export const metadata: Metadata = {
   description: 'Join us in celebrating the wedding of Nate Bullock and Blake Moore on October 31, 2027.',
   keywords: ['wedding', 'Nate Bullock', 'Blake Moore', 'October 31 2027'],
   authors: [{ name: 'Nate & Blake' }],
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'N&B Wedding',
+  },
   openGraph: {
     title: 'Nate & Blake Say I Do',
     description: 'Join us in celebrating our wedding on October 31, 2027.',
     type: 'website',
     locale: 'en_US',
+  },
+  icons: {
+    icon: '/icons/guest-icon-192.png',
+    apple: '/icons/guest-icon-192.png',
   },
 };
 

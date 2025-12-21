@@ -1,0 +1,44 @@
+{
+  "name": "Nate & Blake Say I Do",
+  "short_name": "N&B Wedding",
+  "description": "Wedding website for Nate & Blake - October 31, 2027",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/guest-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/guest-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/guest-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "social"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "RSVP",
+      "short_name": "RSVP",
+      "url": "/rsvp",
+      "icons": [{ "src": "/icons/guest-icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Our Story",
+      "short_name": "Story",
+      "url": "/our-story",
+      "icons": [{ "src": "/icons/guest-icon.svg", "sizes": "any" }]
+    }
+  ]
+}

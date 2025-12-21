@@ -85,10 +85,8 @@ export default function RSVPPage() {
     );
   };
 
-  // RSVP availability windows
+  // RSVP availability window: April 1, 2027 - Sept 1, 2027
   const now = new Date();
-
-  // Production window: April 1, 2027 - Sept 1, 2027
   const prodStart = new Date('2027-04-01T00:00:00');
   const prodEnd = new Date('2027-09-01T23:59:59');
   const inProdWindow = now >= prodStart && now <= prodEnd;
