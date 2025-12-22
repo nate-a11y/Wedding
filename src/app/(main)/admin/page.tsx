@@ -279,9 +279,40 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning' | 'communications';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning' | 'communications' | 'live' | 'songs';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
 type CommunicationsSubTab = 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
+
+// Live Feed interfaces
+interface LiveUpdate {
+  id: string;
+  message: string;
+  type: 'info' | 'action' | 'celebration';
+  posted_by: string | null;
+  pinned: boolean;
+  created_at: string;
+}
+
+// Song Request interfaces
+interface SongRequest {
+  id: string;
+  title: string;
+  artist: string | null;
+  submitted_by_email: string | null;
+  submitted_by_name: string | null;
+  source: string;
+  status: 'pending' | 'approved' | 'rejected' | 'played';
+  votes: number;
+  created_at: string;
+}
+
+interface SongStats {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  played: number;
+}
 
 // Communication-related interfaces
 interface TagCount {
@@ -367,7 +398,7 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning', 'communications'];
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning', 'communications', 'live'];
 
 export default function AdminPage() {
   // Initialize tabs from URL params, fallback to localStorage
@@ -393,6 +424,9 @@ export default function AdminPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [emails, setEmails] = useState<Email[]>([]);
   const [addresses, setAddresses] = useState<GuestAddress[]>([]);
+  const [addressTags, setAddressTags] = useState<Record<string, string[]>>({});
+  const [editingAddressTags, setEditingAddressTags] = useState<string | null>(null);
+  const [newAddressTag, setNewAddressTag] = useState('');
   const [seatingTables, setSeatingTables] = useState<SeatingTable[]>([]);
   const [seatingAssignments, setSeatingAssignments] = useState<SeatingAssignment[]>([]);
   const [unassignedGuests, setUnassignedGuests] = useState<UnassignedGuest[]>([]);
@@ -440,6 +474,10 @@ export default function AdminPage() {
   const [expenseTotals, setExpenseTotals] = useState<ExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
   const [standaloneExpenseTotals, setStandaloneExpenseTotals] = useState<StandaloneExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0 });
   const [vendorTotals, setVendorTotals] = useState<VendorTotals>({ totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+  const [vendorPortalTokens, setVendorPortalTokens] = useState<Array<{ id: string; token: string; vendor_id: string | null; vendor_name: string; role: string; expires_at: string; last_accessed: string | null }>>([]);
+  const [generatingVendorLink, setGeneratingVendorLink] = useState(false);
+  const [newVendorPortalName, setNewVendorPortalName] = useState('');
+  const [newVendorPortalRole, setNewVendorPortalRole] = useState('');
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [newBudgetAmount, setNewBudgetAmount] = useState('');
@@ -477,6 +515,37 @@ export default function AdminPage() {
   const [showAddCampaign, setShowAddCampaign] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
+
+  // Live Feed state
+  const [liveUpdates, setLiveUpdates] = useState<LiveUpdate[]>([]);
+  const [liveSubscriberCount, setLiveSubscriberCount] = useState(0);
+  const [newLiveMessage, setNewLiveMessage] = useState('');
+  const [newLiveType, setNewLiveType] = useState<'info' | 'action' | 'celebration'>('info');
+  const [sendPushNotification, setSendPushNotification] = useState(true);
+  const [postingLiveUpdate, setPostingLiveUpdate] = useState(false);
+
+  // Song Request state
+  const [songRequests, setSongRequests] = useState<SongRequest[]>([]);
+  const [songStats, setSongStats] = useState<SongStats>({ total: 0, approved: 0, pending: 0, rejected: 0, played: 0 });
+  const [songFilter, setSongFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'played'>('all');
+  const [songSearch, setSongSearch] = useState('');
+  const [migratingRsvpSongs, setMigratingRsvpSongs] = useState(false);
+
+  // Live feed quick templates
+  const LIVE_TEMPLATES = [
+    { label: 'Ceremony begins in 10 minutes', message: 'Ceremony begins in 10 minutes — please find your seats', type: 'action' as const },
+    { label: 'Ceremony starting', message: 'Ceremony is starting — please silence your phones', type: 'action' as const },
+    { label: 'Cocktail hour open', message: 'Cocktail hour is open — head to the garden!', type: 'info' as const },
+    { label: 'Head to reception', message: 'Please make your way to the reception', type: 'action' as const },
+    { label: 'Dinner is served', message: 'Dinner is being served', type: 'info' as const },
+    { label: 'Speeches beginning', message: 'Speeches beginning shortly', type: 'info' as const },
+    { label: 'First dance', message: 'First dance is about to begin!', type: 'celebration' as const },
+    { label: 'Cake cutting', message: 'Time for cake cutting!', type: 'celebration' as const },
+    { label: 'Bouquet toss', message: 'Bouquet toss time! Single guests to the dance floor!', type: 'celebration' as const },
+    { label: 'Last call', message: 'Last call at the bar', type: 'info' as const },
+    { label: 'Send-off time', message: 'Send-off time — grab a sparkler!', type: 'celebration' as const },
+    { label: 'Thank you', message: 'Thank you for celebrating with us! 🎃', type: 'celebration' as const },
+  ];
 
   // Persist tab state to localStorage and URL
   useEffect(() => {
@@ -948,10 +1017,17 @@ export default function AdminPage() {
           if (!addressesData.error) setAddresses(addressesData.addresses || []);
           if (!rsvpsData.error) setRsvps(rsvpsData.rsvps || []);
         } else if (activeTab === 'addresses') {
-          const response = await fetch('/api/admin/addresses');
-          const data = await response.json();
-          if (data.error) throw new Error(data.error);
-          setAddresses(data.addresses);
+          const [addressesRes, tagsRes] = await Promise.all([
+            fetch('/api/admin/addresses'),
+            fetch('/api/admin/guests/tags'),
+          ]);
+          const [addressesData, tagsData] = await Promise.all([
+            addressesRes.json(),
+            tagsRes.json(),
+          ]);
+          if (addressesData.error) throw new Error(addressesData.error);
+          setAddresses(addressesData.addresses);
+          if (!tagsData.error) setAddressTags(tagsData.guestTags || {});
         } else if (activeTab === 'seating') {
           const response = await fetch('/api/admin/seating');
           const data = await response.json();
@@ -961,21 +1037,23 @@ export default function AdminPage() {
           setUnassignedGuests(data.unassignedGuests);
         } else if (activeTab === 'planning') {
           // Fetch all planning data in parallel
-          const [budgetRes, expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes] = await Promise.all([
+          const [budgetRes, expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes, vendorTokensRes] = await Promise.all([
             fetch('/api/admin/budget'),
             fetch('/api/admin/expenses'),
             fetch('/api/admin/vendors'),
             fetch('/api/admin/gifts'),
             fetch('/api/admin/tasks'),
             fetch('/api/admin/timeline'),
+            fetch('/api/vendor/token'),
           ]);
-          const [budgetData, expensesData, vendorsData, giftsData, tasksData, timelineData] = await Promise.all([
+          const [budgetData, expensesData, vendorsData, giftsData, tasksData, timelineData, vendorTokensData] = await Promise.all([
             budgetRes.json(),
             expensesRes.json(),
             vendorsRes.json(),
             giftsRes.json(),
             tasksRes.json(),
             timelineRes.json(),
+            vendorTokensRes.json(),
           ]);
           if (!budgetData.error) {
             setBudgetSettings(budgetData.settings);
@@ -989,6 +1067,9 @@ export default function AdminPage() {
           if (!vendorsData.error) {
             setVendors(vendorsData.vendors || []);
             setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+          }
+          if (!vendorTokensData.error) {
+            setVendorPortalTokens(vendorTokensData.tokens || []);
           }
           if (!giftsData.error) {
             setGifts(giftsData.gifts || []);
@@ -1037,6 +1118,22 @@ export default function AdminPage() {
           }
           if (!sendsData.error) {
             setEmailSendHistory(sendsData.sends || []);
+          }
+        } else if (activeTab === 'live') {
+          // Fetch live feed data
+          const response = await fetch('/api/admin/live');
+          const data = await response.json();
+          if (!data.error) {
+            setLiveUpdates(data.updates || []);
+            setLiveSubscriberCount(data.subscriberCount || 0);
+          }
+        } else if (activeTab === 'songs') {
+          // Fetch song requests data
+          const response = await fetch('/api/admin/songs');
+          const data = await response.json();
+          if (!data.error) {
+            setSongRequests(data.songs || []);
+            setSongStats(data.stats || { total: 0, approved: 0, pending: 0, rejected: 0, played: 0 });
           }
         }
       } catch (err) {
@@ -1424,6 +1521,24 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'live',
+      label: 'Live Feed',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+    },
+    {
+      id: 'songs',
+      label: 'Songs',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
         </svg>
       ),
     },
@@ -2265,8 +2380,8 @@ export default function AdminPage() {
                         <th className="p-3 text-olive-300 font-medium">Name</th>
                         <th className="p-3 text-olive-300 font-medium">Email</th>
                         <th className="p-3 text-olive-300 font-medium">Address</th>
+                        <th className="p-3 text-olive-300 font-medium">Tags</th>
                         <th className="p-3 text-olive-300 font-medium">RSVP Status</th>
-                        <th className="p-3 text-olive-300 font-medium">Date</th>
                         <th className="p-3 text-olive-300 font-medium">Actions</th>
                       </tr>
                     </thead>
@@ -2287,6 +2402,91 @@ export default function AdminPage() {
                             {addr.country !== 'United States' && <div>{addr.country}</div>}
                           </td>
                           <td className="p-3">
+                            <div className="relative">
+                              <div className="flex flex-wrap gap-1 mb-1">
+                                {(addressTags[addr.email.toLowerCase()] || []).map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-olive-700 text-olive-200 rounded text-xs"
+                                  >
+                                    {tag}
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await fetch('/api/admin/guests/tags', {
+                                            method: 'DELETE',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ emails: [addr.email], tags: [tag] }),
+                                          });
+                                          setAddressTags((prev) => ({
+                                            ...prev,
+                                            [addr.email.toLowerCase()]: (prev[addr.email.toLowerCase()] || []).filter((t) => t !== tag),
+                                          }));
+                                        } catch (err) {
+                                          console.error('Failed to remove tag:', err);
+                                        }
+                                      }}
+                                      className="text-olive-400 hover:text-red-400"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                              {editingAddressTags === addr.id ? (
+                                <div className="flex gap-1">
+                                  <input
+                                    type="text"
+                                    value={newAddressTag}
+                                    onChange={(e) => setNewAddressTag(e.target.value)}
+                                    placeholder="New tag..."
+                                    className="w-24 px-2 py-1 text-xs bg-charcoal border border-olive-600 rounded text-cream"
+                                    onKeyDown={async (e) => {
+                                      if (e.key === 'Enter' && newAddressTag.trim()) {
+                                        try {
+                                          await fetch('/api/admin/guests/tags', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ emails: [addr.email], tags: [newAddressTag.trim()] }),
+                                          });
+                                          const normalizedTag = newAddressTag.trim().toLowerCase().replace(/\s+/g, '_');
+                                          setAddressTags((prev) => ({
+                                            ...prev,
+                                            [addr.email.toLowerCase()]: [...(prev[addr.email.toLowerCase()] || []), normalizedTag],
+                                          }));
+                                          setNewAddressTag('');
+                                          setEditingAddressTags(null);
+                                        } catch (err) {
+                                          console.error('Failed to add tag:', err);
+                                        }
+                                      } else if (e.key === 'Escape') {
+                                        setNewAddressTag('');
+                                        setEditingAddressTags(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      setNewAddressTag('');
+                                      setEditingAddressTags(null);
+                                    }}
+                                    className="text-olive-400 hover:text-olive-300 text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingAddressTags(addr.id)}
+                                  className="text-xs text-gold-500 hover:text-gold-400"
+                                >
+                                  + Add tag
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
                             {addr.rsvps ? (
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
                                 addr.rsvps.attending ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
@@ -2299,7 +2499,6 @@ export default function AdminPage() {
                               </span>
                             )}
                           </td>
-                          <td className="p-3 text-olive-400 text-sm">{formatDate(addr.created_at)}</td>
                           <td className="p-3">
                             <button
                               onClick={() => deleteAddress(addr.id)}
@@ -3691,6 +3890,130 @@ export default function AdminPage() {
                           ))}
                         </div>
                       )}
+
+                      {/* Vendor Portal Links */}
+                      <div className="mt-8 pt-6 border-t border-olive-700">
+                        <div className="flex justify-between items-center mb-4">
+                          <h3 className="text-lg font-heading text-gold-400">Vendor Portal Links</h3>
+                        </div>
+                        <p className="text-olive-400 text-sm mb-4">
+                          Generate secure access links for vendors to view the day-of timeline and venue info.
+                        </p>
+
+                        {/* Generate New Link Form */}
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-4 mb-4">
+                          <div className="flex flex-wrap gap-3 items-end">
+                            <div className="flex-1 min-w-[150px]">
+                              <label className="block text-sm text-olive-300 mb-1">Vendor/Staff Name</label>
+                              <input
+                                type="text"
+                                value={newVendorPortalName}
+                                onChange={(e) => setNewVendorPortalName(e.target.value)}
+                                placeholder="e.g., DJ Mike, Catering Team"
+                                className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none text-sm"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-[150px]">
+                              <label className="block text-sm text-olive-300 mb-1">Role</label>
+                              <input
+                                type="text"
+                                value={newVendorPortalRole}
+                                onChange={(e) => setNewVendorPortalRole(e.target.value)}
+                                placeholder="e.g., DJ, Caterer, Coordinator"
+                                className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none text-sm"
+                              />
+                            </div>
+                            <button
+                              onClick={async () => {
+                                if (!newVendorPortalName.trim() || !newVendorPortalRole.trim()) return;
+                                setGeneratingVendorLink(true);
+                                try {
+                                  const response = await fetch('/api/vendor/token', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      vendor_name: newVendorPortalName.trim(),
+                                      role: newVendorPortalRole.trim(),
+                                    }),
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    // Copy link to clipboard
+                                    await navigator.clipboard.writeText(data.link);
+                                    alert(`Link copied to clipboard!\n\n${data.link}\n\nExpires: ${new Date(data.expires_at).toLocaleDateString()}`);
+                                    // Refresh tokens list
+                                    const tokensRes = await fetch('/api/vendor/token');
+                                    const tokensData = await tokensRes.json();
+                                    if (!tokensData.error) setVendorPortalTokens(tokensData.tokens || []);
+                                    setNewVendorPortalName('');
+                                    setNewVendorPortalRole('');
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to generate link:', err);
+                                  alert('Failed to generate link');
+                                } finally {
+                                  setGeneratingVendorLink(false);
+                                }
+                              }}
+                              disabled={generatingVendorLink || !newVendorPortalName.trim() || !newVendorPortalRole.trim()}
+                              className="px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium disabled:opacity-50"
+                            >
+                              {generatingVendorLink ? 'Generating...' : 'Generate Link'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Active Links */}
+                        {vendorPortalTokens.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-cream">Active Links</h4>
+                            {vendorPortalTokens.map((token) => (
+                              <div
+                                key={token.id}
+                                className="flex items-center justify-between bg-olive-900/30 border border-olive-700 rounded-lg p-3"
+                              >
+                                <div>
+                                  <p className="text-cream font-medium">{token.vendor_name}</p>
+                                  <p className="text-olive-400 text-xs">
+                                    {token.role} • Expires {new Date(token.expires_at).toLocaleDateString()}
+                                    {token.last_accessed && ` • Last accessed ${new Date(token.last_accessed).toLocaleDateString()}`}
+                                  </p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const link = `${window.location.origin}/vendor/${token.token}`;
+                                      navigator.clipboard.writeText(link);
+                                      alert('Link copied to clipboard!');
+                                    }}
+                                    className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
+                                  >
+                                    Copy Link
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Revoke this access link? The vendor will no longer be able to access the portal.')) return;
+                                      try {
+                                        await fetch('/api/vendor/token', {
+                                          method: 'DELETE',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ token_id: token.id }),
+                                        });
+                                        setVendorPortalTokens((prev) => prev.filter((t) => t.id !== token.id));
+                                      } catch (err) {
+                                        console.error('Failed to revoke token:', err);
+                                      }
+                                    }}
+                                    className="px-2 py-1 text-xs text-red-400 hover:bg-red-500/20 rounded"
+                                  >
+                                    Revoke
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -4962,6 +5285,489 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* Live Feed Tab */}
+          {activeTab === 'live' && (
+            <motion.div
+              key="live"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-2xl font-display text-gold-400">Live Feed</h2>
+                <div className="text-olive-300 text-sm">
+                  {liveSubscriberCount} subscriber{liveSubscriberCount !== 1 ? 's' : ''} for push notifications
+                </div>
+              </div>
+
+              {/* Post New Update */}
+              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-600">
+                <h3 className="text-lg font-medium text-cream mb-4">Post Update</h3>
+
+                {/* Quick Templates */}
+                <div className="mb-4">
+                  <label className="block text-sm text-olive-300 mb-2">Quick Templates</label>
+                  <div className="flex flex-wrap gap-2">
+                    {LIVE_TEMPLATES.map((template) => (
+                      <button
+                        key={template.label}
+                        onClick={() => {
+                          setNewLiveMessage(template.message);
+                          setNewLiveType(template.type);
+                        }}
+                        className="px-3 py-1.5 text-xs bg-olive-700 hover:bg-olive-600 text-cream rounded-lg transition-colors"
+                      >
+                        {template.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Message Input */}
+                <div className="mb-4">
+                  <label className="block text-sm text-olive-300 mb-2">Message</label>
+                  <textarea
+                    value={newLiveMessage}
+                    onChange={(e) => setNewLiveMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Enter your announcement..."
+                    className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500 focus:outline-none focus:border-gold-500"
+                  />
+                </div>
+
+                {/* Type Selection */}
+                <div className="mb-4">
+                  <label className="block text-sm text-olive-300 mb-2">Type</label>
+                  <div className="flex gap-3">
+                    {[
+                      { value: 'info', label: 'ℹ️ Info', color: 'bg-olive-700 border-olive-600' },
+                      { value: 'action', label: '📢 Action', color: 'bg-orange-500/20 border-orange-500' },
+                      { value: 'celebration', label: '🎉 Celebration', color: 'bg-gold-500/20 border-gold-500' },
+                    ].map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => setNewLiveType(type.value as 'info' | 'action' | 'celebration')}
+                        className={`px-4 py-2 rounded-lg border transition-colors ${
+                          newLiveType === type.value
+                            ? type.color
+                            : 'bg-charcoal border-olive-700 text-olive-400'
+                        }`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Send Push Option */}
+                <div className="mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendPushNotification}
+                      onChange={(e) => setSendPushNotification(e.target.checked)}
+                      className="w-4 h-4 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500"
+                    />
+                    <span className="text-cream">Send push notification to subscribers</span>
+                  </label>
+                </div>
+
+                {/* Post Button */}
+                <button
+                  onClick={async () => {
+                    if (!newLiveMessage.trim()) return;
+                    setPostingLiveUpdate(true);
+                    try {
+                      const response = await fetch('/api/admin/live', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          message: newLiveMessage.trim(),
+                          type: newLiveType,
+                          send_push: sendPushNotification,
+                        }),
+                      });
+                      if (response.ok) {
+                        setNewLiveMessage('');
+                        // Refresh updates
+                        const refreshRes = await fetch('/api/admin/live');
+                        const data = await refreshRes.json();
+                        if (!data.error) {
+                          setLiveUpdates(data.updates || []);
+                          setLiveSubscriberCount(data.subscriberCount || 0);
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Failed to post update:', err);
+                    } finally {
+                      setPostingLiveUpdate(false);
+                    }
+                  }}
+                  disabled={!newLiveMessage.trim() || postingLiveUpdate}
+                  className="px-6 py-3 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {postingLiveUpdate ? 'Posting...' : 'Post Update'}
+                </button>
+              </div>
+
+              {/* Current Updates */}
+              <div className="bg-charcoal-light rounded-lg p-6">
+                <h3 className="text-lg font-medium text-cream mb-4">Current Updates</h3>
+
+                {liveUpdates.length === 0 ? (
+                  <p className="text-olive-400 italic">No updates posted yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {liveUpdates.map((update) => (
+                      <div
+                        key={update.id}
+                        className={`p-4 rounded-lg border ${
+                          update.type === 'celebration'
+                            ? 'bg-gold-500/10 border-gold-500/50'
+                            : update.type === 'action'
+                            ? 'bg-orange-500/10 border-orange-500/50'
+                            : 'bg-olive-800/50 border-olive-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">
+                                {update.type === 'celebration' ? '🎉' : update.type === 'action' ? '📢' : 'ℹ️'}
+                              </span>
+                              {update.pinned && (
+                                <span className="text-xs bg-gold-500/30 text-gold-400 px-2 py-0.5 rounded">📌 Pinned</span>
+                              )}
+                            </div>
+                            <p className="text-cream">{update.message}</p>
+                            <p className="text-olive-400 text-sm mt-1">
+                              {formatDate(update.created_at)}
+                              {update.posted_by && ` • ${update.posted_by}`}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch(`/api/admin/live/${update.id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ pinned: !update.pinned }),
+                                  });
+                                  // Refresh
+                                  const res = await fetch('/api/admin/live');
+                                  const data = await res.json();
+                                  if (!data.error) setLiveUpdates(data.updates || []);
+                                } catch (err) {
+                                  console.error('Failed to toggle pin:', err);
+                                }
+                              }}
+                              className={`p-2 rounded ${update.pinned ? 'text-gold-400' : 'text-olive-400 hover:text-gold-400'}`}
+                              title={update.pinned ? 'Unpin' : 'Pin'}
+                            >
+                              📌
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Delete this update?')) return;
+                                try {
+                                  await fetch(`/api/admin/live/${update.id}`, {
+                                    method: 'DELETE',
+                                  });
+                                  setLiveUpdates((prev) => prev.filter((u) => u.id !== update.id));
+                                } catch (err) {
+                                  console.error('Failed to delete:', err);
+                                }
+                              }}
+                              className="p-2 text-red-400 hover:text-red-300"
+                              title="Delete"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Songs Tab */}
+          {activeTab === 'songs' && (
+            <motion.div
+              key="songs"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-2xl font-display text-gold-400">Song Requests</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setMigratingRsvpSongs(true);
+                      try {
+                        const response = await fetch('/api/admin/songs', { method: 'POST' });
+                        const data = await response.json();
+                        if (data.success) {
+                          alert(`Migrated ${data.migrated} song requests from RSVPs`);
+                          // Refresh songs list
+                          const refreshRes = await fetch('/api/admin/songs');
+                          const refreshData = await refreshRes.json();
+                          if (!refreshData.error) {
+                            setSongRequests(refreshData.songs || []);
+                            setSongStats(refreshData.stats || { total: 0, approved: 0, pending: 0, rejected: 0, played: 0 });
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to migrate songs:', err);
+                        alert('Failed to migrate songs');
+                      } finally {
+                        setMigratingRsvpSongs(false);
+                      }
+                    }}
+                    disabled={migratingRsvpSongs}
+                    className="px-4 py-2 bg-olive-700 hover:bg-olive-600 text-cream rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {migratingRsvpSongs ? 'Migrating...' : 'Import from RSVPs'}
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/api/admin/songs/export'}
+                    className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-black rounded-lg transition-colors font-medium"
+                  >
+                    Export DJ Playlist
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div className="bg-charcoal-light rounded-lg p-4 border border-olive-600 text-center">
+                  <p className="text-2xl font-bold text-cream">{songStats.total}</p>
+                  <p className="text-olive-400 text-sm">Total</p>
+                </div>
+                <div className="bg-charcoal-light rounded-lg p-4 border border-yellow-500/30 text-center">
+                  <p className="text-2xl font-bold text-yellow-400">{songStats.pending}</p>
+                  <p className="text-olive-400 text-sm">Pending</p>
+                </div>
+                <div className="bg-charcoal-light rounded-lg p-4 border border-green-500/30 text-center">
+                  <p className="text-2xl font-bold text-green-400">{songStats.approved}</p>
+                  <p className="text-olive-400 text-sm">Approved</p>
+                </div>
+                <div className="bg-charcoal-light rounded-lg p-4 border border-red-500/30 text-center">
+                  <p className="text-2xl font-bold text-red-400">{songStats.rejected}</p>
+                  <p className="text-olive-400 text-sm">Rejected</p>
+                </div>
+                <div className="bg-charcoal-light rounded-lg p-4 border border-purple-500/30 text-center">
+                  <p className="text-2xl font-bold text-purple-400">{songStats.played}</p>
+                  <p className="text-olive-400 text-sm">Played</p>
+                </div>
+              </div>
+
+              {/* Filters and Search */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex gap-2 flex-wrap">
+                  {(['all', 'pending', 'approved', 'rejected', 'played'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setSongFilter(filter)}
+                      className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${
+                        songFilter === filter
+                          ? 'bg-gold-500 text-black'
+                          : 'bg-olive-700 text-cream hover:bg-olive-600'
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={songSearch}
+                  onChange={(e) => setSongSearch(e.target.value)}
+                  placeholder="Search songs or artists..."
+                  className="flex-1 px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500 focus:outline-none focus:border-gold-500"
+                />
+              </div>
+
+              {/* Songs List */}
+              <div className="bg-charcoal-light rounded-lg border border-olive-600 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-olive-600">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-olive-300">Song</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-olive-300">Submitted By</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-olive-300">Votes</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-olive-300">Status</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-olive-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {songRequests
+                        .filter((song) => songFilter === 'all' || song.status === songFilter)
+                        .filter(
+                          (song) =>
+                            songSearch === '' ||
+                            song.title.toLowerCase().includes(songSearch.toLowerCase()) ||
+                            (song.artist && song.artist.toLowerCase().includes(songSearch.toLowerCase()))
+                        )
+                        .map((song) => (
+                          <tr key={song.id} className="border-b border-olive-700 hover:bg-charcoal/50">
+                            <td className="px-4 py-3">
+                              <p className="font-medium text-cream">{song.title}</p>
+                              {song.artist && <p className="text-olive-400 text-sm">{song.artist}</p>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <p className="text-cream">{song.submitted_by_name || 'Anonymous'}</p>
+                              <p className="text-olive-500 text-xs">
+                                {song.source === 'rsvp' ? 'From RSVP' : 'Song page'}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 font-medium">
+                                {song.votes}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span
+                                className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                  song.status === 'approved'
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : song.status === 'rejected'
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : song.status === 'played'
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-yellow-500/20 text-yellow-400'
+                                }`}
+                              >
+                                {song.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                {song.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await fetch(`/api/admin/songs/${song.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'approved' }),
+                                          });
+                                          setSongRequests((prev) =>
+                                            prev.map((s) => (s.id === song.id ? { ...s, status: 'approved' } : s))
+                                          );
+                                          setSongStats((prev) => ({
+                                            ...prev,
+                                            pending: prev.pending - 1,
+                                            approved: prev.approved + 1,
+                                          }));
+                                        } catch (err) {
+                                          console.error('Failed to approve:', err);
+                                        }
+                                      }}
+                                      className="p-1.5 text-green-400 hover:bg-green-500/20 rounded"
+                                      title="Approve"
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await fetch(`/api/admin/songs/${song.id}`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ status: 'rejected' }),
+                                          });
+                                          setSongRequests((prev) =>
+                                            prev.map((s) => (s.id === song.id ? { ...s, status: 'rejected' } : s))
+                                          );
+                                          setSongStats((prev) => ({
+                                            ...prev,
+                                            pending: prev.pending - 1,
+                                            rejected: prev.rejected + 1,
+                                          }));
+                                        } catch (err) {
+                                          console.error('Failed to reject:', err);
+                                        }
+                                      }}
+                                      className="p-1.5 text-red-400 hover:bg-red-500/20 rounded"
+                                      title="Reject"
+                                    >
+                                      ✕
+                                    </button>
+                                  </>
+                                )}
+                                {song.status === 'approved' && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await fetch(`/api/admin/songs/${song.id}`, {
+                                          method: 'PUT',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ status: 'played' }),
+                                        });
+                                        setSongRequests((prev) =>
+                                          prev.map((s) => (s.id === song.id ? { ...s, status: 'played' } : s))
+                                        );
+                                        setSongStats((prev) => ({
+                                          ...prev,
+                                          approved: prev.approved - 1,
+                                          played: prev.played + 1,
+                                        }));
+                                      } catch (err) {
+                                        console.error('Failed to mark as played:', err);
+                                      }
+                                    }}
+                                    className="p-1.5 text-purple-400 hover:bg-purple-500/20 rounded"
+                                    title="Mark as Played"
+                                  >
+                                    🎵
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm('Delete this song request?')) return;
+                                    try {
+                                      await fetch(`/api/admin/songs/${song.id}`, { method: 'DELETE' });
+                                      const prevStatus = song.status;
+                                      setSongRequests((prev) => prev.filter((s) => s.id !== song.id));
+                                      setSongStats((prev) => ({
+                                        ...prev,
+                                        total: prev.total - 1,
+                                        [prevStatus]: prev[prevStatus as keyof SongStats] - 1,
+                                      }));
+                                    } catch (err) {
+                                      console.error('Failed to delete:', err);
+                                    }
+                                  }}
+                                  className="p-1.5 text-red-400 hover:bg-red-500/20 rounded"
+                                  title="Delete"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                {songRequests.length === 0 && (
+                  <div className="text-center py-12 text-olive-400">
+                    No song requests yet. Songs will appear here when guests submit them.
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
