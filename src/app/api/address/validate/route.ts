@@ -186,6 +186,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Validated
 }
 
 interface USPSAddressResponse {
+  firm?: string;
   address?: {
     streetAddress?: string;
     streetAddressAbbreviation?: string;
@@ -197,7 +198,7 @@ interface USPSAddressResponse {
     ZIPPlus4?: string;
     urbanization?: string;
   };
-  addressAdditionalInfo?: {
+  additionalInfo?: {
     deliveryPoint?: string;
     carrierRoute?: string;
     DPVConfirmation?: string;
@@ -210,7 +211,7 @@ interface USPSAddressResponse {
 
 function parseUspsResponse(data: USPSAddressResponse, originalInput: AddressInput): ValidatedAddress {
   const address = data.address || {};
-  const additionalInfo = data.addressAdditionalInfo || {};
+  const additionalInfo = data.additionalInfo || {};
 
   // Extract standardized address components
   const streetAddress = address.streetAddress || address.streetAddressAbbreviation || '';
