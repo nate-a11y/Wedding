@@ -273,6 +273,13 @@ export default function LiveFeedPage() {
                 </button>
               </div>
             )}
+
+            {/* iPhone instructions */}
+            {!isSubscribed && (
+              <p className="text-olive-400 text-xs text-center mt-2">
+                <span className="font-medium">iPhone users:</span> Tap the Share button and select &ldquo;Add to Home Screen&rdquo;, then open from there to enable notifications.
+              </p>
+            )}
           </motion.div>
 
           {/* Loading State */}
