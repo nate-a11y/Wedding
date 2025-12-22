@@ -81,25 +81,25 @@ export async function GET(
       );
     }
 
-    // Get venue info from site settings or use defaults
+    // Get venue info from environment variables
     const venueInfo = {
-      name: 'The Gothic Chapel',
-      address: '123 Cemetery Lane, Sleepy Hollow, NY 10591',
-      contactName: 'Morticia Adams',
-      contactPhone: '(555) 666-1313',
-      contactEmail: 'morticia@gothicchapel.com',
-      parkingNotes: 'Vendor parking available in the east lot. Enter through the iron gates.',
-      loadInNotes: 'Load-in through the service entrance on the south side of the building.',
-      wifiNetwork: 'Chapel-Staff',
-      wifiPassword: 'SpookyWedding2027',
-      notes: 'Please check in with the venue coordinator upon arrival.',
+      name: process.env.VENUE_NAME || 'Venue TBD',
+      address: process.env.VENUE_ADDRESS || 'Address TBD',
+      contactName: process.env.VENUE_CONTACT_NAME || 'Venue Coordinator',
+      contactPhone: process.env.VENUE_CONTACT_PHONE || '',
+      contactEmail: process.env.VENUE_CONTACT_EMAIL || '',
+      parkingNotes: process.env.VENUE_PARKING_NOTES || 'See venue for parking instructions.',
+      loadInNotes: process.env.VENUE_LOADIN_NOTES || 'See venue for load-in instructions.',
+      wifiNetwork: process.env.VENUE_WIFI_NETWORK || '',
+      wifiPassword: process.env.VENUE_WIFI_PASSWORD || '',
+      notes: process.env.VENUE_NOTES || '',
     };
 
     // Wedding date and basic info
     const weddingInfo = {
-      date: '2027-10-31',
-      coupleName: 'Morticia & Gomez',
-      guestCount: 150,
+      date: process.env.WEDDING_DATE || '2027-10-31',
+      coupleName: process.env.COUPLE_NAMES || 'The Happy Couple',
+      guestCount: parseInt(process.env.EXPECTED_GUEST_COUNT || '100', 10),
     };
 
     return NextResponse.json({
