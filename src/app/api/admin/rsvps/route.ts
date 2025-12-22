@@ -10,14 +10,35 @@ export async function GET() {
   }
 
   try {
-    const { data, error } = await supabase
+    // Fetch RSVPs with their event responses
+    const { data: rsvps, error } = await supabase
       .from('rsvps')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return NextResponse.json({ rsvps: data || [] });
+    // Fetch all event responses
+    const { data: eventResponses } = await supabase
+      .from('rsvp_event_responses')
+      .select('rsvp_id, event_slug, attending');
+
+    // Create a map of rsvp_id -> event responses
+    const eventResponseMap: Record<string, Record<string, boolean>> = {};
+    for (const response of eventResponses || []) {
+      if (!eventResponseMap[response.rsvp_id]) {
+        eventResponseMap[response.rsvp_id] = {};
+      }
+      eventResponseMap[response.rsvp_id][response.event_slug] = response.attending;
+    }
+
+    // Attach event responses to each RSVP
+    const rsvpsWithEvents = (rsvps || []).map(rsvp => ({
+      ...rsvp,
+      event_responses: eventResponseMap[rsvp.id] || {},
+    }));
+
+    return NextResponse.json({ rsvps: rsvpsWithEvents });
   } catch (error) {
     console.error('Admin RSVP fetch error:', error);
     return NextResponse.json(

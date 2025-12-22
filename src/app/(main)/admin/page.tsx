@@ -44,6 +44,7 @@ interface RSVP {
   song_request: string | null;
   message: string | null;
   created_at: string;
+  event_responses?: Record<string, boolean>;
 }
 
 interface GuestbookEntry {
@@ -2318,6 +2319,7 @@ export default function AdminPage() {
                         <th className="p-3 text-olive-300 font-medium">Status</th>
                         <th className="p-3 text-olive-300 font-medium">Meal</th>
                         <th className="p-3 text-olive-300 font-medium">Party</th>
+                        <th className="p-3 text-olive-300 font-medium">Events Attending</th>
                         <th className="p-3 text-olive-300 font-medium">Date</th>
                         <th className="p-3 text-olive-300 font-medium">Actions</th>
                       </tr>
@@ -2326,14 +2328,18 @@ export default function AdminPage() {
                       {rsvps.map((rsvp) => {
                         const guests = rsvp.additional_guests || [];
                         const partySize = 1 + guests.length;
-                        const childCount = guests.filter(g => g.isChild).length;
+                        const childCount = guests.filter((g: { isChild?: boolean }) => g.isChild).length;
+                        const eventResponses = rsvp.event_responses || {};
+                        const attendingEvents = Object.entries(eventResponses)
+                          .filter(([, attending]) => attending)
+                          .map(([slug]) => slug);
                         return (
                           <tr key={rsvp.id} className="border-b border-olive-800 hover:bg-olive-900/30">
                             <td className="p-3 text-cream">
                               {rsvp.name}
                               {guests.length > 0 && (
                                 <div className="text-xs text-olive-400 mt-1">
-                                  +{guests.map(g => g.name).join(', ')}
+                                  +{guests.map((g: { name: string }) => g.name).join(', ')}
                                 </div>
                               )}
                             </td>
@@ -2352,6 +2358,33 @@ export default function AdminPage() {
                                 <span className="text-xs text-gold-400 ml-1">
                                   ({childCount} {childCount === 1 ? 'child' : 'children'})
                                 </span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              {rsvp.attending ? (
+                                attendingEvents.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {attendingEvents.map(slug => (
+                                      <span
+                                        key={slug}
+                                        className="px-2 py-0.5 bg-gold-500/20 text-gold-400 rounded text-xs"
+                                        title={slug.replace(/_/g, ' ')}
+                                      >
+                                        {slug === 'ceremony' ? '💒' :
+                                         slug === 'cocktail' ? '🍸' :
+                                         slug === 'reception' ? '🎉' :
+                                         slug === 'sendoff' ? '✨' :
+                                         slug === 'rehearsal_dinner' ? '🍽️' :
+                                         slug === 'sunday_brunch' ? '🥂' : '📅'}
+                                        <span className="ml-1">{slug.replace(/_/g, ' ').split(' ').map(w => w[0].toUpperCase()).join('')}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-olive-500 text-xs">All events</span>
+                                )
+                              ) : (
+                                <span className="text-olive-500 text-xs">-</span>
                               )}
                             </td>
                             <td className="p-3 text-olive-400 text-sm">{formatDate(rsvp.created_at)}</td>
