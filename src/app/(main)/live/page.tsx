@@ -231,7 +231,7 @@ export default function LiveFeedPage() {
             <h1 className="text-3xl md:text-4xl font-display text-gold-400 mb-2">
               Live Updates
             </h1>
-            <p className="text-olive-300">Real-time announcements from your celebration</p>
+            <p className="text-olive-300">Stay in the loop throughout our wedding day</p>
           </motion.div>
 
           {/* Notification Toggle */}

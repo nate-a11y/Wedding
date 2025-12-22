@@ -1,11 +1,13 @@
 import Image from 'next/image';
 import { Hero, GuestCount, RSVPCard } from '@/components/sections';
 import { AnimatedGoldLine } from '@/components/ui';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export default function HomePage() {
   return (
     <>
       <Hero />
+      <PWAInstallPrompt />
 
       {/* Welcome Section */}
       <section className="section-padding bg-black">
