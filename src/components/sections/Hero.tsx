@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useState, useMemo } from 'react';
 import { Countdown } from './Countdown';
 import { siteConfig } from '@/config/site';
@@ -8,12 +8,15 @@ import { Button } from '@/components/ui';
 import Link from 'next/link';
 
 // Floating particle component
-function FloatingParticle({ delay, duration, size, left, top }: {
+function FloatingParticle({ delay, duration, size, left, top, xOffset1, xOffset2, repeatDelay }: {
   delay: number;
   duration: number;
   size: number;
   left: string;
   top: string;
+  xOffset1: number;
+  xOffset2: number;
+  repeatDelay: number;
 }) {
   return (
     <motion.div
@@ -30,13 +33,13 @@ function FloatingParticle({ delay, duration, size, left, top }: {
         opacity: [0, 1, 1, 0],
         scale: [0, 1, 1, 0],
         y: [0, -100, -200, -300],
-        x: [0, Math.random() * 50 - 25, Math.random() * 100 - 50],
+        x: [0, xOffset1, xOffset2],
       }}
       transition={{
         duration,
         delay,
         repeat: Infinity,
-        repeatDelay: Math.random() * 2,
+        repeatDelay,
         ease: 'easeOut',
       }}
     />
@@ -72,7 +75,7 @@ function AnimatedRing({ size, delay, duration }: { size: number; delay: number; 
 }
 
 // Sparkle star component
-function Sparkle({ style, delay }: { style: React.CSSProperties; delay: number }) {
+function Sparkle({ style, delay, repeatDelay }: { style: React.CSSProperties; delay: number; repeatDelay: number }) {
   return (
     <motion.div
       className="absolute pointer-events-none"
@@ -87,7 +90,7 @@ function Sparkle({ style, delay }: { style: React.CSSProperties; delay: number }
         duration: 2,
         delay,
         repeat: Infinity,
-        repeatDelay: Math.random() * 3 + 1,
+        repeatDelay,
       }}
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -113,30 +116,40 @@ export function Hero() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
-  // Generate particles
+  // Seeded random function for deterministic values
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed * 9999) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Generate particles with deterministic values
   const particles = useMemo(() =>
     Array.from({ length: 20 }, (_, i) => ({
       id: i,
-      delay: Math.random() * 5,
-      duration: 4 + Math.random() * 3,
-      size: 4 + Math.random() * 8,
-      left: `${Math.random() * 100}%`,
-      top: `${60 + Math.random() * 40}%`,
+      delay: seededRandom(i * 1) * 5,
+      duration: 4 + seededRandom(i * 2) * 3,
+      size: 4 + seededRandom(i * 3) * 8,
+      left: `${seededRandom(i * 4) * 100}%`,
+      top: `${60 + seededRandom(i * 5) * 40}%`,
+      xOffset1: seededRandom(i * 9) * 50 - 25,
+      xOffset2: seededRandom(i * 10) * 100 - 50,
+      repeatDelay: seededRandom(i * 11) * 2,
     })), []
   );
 
-  // Generate sparkles
+  // Generate sparkles with deterministic values
   const sparkles = useMemo(() =>
     Array.from({ length: 12 }, (_, i) => ({
       id: i,
-      delay: Math.random() * 4,
+      delay: seededRandom(i * 6) * 4,
       style: {
-        left: `${10 + Math.random() * 80}%`,
-        top: `${10 + Math.random() * 80}%`,
+        left: `${10 + seededRandom(i * 7) * 80}%`,
+        top: `${10 + seededRandom(i * 8) * 80}%`,
       },
+      repeatDelay: seededRandom(i * 12) * 3 + 1,
     })), []
   );
 
@@ -187,7 +200,7 @@ export function Hero() {
 
       {/* Sparkle effects */}
       {mounted && sparkles.map((s) => (
-        <Sparkle key={s.id} style={s.style} delay={s.delay} />
+        <Sparkle key={s.id} style={s.style} delay={s.delay} repeatDelay={s.repeatDelay} />
       ))}
 
       {/* Content */}

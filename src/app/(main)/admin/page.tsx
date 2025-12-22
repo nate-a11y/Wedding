@@ -279,8 +279,64 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning' | 'communications';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
+type CommunicationsSubTab = 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
+
+// Communication-related interfaces
+interface TagCount {
+  tag: string;
+  count: number;
+}
+
+interface EventInvitation {
+  id: string;
+  email: string;
+  event_slug: string;
+  invited_by: string | null;
+  created_at: string;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
+  type: string;
+  subject: string;
+  body_html: string;
+  segment: Record<string, unknown>;
+  status: string;
+  scheduled_for: string | null;
+  sent_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  stats?: { total: number; sent: number; failed: number };
+}
+
+interface EmailSend {
+  id: string;
+  campaign_id: string;
+  email: string;
+  guest_name: string | null;
+  status: string;
+  sent_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+interface ReminderSettings {
+  enabled: boolean;
+  reminder_days: number[];
+  min_interval_days: number;
+  last_manual_send?: string;
+}
+
+interface ReminderStatus {
+  settings: ReminderSettings;
+  nonResponderCount: number;
+  lastReminder: { sent_at: string; reminder_type: string } | null;
+  daysUntilDeadline: number;
+  inRsvpWindow: boolean;
+}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -311,18 +367,20 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning', 'communications'];
+
 export default function AdminPage() {
   // Initialize tabs from URL params, fallback to localStorage
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     // Check URL params first
     if (typeof window !== 'undefined') {
       const urlTab = new URLSearchParams(window.location.search).get('tab');
-      if (urlTab && ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning'].includes(urlTab)) {
+      if (urlTab && VALID_TABS.includes(urlTab)) {
         return urlTab as Tab;
       }
       // Fallback to localStorage
       const saved = localStorage.getItem('admin_active_tab');
-      if (saved && ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning'].includes(saved)) {
+      if (saved && VALID_TABS.includes(saved)) {
         return saved as Tab;
       }
     }
@@ -406,6 +464,19 @@ export default function AdminPage() {
   const [microsoftListName, setMicrosoftListName] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  // Communications state
+  const [communicationsSubTab, setCommunicationsSubTab] = useState<CommunicationsSubTab>('tags');
+  const [tags, setTags] = useState<TagCount[]>([]);
+  const [guestTags, setGuestTags] = useState<Record<string, string[]>>({});
+  const [eventInvitations, setEventInvitations] = useState<EventInvitation[]>([]);
+  const [eventCounts, setEventCounts] = useState<Record<string, number>>({});
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [reminderStatus, setReminderStatus] = useState<ReminderStatus | null>(null);
+  const [emailSendHistory, setEmailSendHistory] = useState<EmailSend[]>([]);
+  const [showAddCampaign, setShowAddCampaign] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState<string | null>(null);
 
   // Persist tab state to localStorage and URL
   useEffect(() => {
@@ -816,7 +887,7 @@ export default function AdminPage() {
           setEmails(emailsData.emails);
         }
       }
-    } catch (err) {
+    } catch {
       setEmailSendResult({ success: false, message: 'Failed to send emails' });
     } finally {
       setSendingEmail(false);
@@ -929,6 +1000,43 @@ export default function AdminPage() {
           }
           if (!timelineData.error) {
             setTimelineEvents(timelineData.events || []);
+          }
+        } else if (activeTab === 'communications') {
+          // Fetch all communications data in parallel
+          const [tagsRes, guestTagsRes, invitationsRes, campaignsRes, reminderRes, sendsRes] = await Promise.all([
+            fetch('/api/admin/tags'),
+            fetch('/api/admin/guests/tags'),
+            fetch('/api/admin/event-invitations'),
+            fetch('/api/admin/campaigns'),
+            fetch('/api/admin/reminders/status'),
+            fetch('/api/admin/email-sends'),
+          ]);
+          const [tagsData, guestTagsData, invitationsData, campaignsData, reminderData, sendsData] = await Promise.all([
+            tagsRes.json(),
+            guestTagsRes.json(),
+            invitationsRes.json(),
+            campaignsRes.json(),
+            reminderRes.json(),
+            sendsRes.json(),
+          ]);
+          if (!tagsData.error) {
+            setTags(tagsData.tags || []);
+          }
+          if (!guestTagsData.error) {
+            setGuestTags(guestTagsData.guestTags || {});
+          }
+          if (!invitationsData.error) {
+            setEventInvitations(invitationsData.invitations || []);
+            setEventCounts(invitationsData.eventCounts || {});
+          }
+          if (!campaignsData.error) {
+            setCampaigns(campaignsData.campaigns || []);
+          }
+          if (!reminderData.error) {
+            setReminderStatus(reminderData);
+          }
+          if (!sendsData.error) {
+            setEmailSendHistory(sendsData.sends || []);
           }
         }
       } catch (err) {
@@ -1307,6 +1415,15 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      ),
+    },
+    {
+      id: 'communications',
+      label: 'Communications',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
       ),
     },
@@ -3853,7 +3970,7 @@ export default function AdminPage() {
                               <svg className="w-4 h-4 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M11.5 3v8.5H3V3h8.5zm0 18H3v-8.5h8.5V21zm1-18H21v8.5h-8.5V3zm8.5 9.5V21h-8.5v-8.5H21z"/>
                               </svg>
-                              <span>Synced with "{microsoftListName}"</span>
+                              <span>Synced with &ldquo;{microsoftListName}&rdquo;</span>
                               <button
                                 onClick={disconnectMicrosoft}
                                 className="text-olive-500 hover:text-red-400 transition-colors"
@@ -4351,6 +4468,499 @@ export default function AdminPage() {
                     </div>
                   )}
                 </>
+              )}
+            </motion.div>
+          )}
+
+          {/* Communications Tab */}
+          {activeTab === 'communications' && (
+            <motion.div
+              key="communications"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-2xl font-display text-gold-400">Communications</h2>
+              </div>
+
+              {/* Communications Sub-tabs */}
+              <div className="flex flex-wrap gap-2 border-b border-olive-700 pb-4">
+                {[
+                  { id: 'tags', label: 'Guest Tags', icon: '🏷️' },
+                  { id: 'event-invitations', label: 'Event Invitations', icon: '📨' },
+                  { id: 'campaigns', label: 'Email Campaigns', icon: '📧' },
+                  { id: 'reminders', label: 'RSVP Reminders', icon: '⏰' },
+                  { id: 'send-history', label: 'Send History', icon: '📬' },
+                ].map((subtab) => (
+                  <button
+                    key={subtab.id}
+                    onClick={() => setCommunicationsSubTab(subtab.id as CommunicationsSubTab)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      communicationsSubTab === subtab.id
+                        ? 'bg-gold-500 text-black'
+                        : 'bg-charcoal-light text-cream hover:bg-olive-700'
+                    }`}
+                  >
+                    <span className="mr-2">{subtab.icon}</span>
+                    {subtab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tags Sub-tab */}
+              {communicationsSubTab === 'tags' && (
+                <div className="space-y-6">
+                  <div className="bg-charcoal-light rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-cream mb-4">Guest Tags</h3>
+                    <p className="text-olive-300 text-sm mb-4">
+                      Tags help you segment guests for targeted communications (e.g., &ldquo;Family&rdquo;, &ldquo;College Friends&rdquo;, &ldquo;Work Colleagues&rdquo;).
+                    </p>
+
+                    {tags.length === 0 ? (
+                      <p className="text-olive-400 italic">No tags created yet. Add tags from the Addresses tab.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {tags.map((tag) => (
+                            <div
+                              key={tag.tag}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-olive-700 rounded-full"
+                            >
+                              <span className="text-cream">{tag.tag}</span>
+                              <span className="text-xs text-olive-300 bg-olive-800 px-2 py-0.5 rounded-full">
+                                {tag.count} guest{tag.count !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-olive-700 pt-4">
+                          <h4 className="text-sm font-medium text-cream mb-2">Guests by Tag</h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {Object.entries(guestTags).map(([email, tagList]) => (
+                              tagList.length > 0 && (
+                                <div key={email} className="flex items-center gap-2 text-sm">
+                                  <span className="text-cream">{email}</span>
+                                  <div className="flex gap-1">
+                                    {tagList.map((t) => (
+                                      <span key={t} className="px-2 py-0.5 bg-olive-800 text-olive-300 rounded text-xs">
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Event Invitations Sub-tab */}
+              {communicationsSubTab === 'event-invitations' && (
+                <div className="space-y-6">
+                  <div className="bg-charcoal-light rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-cream mb-4">Event Invitations</h3>
+                    <p className="text-olive-300 text-sm mb-4">
+                      Control which guests can see and RSVP to restricted events like the Rehearsal Dinner and Sunday Brunch.
+                      All guests are automatically invited to the Ceremony, Cocktail Hour, Reception, and Send-off.
+                    </p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-olive-800 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-gold-400">{eventCounts['rehearsal_dinner'] || 0}</div>
+                        <div className="text-sm text-olive-300">Rehearsal Dinner</div>
+                      </div>
+                      <div className="bg-olive-800 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-gold-400">{eventCounts['sunday_brunch'] || 0}</div>
+                        <div className="text-sm text-olive-300">Sunday Brunch</div>
+                      </div>
+                    </div>
+
+                    {eventInvitations.length === 0 ? (
+                      <p className="text-olive-400 italic">No restricted event invitations yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-olive-700">
+                              <th className="text-left py-2 px-3 text-olive-300">Email</th>
+                              <th className="text-left py-2 px-3 text-olive-300">Event</th>
+                              <th className="text-left py-2 px-3 text-olive-300">Invited By</th>
+                              <th className="text-left py-2 px-3 text-olive-300">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {eventInvitations.map((inv) => (
+                              <tr key={inv.id} className="border-b border-olive-800">
+                                <td className="py-2 px-3 text-cream">{inv.email}</td>
+                                <td className="py-2 px-3">
+                                  <span className="px-2 py-0.5 bg-gold-500/20 text-gold-400 rounded text-xs">
+                                    {inv.event_slug.replace(/_/g, ' ')}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-olive-300">{inv.invited_by || '-'}</td>
+                                <td className="py-2 px-3 text-olive-300">
+                                  {formatDate(inv.created_at)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Email Campaigns Sub-tab */}
+              {communicationsSubTab === 'campaigns' && (
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium text-cream">Email Campaigns</h3>
+                    <button
+                      onClick={() => setShowAddCampaign(true)}
+                      className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors"
+                    >
+                      + New Campaign
+                    </button>
+                  </div>
+
+                  {showAddCampaign && (
+                    <div className="bg-charcoal-light rounded-lg p-6 border border-olive-600">
+                      <h4 className="text-lg font-medium text-cream mb-4">Create New Campaign</h4>
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const form = e.target as HTMLFormElement;
+                          const formData = new FormData(form);
+                          try {
+                            const response = await fetch('/api/admin/campaigns', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                name: formData.get('name'),
+                                type: formData.get('type'),
+                                subject: formData.get('subject'),
+                                body_html: formData.get('body_html'),
+                                segment: { rsvp_status: formData.get('segment') },
+                              }),
+                            });
+                            if (response.ok) {
+                              setShowAddCampaign(false);
+                              // Refetch campaigns
+                              const res = await fetch('/api/admin/campaigns');
+                              const data = await res.json();
+                              if (!data.error) setCampaigns(data.campaigns || []);
+                            }
+                          } catch (err) {
+                            console.error('Failed to create campaign:', err);
+                          }
+                        }}
+                        className="space-y-4"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-olive-300 mb-1">Campaign Name</label>
+                            <input
+                              name="name"
+                              required
+                              placeholder="e.g., Wedding Updates"
+                              className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-olive-300 mb-1">Type</label>
+                            <select
+                              name="type"
+                              className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                            >
+                              <option value="announcement">Announcement</option>
+                              <option value="reminder">Reminder</option>
+                              <option value="update">Update</option>
+                              <option value="thank_you">Thank You</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-olive-300 mb-1">Subject Line</label>
+                          <input
+                            name="subject"
+                            required
+                            placeholder="Email subject"
+                            className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-olive-300 mb-1">Audience Segment</label>
+                          <select
+                            name="segment"
+                            className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                          >
+                            <option value="all">All Guests</option>
+                            <option value="attending">Attending Only</option>
+                            <option value="not_attending">Not Attending</option>
+                            <option value="not_responded">Not Yet Responded</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-olive-300 mb-1">Email Body (HTML)</label>
+                          <textarea
+                            name="body_html"
+                            required
+                            rows={6}
+                            placeholder="<p>Your email content here...</p>"
+                            className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream font-mono text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            className="px-4 py-2 bg-gold-500 text-black rounded-lg font-medium"
+                          >
+                            Create Campaign
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowAddCampaign(false)}
+                            className="px-4 py-2 bg-olive-700 text-cream rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  <div className="bg-charcoal-light rounded-lg overflow-hidden">
+                    {campaigns.length === 0 ? (
+                      <p className="p-6 text-olive-400 italic">No campaigns created yet.</p>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-olive-800">
+                          <tr>
+                            <th className="text-left py-3 px-4 text-olive-300">Campaign</th>
+                            <th className="text-left py-3 px-4 text-olive-300">Type</th>
+                            <th className="text-left py-3 px-4 text-olive-300">Status</th>
+                            <th className="text-left py-3 px-4 text-olive-300">Sent</th>
+                            <th className="text-left py-3 px-4 text-olive-300">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {campaigns.map((campaign) => (
+                            <tr key={campaign.id} className="border-b border-olive-800">
+                              <td className="py-3 px-4">
+                                <div className="text-cream font-medium">{campaign.name}</div>
+                                <div className="text-xs text-olive-400">{campaign.subject}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 bg-olive-700 text-olive-300 rounded text-xs">
+                                  {campaign.type}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  campaign.status === 'sent' ? 'bg-green-500/20 text-green-400' :
+                                  campaign.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-olive-700 text-olive-300'
+                                }`}>
+                                  {campaign.status}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-olive-300">
+                                {campaign.sent_at ? formatDate(campaign.sent_at) : '-'}
+                              </td>
+                              <td className="py-3 px-4">
+                                {campaign.status === 'draft' && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Send this campaign to all matching recipients?')) return;
+                                      try {
+                                        const res = await fetch(`/api/admin/campaigns/${campaign.id}/send`, {
+                                          method: 'POST',
+                                        });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                          alert(`Campaign sent! ${data.successCount} emails sent.`);
+                                          // Refetch campaigns
+                                          const refreshRes = await fetch('/api/admin/campaigns');
+                                          const refreshData = await refreshRes.json();
+                                          if (!refreshData.error) setCampaigns(refreshData.campaigns || []);
+                                        } else {
+                                          alert(data.error || 'Failed to send campaign');
+                                        }
+                                      } catch {
+                                        alert('Failed to send campaign');
+                                      }
+                                    }}
+                                    className="px-3 py-1 bg-gold-500 text-black rounded text-xs font-medium"
+                                  >
+                                    Send
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* RSVP Reminders Sub-tab */}
+              {communicationsSubTab === 'reminders' && (
+                <div className="space-y-6">
+                  <div className="bg-charcoal-light rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-cream mb-4">RSVP Reminder System</h3>
+
+                    {reminderStatus && (
+                      <div className="space-y-6">
+                        {/* Status Overview */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-olive-800 rounded-lg p-4 text-center">
+                            <div className="text-2xl font-bold text-gold-400">{reminderStatus.nonResponderCount}</div>
+                            <div className="text-sm text-olive-300">Non-Responders</div>
+                          </div>
+                          <div className="bg-olive-800 rounded-lg p-4 text-center">
+                            <div className="text-2xl font-bold text-gold-400">{reminderStatus.daysUntilDeadline}</div>
+                            <div className="text-sm text-olive-300">Days Until Deadline</div>
+                          </div>
+                          <div className="bg-olive-800 rounded-lg p-4 text-center">
+                            <div className={`text-2xl font-bold ${reminderStatus.inRsvpWindow ? 'text-green-400' : 'text-olive-400'}`}>
+                              {reminderStatus.inRsvpWindow ? 'Active' : 'Inactive'}
+                            </div>
+                            <div className="text-sm text-olive-300">RSVP Window</div>
+                          </div>
+                          <div className="bg-olive-800 rounded-lg p-4 text-center">
+                            <div className="text-2xl font-bold text-gold-400">
+                              {reminderStatus.lastReminder ? formatDate(reminderStatus.lastReminder.sent_at).split(',')[0] : 'Never'}
+                            </div>
+                            <div className="text-sm text-olive-300">Last Reminder</div>
+                          </div>
+                        </div>
+
+                        {/* Settings */}
+                        <div className="border-t border-olive-700 pt-4">
+                          <h4 className="text-sm font-medium text-cream mb-4">Reminder Settings</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm text-olive-300 mb-1">
+                                Minimum Days Between Reminders
+                              </label>
+                              <div className="text-cream">{reminderStatus.settings.min_interval_days} days</div>
+                            </div>
+                            <div>
+                              <label className="block text-sm text-olive-300 mb-1">
+                                Auto-Reminder Days Before Deadline
+                              </label>
+                              <div className="text-cream">{reminderStatus.settings.reminder_days.join(', ')} days</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Send Reminder Button */}
+                        <div className="border-t border-olive-700 pt-4">
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Send reminders to ${reminderStatus.nonResponderCount} non-responders?`)) return;
+                                setSendingReminder(true);
+                                setReminderMessage(null);
+                                try {
+                                  const res = await fetch('/api/admin/reminders/send', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({}),
+                                  });
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    setReminderMessage(`Success! ${data.sent} reminders sent. ${data.skipped || 0} skipped (reminded recently).`);
+                                    // Refresh status
+                                    const statusRes = await fetch('/api/admin/reminders/status');
+                                    const statusData = await statusRes.json();
+                                    if (!statusData.error) setReminderStatus(statusData);
+                                  } else {
+                                    setReminderMessage(data.error || 'Failed to send reminders');
+                                  }
+                                } catch {
+                                  setReminderMessage('Failed to send reminders - network error');
+                                } finally {
+                                  setSendingReminder(false);
+                                }
+                              }}
+                              disabled={sendingReminder || reminderStatus.nonResponderCount === 0}
+                              className="px-6 py-3 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {sendingReminder ? 'Sending...' : 'Send Reminders Now'}
+                            </button>
+
+                            {reminderMessage && (
+                              <span className={`text-sm ${reminderMessage.startsWith('Success') ? 'text-green-400' : 'text-red-400'}`}>
+                                {reminderMessage}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Send History Sub-tab */}
+              {communicationsSubTab === 'send-history' && (
+                <div className="space-y-6">
+                  <div className="bg-charcoal-light rounded-lg p-6">
+                    <h3 className="text-lg font-medium text-cream mb-4">Email Send History</h3>
+
+                    {emailSendHistory.length === 0 ? (
+                      <p className="text-olive-400 italic">No emails sent yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-olive-800">
+                            <tr>
+                              <th className="text-left py-3 px-4 text-olive-300">Recipient</th>
+                              <th className="text-left py-3 px-4 text-olive-300">Guest Name</th>
+                              <th className="text-left py-3 px-4 text-olive-300">Status</th>
+                              <th className="text-left py-3 px-4 text-olive-300">Sent At</th>
+                              <th className="text-left py-3 px-4 text-olive-300">Error</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {emailSendHistory.map((send) => (
+                              <tr key={send.id} className="border-b border-olive-800">
+                                <td className="py-3 px-4 text-cream">{send.email}</td>
+                                <td className="py-3 px-4 text-olive-300">{send.guest_name || '-'}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`px-2 py-0.5 rounded text-xs ${
+                                    send.status === 'sent' ? 'bg-green-500/20 text-green-400' :
+                                    send.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                    'bg-olive-700 text-olive-300'
+                                  }`}>
+                                    {send.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-olive-300">
+                                  {send.sent_at ? formatDate(send.sent_at) : '-'}
+                                </td>
+                                <td className="py-3 px-4 text-red-400 text-xs">
+                                  {send.error_message || '-'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </motion.div>
           )}

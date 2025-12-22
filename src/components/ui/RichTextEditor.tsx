@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
@@ -8,7 +8,7 @@ import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
-import { $getRoot, $createParagraphNode, $createTextNode, FORMAT_TEXT_COMMAND, EditorState, $getSelection, $isRangeSelection } from 'lexical';
+import { $getRoot, $createParagraphNode, FORMAT_TEXT_COMMAND, EditorState, $getSelection, $isRangeSelection } from 'lexical';
 import { $generateHtmlFromNodes } from '@lexical/html';
 
 function Toolbar() {

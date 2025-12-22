@@ -56,6 +56,16 @@ interface ExistingRSVP {
 type WizardStep = 'email' | 'household-choice' | 'info' | 'rsvp' | 'success';
 type LookupStatus = 'existing_rsvp' | 'household_found' | 'address_found' | 'new_guest';
 
+// Event display names and order
+const EVENT_INFO: Record<string, { name: string; date: string; order: number }> = {
+  rehearsal_dinner: { name: 'Rehearsal Dinner', date: 'October 30, 2027', order: 1 },
+  ceremony: { name: 'Wedding Ceremony', date: 'October 31, 2027', order: 2 },
+  cocktail: { name: 'Cocktail Hour', date: 'October 31, 2027', order: 3 },
+  reception: { name: 'Reception', date: 'October 31, 2027', order: 4 },
+  sendoff: { name: 'Send-off', date: 'October 31, 2027', order: 5 },
+  sunday_brunch: { name: 'Sunday Brunch', date: 'November 1, 2027', order: 6 },
+};
+
 export default function RSVPPage() {
   // Wizard state
   const [step, setStep] = useState<WizardStep>('email');
@@ -70,6 +80,10 @@ export default function RSVPPage() {
   const [existingAddress, setExistingAddress] = useState<AddressData | null>(null);
   const [householdRsvps, setHouseholdRsvps] = useState<HouseholdRSVP[]>([]);
   const [selectedHouseholdRsvp, setSelectedHouseholdRsvp] = useState<HouseholdRSVP | null>(null);
+
+  // Event invitation state
+  const [invitedEvents, setInvitedEvents] = useState<string[]>([]);
+  const [eventResponses, setEventResponses] = useState<Record<string, boolean>>({});
 
   // Form data
   const [formData, setFormData] = useState({
@@ -115,6 +129,17 @@ export default function RSVPPage() {
       setLookupStatus(result.status);
       setWelcomeMessage(result.message || '');
 
+      // Set invited events from lookup
+      if (result.invitedEvents) {
+        setInvitedEvents(result.invitedEvents);
+        // Initialize event responses - default all to true if attending
+        const initialResponses: Record<string, boolean> = {};
+        for (const evt of result.invitedEvents) {
+          initialResponses[evt] = result.eventResponses?.[evt] ?? true;
+        }
+        setEventResponses(result.eventResponses || initialResponses);
+      }
+
       if (result.status === 'existing_rsvp') {
         // Pre-fill form with existing RSVP data
         const rsvp = result.rsvp as ExistingRSVP;
@@ -136,6 +161,10 @@ export default function RSVPPage() {
           isChild: g.isChild,
         }));
         setAdditionalGuests(guests);
+        // Set event responses from existing data
+        if (result.eventResponses) {
+          setEventResponses(result.eventResponses);
+        }
         setStep('rsvp');
       } else if (result.status === 'household_found') {
         // Show household choice
@@ -222,6 +251,17 @@ export default function RSVPPage() {
   // Handle RSVP submission
   const handleRSVPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate additional guests have names
+    const guestsWithoutNames = additionalGuests.filter(g => g.name.trim() === '');
+    if (guestsWithoutNames.length > 0) {
+      setFormState({
+        status: 'error',
+        message: 'Please provide a name for all additional guests.',
+      });
+      return;
+    }
+
     setFormState({ status: 'loading' });
 
     try {
@@ -252,6 +292,11 @@ export default function RSVPPage() {
       // Include existing address ID if available
       if (existingAddress?.id) {
         payload.existingAddressId = existingAddress.id;
+      }
+
+      // Include event responses if attending
+      if (formData.attending === 'yes' && Object.keys(eventResponses).length > 0) {
+        payload.eventResponses = eventResponses;
       }
 
       const response = await fetch('/api/rsvp', {
@@ -293,6 +338,18 @@ export default function RSVPPage() {
     const { name, value } = e.target;
     setAddressData(prev => ({ ...prev, [name]: value }));
   };
+
+  const toggleEventResponse = (eventSlug: string) => {
+    setEventResponses(prev => ({
+      ...prev,
+      [eventSlug]: !prev[eventSlug],
+    }));
+  };
+
+  // Get sorted invited events for display
+  const sortedInvitedEvents = [...invitedEvents].sort((a, b) => {
+    return (EVENT_INFO[a]?.order || 99) - (EVENT_INFO[b]?.order || 99);
+  });
 
   const addGuest = () => {
     setAdditionalGuests([
@@ -814,6 +871,40 @@ export default function RSVPPage() {
 
                     {formData.attending === 'yes' && (
                       <>
+                        {/* Event Selection - Only show if there are events to select */}
+                        {sortedInvitedEvents.length > 0 && (
+                          <div className="pt-4 border-t border-olive-700">
+                            <h3 className="text-lg font-medium text-gold-400 mb-3">Which events will you attend?</h3>
+                            <p className="text-olive-400 text-sm mb-4">
+                              Please check all events you plan to attend.
+                            </p>
+                            <div className="space-y-3">
+                              {sortedInvitedEvents.map((eventSlug) => {
+                                const info = EVENT_INFO[eventSlug] || { name: eventSlug, date: '' };
+                                return (
+                                  <label
+                                    key={eventSlug}
+                                    className="flex items-start gap-3 p-3 bg-olive-900/30 border border-olive-700 rounded-lg cursor-pointer hover:border-olive-600 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={eventResponses[eventSlug] ?? true}
+                                      onChange={() => toggleEventResponse(eventSlug)}
+                                      className="w-5 h-5 mt-0.5 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500/20"
+                                    />
+                                    <div className="flex-1">
+                                      <span className="text-cream font-medium">{info.name}</span>
+                                      {info.date && (
+                                        <span className="text-olive-400 text-sm ml-2">({info.date})</span>
+                                      )}
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Dietary Restrictions */}
                         <Input
                           label="Dietary Restrictions or Allergies"
@@ -875,8 +966,11 @@ export default function RSVPPage() {
                                         type="text"
                                         value={guest.name}
                                         onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
-                                        placeholder="Guest name"
-                                        className="flex h-10 flex-1 rounded-md border border-olive-600 bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                                        placeholder="Guest name (required)"
+                                        required
+                                        className={`flex h-10 flex-1 rounded-md border bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 ${
+                                          guest.name.trim() === '' ? 'border-red-500/50' : 'border-olive-600'
+                                        }`}
                                       />
 
                                       <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">

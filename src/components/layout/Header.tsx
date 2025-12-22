@@ -36,8 +36,10 @@ export function Header() {
 
   // Close mobile menu on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-    setOpenDropdown(null);
+    queueMicrotask(() => {
+      setIsMobileMenuOpen(false);
+      setOpenDropdown(null);
+    });
   }, [pathname]);
 
   // Check if any child is active

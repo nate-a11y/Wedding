@@ -5,12 +5,21 @@ import { useEffect, useState } from 'react';
 
 export function PWAManifest() {
   const pathname = usePathname();
-  const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
+  const [isAdminSubdomain, setIsAdminSubdomain] = useState(() => {
+    // Check if we're on the admin subdomain (runs during hydration)
+    if (typeof window !== 'undefined') {
+      return window.location.hostname.startsWith('admin.');
+    }
+    return false;
+  });
 
   useEffect(() => {
-    // Check if we're on the admin subdomain
-    setIsAdminSubdomain(window.location.hostname.startsWith('admin.'));
-  }, []);
+    // Re-check after hydration in case SSR value was different
+    const isAdmin = window.location.hostname.startsWith('admin.');
+    if (isAdmin !== isAdminSubdomain) {
+      queueMicrotask(() => setIsAdminSubdomain(isAdmin));
+    }
+  }, [isAdminSubdomain]);
 
   // Admin subdomain OR /admin path = admin manifest
   const isAdmin = isAdminSubdomain || pathname?.startsWith('/admin');

@@ -191,6 +191,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Save event responses if provided
+    if (body.eventResponses && typeof body.eventResponses === 'object') {
+      // Delete existing responses for this RSVP
+      await supabase
+        .from('rsvp_event_responses')
+        .delete()
+        .eq('rsvp_id', rsvpId);
+
+      // Insert new responses
+      const eventResponseRecords = Object.entries(body.eventResponses)
+        .filter(([, value]) => typeof value === 'boolean')
+        .map(([eventSlug, isAttending]) => ({
+          rsvp_id: rsvpId,
+          event_slug: eventSlug,
+          attending: isAttending as boolean,
+        }));
+
+      if (eventResponseRecords.length > 0) {
+        const { error: eventError } = await supabase
+          .from('rsvp_event_responses')
+          .insert(eventResponseRecords);
+
+        if (eventError) {
+          console.log('Note: Could not save event responses:', eventError.message);
+        }
+      }
+    }
+
     // Send confirmation email
     await sendRSVPConfirmation({
       to: email,

@@ -1,18 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  type: 'heart' | 'sparkle';
-  size: number;
-  delay: number;
-  duration: number;
-  rotation: number;
-}
 
 export interface CelebrationAnimationProps {
   isActive: boolean;
@@ -20,25 +9,25 @@ export interface CelebrationAnimationProps {
 }
 
 function CelebrationAnimation({ isActive, particleCount = 100 }: CelebrationAnimationProps) {
-  const [particles, setParticles] = useState<Particle[]>([]);
+  // Seeded random function for deterministic values
+  const seededRandom = (seed: number) => {
+    const x = Math.sin(seed * 9999) * 10000;
+    return x - Math.floor(x);
+  };
 
-  useEffect(() => {
-    if (isActive) {
-      const newParticles: Particle[] = [];
-      for (let i = 0; i < particleCount; i++) {
-        newParticles.push({
-          id: i,
-          x: Math.random() * 100,
-          y: Math.random() * 100,
-          type: Math.random() > 0.4 ? 'sparkle' : 'heart',
-          size: Math.random() * 16 + 10,
-          delay: Math.random() * 4,
-          duration: Math.random() * 4 + 5,
-          rotation: Math.random() * 720 - 360,
-        });
-      }
-      setParticles(newParticles);
-    }
+  // Generate particles with deterministic values
+  const particles = useMemo(() => {
+    if (!isActive) return [];
+    return Array.from({ length: particleCount }, (_, i) => ({
+      id: i,
+      x: seededRandom(i * 1) * 100,
+      y: seededRandom(i * 2) * 100,
+      type: (seededRandom(i * 3) > 0.4 ? 'sparkle' : 'heart') as 'heart' | 'sparkle',
+      size: seededRandom(i * 4) * 16 + 10,
+      delay: seededRandom(i * 5) * 4,
+      duration: seededRandom(i * 6) * 4 + 5,
+      rotation: seededRandom(i * 7) * 720 - 360,
+    }));
   }, [isActive, particleCount]);
 
   return (

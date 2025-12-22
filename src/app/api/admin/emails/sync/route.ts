@@ -4,7 +4,6 @@ import {
   refreshAccessToken,
   getSentEmails,
   getInboxEmails,
-  OutlookEmail,
 } from '@/lib/microsoft-graph';
 
 interface MicrosoftAuth {

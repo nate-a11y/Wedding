@@ -42,6 +42,49 @@ interface HouseholdRSVP {
   additional_guests: AdditionalGuest[];
 }
 
+// Core wedding events - all guests are invited to these
+const CORE_EVENTS = ['ceremony', 'cocktail', 'reception', 'sendoff'];
+
+// Helper to get invited events for an email
+async function getInvitedEvents(email: string): Promise<string[]> {
+  if (!supabase) return CORE_EVENTS;
+
+  // Start with core events (everyone is invited)
+  const invitedEvents = [...CORE_EVENTS];
+
+  // Check for restricted event invitations
+  const { data: eventInvites } = await supabase
+    .from('guest_events')
+    .select('event_slug')
+    .eq('email', email.toLowerCase());
+
+  if (eventInvites) {
+    for (const invite of eventInvites) {
+      if (!invitedEvents.includes(invite.event_slug)) {
+        invitedEvents.push(invite.event_slug);
+      }
+    }
+  }
+
+  return invitedEvents;
+}
+
+// Helper to get existing event responses for an RSVP
+async function getEventResponses(rsvpId: string): Promise<Record<string, boolean>> {
+  if (!supabase) return {};
+
+  const { data: responses } = await supabase
+    .from('rsvp_event_responses')
+    .select('event_slug, attending')
+    .eq('rsvp_id', rsvpId);
+
+  const result: Record<string, boolean> = {};
+  for (const resp of responses || []) {
+    result[resp.event_slug] = resp.attending;
+  }
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
   if (!isSupabaseConfigured() || !supabase) {
@@ -94,11 +137,17 @@ export async function POST(request: NextRequest) {
       console.error('RSVP lookup error:', rsvpError);
     }
 
+    // Get invited events for this guest
+    const invitedEvents = await getInvitedEvents(email);
+
     // If guest has existing RSVP, return it for editing
     if (existingRsvp) {
+      const eventResponses = await getEventResponses(existingRsvp.id);
       return NextResponse.json({
         status: 'existing_rsvp',
         rsvp: existingRsvp as RSVPRecord,
+        invitedEvents,
+        eventResponses,
         message: `Welcome back, ${existingRsvp.name}! You can update your RSVP below.`,
       });
     }
@@ -173,6 +222,7 @@ export async function POST(request: NextRequest) {
                 country: address.country,
               },
               householdRsvps: householdRsvps as HouseholdRSVP[],
+              invitedEvents,
               message: `Hi ${address.name}! We see someone from your household has already RSVPed.`,
             });
           }
@@ -193,6 +243,7 @@ export async function POST(request: NextRequest) {
           postal_code: address.postal_code,
           country: address.country,
         },
+        invitedEvents,
         message: `Welcome, ${address.name}! We have your address on file. Just complete your RSVP below.`,
       });
     }
@@ -200,6 +251,7 @@ export async function POST(request: NextRequest) {
     // No records found - guest needs to provide all information
     return NextResponse.json({
       status: 'new_guest',
+      invitedEvents,
       message: 'Welcome! Please provide your information to RSVP.',
     });
   } catch (error) {
