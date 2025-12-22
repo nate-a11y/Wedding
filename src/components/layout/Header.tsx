@@ -22,8 +22,30 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [expandedMobileItem, setExpandedMobileItem] = useState<string | null>(null);
+  const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
   const pathname = usePathname();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if on admin subdomain
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsAdminSubdomain(window.location.hostname.startsWith('admin.'));
+    }
+  }, []);
+
+  // Check if we're on an admin page
+  const isAdminPage = pathname?.startsWith('/admin') || isAdminSubdomain;
+
+  // Get the main domain URL for navigation links
+  const getMainDomainUrl = (href: string) => {
+    if (isAdminSubdomain && typeof window !== 'undefined') {
+      // Replace admin.domain.com with domain.com
+      const mainDomain = window.location.hostname.replace(/^admin\./, '');
+      const protocol = window.location.protocol;
+      return `${protocol}//${mainDomain}${href}`;
+    }
+    return href;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -60,6 +82,56 @@ export function Header() {
       setOpenDropdown(null);
     }, 150);
   };
+
+  // Simplified header for admin pages
+  if (isAdminPage) {
+    const mainSiteUrl = getMainDomainUrl('/');
+    return (
+      <header
+        className={cn(
+          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          isScrolled
+            ? 'bg-charcoal shadow-elegant py-3'
+            : 'bg-charcoal/95 backdrop-blur-md py-5'
+        )}
+      >
+        <nav className="container-wedding">
+          <div className="flex items-center justify-between">
+            {/* Logo - links to main site */}
+            <a href={mainSiteUrl} className="relative z-10">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="flex flex-col items-center pt-1"
+              >
+                <span className="font-accent-logo text-2xl md:text-3xl text-gold-500">
+                  N & B
+                </span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-olive-300 font-medium">
+                  10.31.27
+                </span>
+              </motion.div>
+            </a>
+
+            {/* Admin header - Back to main site link */}
+            <div className="flex items-center gap-4">
+              <span className="text-gold-400 text-sm font-medium uppercase tracking-wider">
+                Admin Dashboard
+              </span>
+              <a
+                href={mainSiteUrl}
+                className="px-4 py-2 text-sm text-olive-300 hover:text-gold-400 transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Main Site
+              </a>
+            </div>
+          </div>
+        </nav>
+      </header>
+    );
+  }
 
   return (
     <header
