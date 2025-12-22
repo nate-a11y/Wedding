@@ -1307,22 +1307,33 @@ export default function AdminPage() {
     }
   };
 
-  // Export RSVPs with meal choices (for caterer)
+  // Helper to format event responses for export
+  const formatEventResponses = (eventResponses: Record<string, boolean> | undefined): string => {
+    if (!eventResponses || Object.keys(eventResponses).length === 0) return 'All Events';
+    const attending = Object.entries(eventResponses)
+      .filter(([, isAttending]) => isAttending)
+      .map(([slug]) => slug.replace(/_/g, ' '))
+      .map(s => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+    return attending.length > 0 ? attending.join('; ') : 'None';
+  };
+
+  // Export RSVPs with dietary info (for caterer - buffet style)
   const exportMealChoices = () => {
     const attendingRsvps = rsvps.filter(r => r.attending);
     const rows: string[][] = [
-      ['Name', 'Email', 'Meal Choice', 'Dietary Restrictions', 'Is Child', 'Party Size']
+      ['Name', 'Email', 'Dietary Restrictions', 'Is Child', 'Party Size', 'Events Attending']
     ];
 
     attendingRsvps.forEach(rsvp => {
+      const eventsAttending = formatEventResponses(rsvp.event_responses);
       // Primary guest
       rows.push([
         escapeCSV(rsvp.name),
         escapeCSV(rsvp.email),
-        escapeCSV(rsvp.meal_choice),
         escapeCSV(rsvp.dietary_restrictions),
         'No',
-        String(1 + (rsvp.additional_guests?.length || 0))
+        String(1 + (rsvp.additional_guests?.length || 0)),
+        escapeCSV(eventsAttending)
       ]);
 
       // Additional guests
@@ -1330,33 +1341,34 @@ export default function AdminPage() {
         rows.push([
           escapeCSV(guest.name),
           '',
-          escapeCSV(guest.mealChoice),
           '',
           guest.isChild ? 'Yes' : 'No',
-          ''
+          '',
+          '' // Additional guests inherit primary guest's events
         ]);
       });
     });
 
     const csv = rows.map(row => row.join(',')).join('\n');
-    downloadCSV(csv, `meal-choices-${new Date().toISOString().split('T')[0]}.csv`);
+    downloadCSV(csv, `guest-dietary-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   // Export full RSVP data
   const exportAllRsvps = () => {
     const rows: string[][] = [
-      ['Name', 'Email', 'Attending', 'Meal Choice', 'Dietary Restrictions', 'Additional Guests', 'Song Request', 'Message', 'Date']
+      ['Name', 'Email', 'Attending', 'Dietary Restrictions', 'Additional Guests', 'Events Attending', 'Song Request', 'Message', 'Date']
     ];
 
     rsvps.forEach(rsvp => {
       const guestNames = rsvp.additional_guests?.map(g => g.name).join('; ') || '';
+      const eventsAttending = rsvp.attending ? formatEventResponses(rsvp.event_responses) : '-';
       rows.push([
         escapeCSV(rsvp.name),
         escapeCSV(rsvp.email),
         rsvp.attending ? 'Yes' : 'No',
-        escapeCSV(rsvp.meal_choice),
         escapeCSV(rsvp.dietary_restrictions),
         escapeCSV(guestNames),
+        escapeCSV(eventsAttending),
         escapeCSV(rsvp.song_request),
         escapeCSV(rsvp.message),
         new Date(rsvp.created_at).toLocaleDateString()
@@ -2298,7 +2310,7 @@ export default function AdminPage() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Export Meal Choices (Caterer)
+                      Export Dietary Info (Caterer)
                     </button>
                     <button
                       onClick={exportAllRsvps}
@@ -2317,7 +2329,6 @@ export default function AdminPage() {
                         <th className="p-3 text-olive-300 font-medium">Name</th>
                         <th className="p-3 text-olive-300 font-medium">Email</th>
                         <th className="p-3 text-olive-300 font-medium">Status</th>
-                        <th className="p-3 text-olive-300 font-medium">Meal</th>
                         <th className="p-3 text-olive-300 font-medium">Party</th>
                         <th className="p-3 text-olive-300 font-medium">Events Attending</th>
                         <th className="p-3 text-olive-300 font-medium">Date</th>
@@ -2351,7 +2362,6 @@ export default function AdminPage() {
                                 {rsvp.attending ? 'Attending' : 'Not Attending'}
                               </span>
                             </td>
-                            <td className="p-3 text-olive-400 capitalize">{rsvp.meal_choice || '-'}</td>
                             <td className="p-3 text-olive-400">
                               {partySize}
                               {childCount > 0 && (
