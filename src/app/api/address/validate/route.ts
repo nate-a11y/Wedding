@@ -22,8 +22,8 @@ interface ValidatedAddress {
 }
 
 // USPS OAuth API endpoints
-const USPS_TOKEN_URL = 'https://api.usps.com/oauth2/v3/token';
-const USPS_ADDRESS_URL = 'https://api.usps.com/addresses/v3/address';
+const USPS_TOKEN_URL = 'https://apis.usps.com/oauth2/v3/token';
+const USPS_ADDRESS_URL = 'https://apis.usps.com/addresses/v3/address';
 
 // Cache for OAuth token
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -51,6 +51,7 @@ async function getAccessToken(): Promise<string | null> {
         grant_type: 'client_credentials',
         client_id: consumerKey,
         client_secret: consumerSecret,
+        scope: 'addresses',
       }),
     });
 
