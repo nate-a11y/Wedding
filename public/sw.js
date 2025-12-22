@@ -2,7 +2,7 @@
 const CACHE_NAME = 'wedding-v1';
 
 // Install event - cache essential assets
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -41,5 +41,56 @@ self.addEventListener('fetch', (event) => {
         // Network failed, try cache
         return caches.match(event.request);
       })
+  );
+});
+
+// Push notification event
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const options = {
+      body: data.body || 'New wedding update!',
+      icon: data.icon || '/icon-192.png',
+      badge: data.badge || '/icon-192.png',
+      tag: data.tag || 'wedding-update',
+      vibrate: [100, 50, 100],
+      data: data.data || { url: '/live' },
+      actions: [
+        {
+          action: 'open',
+          title: 'View Update',
+        },
+      ],
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'Wedding Update', options)
+    );
+  } catch (err) {
+    console.error('Push notification error:', err);
+  }
+});
+
+// Notification click event
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/live';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open
+      for (const client of clientList) {
+        if (client.url.includes(url) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
   );
 });
