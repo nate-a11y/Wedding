@@ -5,7 +5,6 @@ import {
   getTodoTasks,
   createTodoTask,
   updateTodoTask,
-  deleteTodoTask,
   toMicrosoftTask,
   fromMicrosoftTask,
   createWebhookSubscription,

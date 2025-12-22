@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Button, PageEffects, AnimatedHeader } from '@/components/ui';
+import { PageEffects, AnimatedHeader } from '@/components/ui';
 
 // Calendar event details
 const calendarEvent = {

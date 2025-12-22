@@ -83,7 +83,7 @@ export default function AddressPage() {
           className="text-center mb-8"
         >
           <p className="text-olive-300 max-w-md mx-auto mb-4">
-            We're so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
+            We&apos;re so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
           </p>
           <p className="text-olive-400 text-sm max-w-md mx-auto">
             Save the dates will be mailed around Halloween 2026, with formal invitations following in April 2027.

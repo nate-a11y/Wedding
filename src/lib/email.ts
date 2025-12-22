@@ -184,7 +184,7 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
     return false;
   }
 
-  const { to, name, attending, mealChoice, dietaryRestrictions, additionalGuests = [], songRequest, message } = data;
+  const { to, name, attending, dietaryRestrictions, additionalGuests = [], songRequest, message } = data;
 
   const partySize = 1 + additionalGuests.length;
   const subject = attending

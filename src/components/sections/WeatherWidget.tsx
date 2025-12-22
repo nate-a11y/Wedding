@@ -43,13 +43,15 @@ export function WeatherWidget() {
     const today = new Date();
     const diffTime = weddingDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    setDaysUntil(diffDays);
 
     // Use fallback weather for now
     // In production, you could fetch from a weather API
-    setWeather({
-      ...FALLBACK_WEATHER,
-      icon: getWeatherIcon(FALLBACK_WEATHER.condition),
+    queueMicrotask(() => {
+      setDaysUntil(diffDays);
+      setWeather({
+        ...FALLBACK_WEATHER,
+        icon: getWeatherIcon(FALLBACK_WEATHER.condition),
+      });
     });
   }, []);
 

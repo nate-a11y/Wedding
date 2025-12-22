@@ -195,14 +195,6 @@ export default function PhotosPage() {
     });
   };
 
-  const updateUploadCaption = (index: number, caption: string) => {
-    setPendingUploads((prev) => {
-      const newUploads = [...prev];
-      newUploads[index] = { ...newUploads[index], caption };
-      return newUploads;
-    });
-  };
-
   const clearAllUploads = () => {
     pendingUploads.forEach((u) => URL.revokeObjectURL(u.preview));
     setPendingUploads([]);
