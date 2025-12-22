@@ -121,6 +121,19 @@ export default function RSVPPage() {
 
   const [additionalGuests, setAdditionalGuests] = useState<AdditionalGuest[]>([]);
 
+  // Address validation state
+  const [validatedAddress, setValidatedAddress] = useState<{
+    street_address: string;
+    street_address_2: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    is_valid: boolean;
+    is_standardized: boolean;
+  } | null>(null);
+  const [showAddressConfirm, setShowAddressConfirm] = useState(false);
+  const [addressValidating, setAddressValidating] = useState(false);
+
   // Push notification state
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -324,9 +337,78 @@ export default function RSVPPage() {
     setFormState({ status: 'idle' });
   };
 
-  // Handle info step (new guests)
-  const handleInfoSubmit = (e: React.FormEvent) => {
+  // Handle info step (new guests) - validates address with USPS
+  const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Only validate US addresses
+    if (addressData.country !== 'United States') {
+      setStep('rsvp');
+      return;
+    }
+
+    setAddressValidating(true);
+    try {
+      const response = await fetch('/api/address/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          street_address: addressData.street_address,
+          street_address_2: addressData.street_address_2,
+          city: addressData.city,
+          state: addressData.state,
+          postal_code: addressData.postal_code,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.is_valid) {
+        // Address couldn't be validated - show warning but allow continue
+        setFormState({
+          status: 'error',
+          message: result.error || 'We couldn\'t verify this address. Please double-check it or continue anyway.',
+        });
+        setAddressValidating(false);
+        return;
+      }
+
+      if (result.is_standardized) {
+        // Address was corrected/standardized - ask user to confirm
+        setValidatedAddress(result);
+        setShowAddressConfirm(true);
+      } else {
+        // Address is valid and unchanged - proceed
+        setStep('rsvp');
+      }
+    } catch (error) {
+      console.error('Address validation error:', error);
+      // If validation fails, allow user to continue
+      setStep('rsvp');
+    } finally {
+      setAddressValidating(false);
+    }
+  };
+
+  // Accept the USPS-standardized address
+  const acceptStandardizedAddress = () => {
+    if (validatedAddress) {
+      setAddressData(prev => ({
+        ...prev,
+        street_address: validatedAddress.street_address,
+        street_address_2: validatedAddress.street_address_2,
+        city: validatedAddress.city,
+        state: validatedAddress.state,
+        postal_code: validatedAddress.postal_code,
+      }));
+    }
+    setShowAddressConfirm(false);
+    setStep('rsvp');
+  };
+
+  // Keep the original address as entered
+  const keepOriginalAddress = () => {
+    setShowAddressConfirm(false);
     setStep('rsvp');
   };
 
@@ -910,6 +992,7 @@ export default function RSVPPage() {
                         variant="outline"
                         onClick={goBack}
                         className="flex-1"
+                        disabled={addressValidating}
                       >
                         Back
                       </Button>
@@ -917,12 +1000,90 @@ export default function RSVPPage() {
                         type="submit"
                         variant="primary"
                         className="flex-1"
+                        isLoading={addressValidating}
                       >
-                        Continue to RSVP
+                        {addressValidating ? 'Validating Address...' : 'Continue to RSVP'}
                       </Button>
                     </div>
                   </div>
                 </form>
+
+                {/* Address Confirmation Modal */}
+                <AnimatePresence>
+                  {showAddressConfirm && validatedAddress && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+                      onClick={() => setShowAddressConfirm(false)}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-charcoal border border-olive-600 rounded-lg shadow-elegant p-6 max-w-md w-full"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 bg-gold-500/20 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-medium text-cream">Standardized Address Found</h3>
+                        </div>
+
+                        <p className="text-olive-300 text-sm mb-4">
+                          USPS suggests this standardized format for your address. Would you like to use it?
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          {/* Original Address */}
+                          <div className="bg-olive-900/30 border border-olive-700 rounded-lg p-3">
+                            <p className="text-xs text-olive-400 uppercase tracking-wide mb-2">Your Entry</p>
+                            <p className="text-cream text-sm">
+                              {addressData.street_address}
+                              {addressData.street_address_2 && <><br />{addressData.street_address_2}</>}
+                              <br />
+                              {addressData.city}, {addressData.state} {addressData.postal_code}
+                            </p>
+                          </div>
+
+                          {/* Standardized Address */}
+                          <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-3">
+                            <p className="text-xs text-gold-400 uppercase tracking-wide mb-2">USPS Standard</p>
+                            <p className="text-cream text-sm">
+                              {validatedAddress.street_address}
+                              {validatedAddress.street_address_2 && <><br />{validatedAddress.street_address_2}</>}
+                              <br />
+                              {validatedAddress.city}, {validatedAddress.state} {validatedAddress.postal_code}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={keepOriginalAddress}
+                            className="flex-1"
+                          >
+                            Keep Original
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            onClick={acceptStandardizedAddress}
+                            className="flex-1"
+                          >
+                            Use USPS Format
+                          </Button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
 
