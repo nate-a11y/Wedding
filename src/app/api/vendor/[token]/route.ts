@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { siteConfig } from '@/config/site';
 
 // GET /api/vendor/[token] - Validate token and return vendor portal data
 export async function GET(
@@ -81,25 +82,29 @@ export async function GET(
       );
     }
 
-    // Get venue info from environment variables
+    // Get venue info from site config
+    const venue = siteConfig.wedding.venue.ceremony;
     const venueInfo = {
-      name: process.env.VENUE_NAME || 'Venue TBD',
-      address: process.env.VENUE_ADDRESS || 'Address TBD',
-      contactName: process.env.VENUE_CONTACT_NAME || 'Venue Coordinator',
-      contactPhone: process.env.VENUE_CONTACT_PHONE || '',
-      contactEmail: process.env.VENUE_CONTACT_EMAIL || '',
-      parkingNotes: process.env.VENUE_PARKING_NOTES || 'See venue for parking instructions.',
-      loadInNotes: process.env.VENUE_LOADIN_NOTES || 'See venue for load-in instructions.',
-      wifiNetwork: process.env.VENUE_WIFI_NETWORK || '',
-      wifiPassword: process.env.VENUE_WIFI_PASSWORD || '',
-      notes: process.env.VENUE_NOTES || '',
+      name: venue.name,
+      address: `${venue.address}, ${venue.city}, ${venue.state} ${venue.zip}`,
+      website: venue.website,
+      // Vendor-specific info (can be customized)
+      contactName: 'Venue Coordinator',
+      contactPhone: '',
+      contactEmail: '',
+      parkingNotes: 'Vendor parking available. Please check with the venue coordinator.',
+      loadInNotes: 'Please coordinate load-in times with the venue.',
+      wifiNetwork: '',
+      wifiPassword: '',
+      notes: '',
     };
 
-    // Wedding date and basic info
+    // Wedding date and basic info from site config
     const weddingInfo = {
-      date: process.env.WEDDING_DATE || '2027-10-31',
-      coupleName: process.env.COUPLE_NAMES || 'The Happy Couple',
-      guestCount: parseInt(process.env.EXPECTED_GUEST_COUNT || '100', 10),
+      date: '2027-10-31',
+      displayDate: siteConfig.wedding.displayDate,
+      coupleName: `${siteConfig.couple.person1.firstName} & ${siteConfig.couple.person2.firstName}`,
+      contactEmail: siteConfig.contact.email,
     };
 
     return NextResponse.json({

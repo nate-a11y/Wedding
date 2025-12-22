@@ -27,14 +27,15 @@ interface TimelineEvent {
 interface VenueInfo {
   name: string;
   address: string;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
-  parkingNotes: string;
-  loadInNotes: string;
-  wifiNetwork: string;
-  wifiPassword: string;
-  notes: string;
+  website?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  parkingNotes?: string;
+  loadInNotes?: string;
+  wifiNetwork?: string;
+  wifiPassword?: string;
+  notes?: string;
 }
 
 interface VendorData {
@@ -46,8 +47,9 @@ interface VendorData {
   venue: VenueInfo;
   wedding: {
     date: string;
+    displayDate?: string;
     coupleName: string;
-    guestCount: number;
+    contactEmail?: string;
   };
 }
 
@@ -326,27 +328,40 @@ export default function VendorPortalPage() {
                 <div>
                   <p className="text-gold-400 font-medium text-lg">{data.venue.name}</p>
                   <p className="text-olive-300">{data.venue.address}</p>
+                  {data.venue.website && (
+                    <p className="text-olive-400 text-sm mt-2">
+                      <a href={data.venue.website} target="_blank" rel="noopener noreferrer" className="hover:text-gold-400">
+                        🔗 {data.venue.website}
+                      </a>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Contact Info */}
-            <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
-              <h2 className="text-lg font-medium text-cream mb-4">Venue Contact</h2>
-              <div className="space-y-2">
-                <p className="text-cream">{data.venue.contactName}</p>
-                <p className="text-olive-300">
-                  <a href={`tel:${data.venue.contactPhone}`} className="hover:text-gold-400">
-                    📞 {data.venue.contactPhone}
-                  </a>
-                </p>
-                <p className="text-olive-300">
-                  <a href={`mailto:${data.venue.contactEmail}`} className="hover:text-gold-400">
-                    ✉️ {data.venue.contactEmail}
-                  </a>
-                </p>
+            {/* Contact Info - only show if contact details available */}
+            {(data.venue.contactPhone || data.venue.contactEmail) && (
+              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+                <h2 className="text-lg font-medium text-cream mb-4">Venue Contact</h2>
+                <div className="space-y-2">
+                  {data.venue.contactName && <p className="text-cream">{data.venue.contactName}</p>}
+                  {data.venue.contactPhone && (
+                    <p className="text-olive-300">
+                      <a href={`tel:${data.venue.contactPhone}`} className="hover:text-gold-400">
+                        📞 {data.venue.contactPhone}
+                      </a>
+                    </p>
+                  )}
+                  {data.venue.contactEmail && (
+                    <p className="text-olive-300">
+                      <a href={`mailto:${data.venue.contactEmail}`} className="hover:text-gold-400">
+                        ✉️ {data.venue.contactEmail}
+                      </a>
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Logistics */}
             <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
@@ -369,20 +384,24 @@ export default function VendorPortalPage() {
               </div>
             </div>
 
-            {/* WiFi */}
-            <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
-              <h2 className="text-lg font-medium text-cream mb-4">WiFi Access</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-olive-400 text-sm">Network</p>
-                  <p className="text-cream font-mono">{data.venue.wifiNetwork}</p>
-                </div>
-                <div>
-                  <p className="text-olive-400 text-sm">Password</p>
-                  <p className="text-cream font-mono">{data.venue.wifiPassword}</p>
+            {/* WiFi - only show if available */}
+            {data.venue.wifiNetwork && (
+              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+                <h2 className="text-lg font-medium text-cream mb-4">WiFi Access</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-olive-400 text-sm">Network</p>
+                    <p className="text-cream font-mono">{data.venue.wifiNetwork}</p>
+                  </div>
+                  {data.venue.wifiPassword && (
+                    <div>
+                      <p className="text-olive-400 text-sm">Password</p>
+                      <p className="text-cream font-mono">{data.venue.wifiPassword}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Wedding Summary */}
             <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
@@ -394,12 +413,18 @@ export default function VendorPortalPage() {
                 </div>
                 <div>
                   <p className="text-olive-400">Date</p>
-                  <p className="text-cream">{formattedDate}</p>
+                  <p className="text-cream">{data.wedding.displayDate || formattedDate}</p>
                 </div>
-                <div>
-                  <p className="text-olive-400">Expected Guests</p>
-                  <p className="text-cream">{data.wedding.guestCount}</p>
-                </div>
+                {data.wedding.contactEmail && (
+                  <div className="col-span-2">
+                    <p className="text-olive-400">Contact</p>
+                    <p className="text-cream">
+                      <a href={`mailto:${data.wedding.contactEmail}`} className="hover:text-gold-400">
+                        {data.wedding.contactEmail}
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
