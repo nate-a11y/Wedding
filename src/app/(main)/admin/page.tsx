@@ -279,9 +279,9 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'emails' | 'planning' | 'communications' | 'live' | 'songs';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
-type CommunicationsSubTab = 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
+type CommunicationsSubTab = 'emails' | 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
 
 // Live Feed interfaces
 interface LiveUpdate {
@@ -398,7 +398,7 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'emails', 'planning', 'communications', 'live'];
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'planning', 'communications', 'live'];
 
 export default function AdminPage() {
   // Initialize tabs from URL params, fallback to localStorage
@@ -506,8 +506,22 @@ export default function AdminPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  // Communications state
-  const [communicationsSubTab, setCommunicationsSubTab] = useState<CommunicationsSubTab>('tags');
+  // Communications state (with URL and localStorage persistence)
+  const [communicationsSubTab, setCommunicationsSubTab] = useState<CommunicationsSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      // Check URL params first
+      const urlSubtab = new URLSearchParams(window.location.search).get('subtab');
+      if (urlSubtab && ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'].includes(urlSubtab)) {
+        return urlSubtab as CommunicationsSubTab;
+      }
+      // Fall back to localStorage
+      const saved = localStorage.getItem('admin_communications_subtab');
+      if (saved && ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'].includes(saved)) {
+        return saved as CommunicationsSubTab;
+      }
+    }
+    return 'emails';
+  });
   const [tags, setTags] = useState<TagCount[]>([]);
   const [guestTags, setGuestTags] = useState<Record<string, string[]>>({});
   const [eventInvitations, setEventInvitations] = useState<EventInvitation[]>([]);
@@ -556,7 +570,7 @@ export default function AdminPage() {
     // Update URL without navigation
     const params = new URLSearchParams(window.location.search);
     params.set('tab', activeTab);
-    if (activeTab !== 'planning') {
+    if (activeTab !== 'planning' && activeTab !== 'communications') {
       params.delete('subtab');
     }
     const newUrl = `${window.location.pathname}?${params.toString()}`;
@@ -574,6 +588,18 @@ export default function AdminPage() {
       window.history.replaceState({}, '', newUrl);
     }
   }, [planningSubTab, activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('admin_communications_subtab', communicationsSubTab);
+    // Update URL without navigation
+    if (activeTab === 'communications') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', 'communications');
+      params.set('subtab', communicationsSubTab);
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [communicationsSubTab, activeTab]);
 
   // Check Microsoft To Do connection status
   useEffect(() => {
@@ -1003,22 +1029,6 @@ export default function AdminPage() {
           const data = await response.json();
           if (data.error) throw new Error(data.error);
           setPhotos(data.photos);
-        } else if (activeTab === 'emails') {
-          // Fetch emails, addresses, and RSVPs for compose feature
-          const [emailsRes, addressesRes, rsvpsRes] = await Promise.all([
-            fetch('/api/admin/emails'),
-            fetch('/api/admin/addresses'),
-            fetch('/api/admin/rsvps'),
-          ]);
-          const [emailsData, addressesData, rsvpsData] = await Promise.all([
-            emailsRes.json(),
-            addressesRes.json(),
-            rsvpsRes.json(),
-          ]);
-          if (emailsData.error) throw new Error(emailsData.error);
-          setEmails(emailsData.emails);
-          if (!addressesData.error) setAddresses(addressesData.addresses || []);
-          if (!rsvpsData.error) setRsvps(rsvpsData.rsvps || []);
         } else if (activeTab === 'addresses') {
           const [addressesRes, tagsRes, eventsRes] = await Promise.all([
             fetch('/api/admin/addresses'),
@@ -1100,22 +1110,28 @@ export default function AdminPage() {
             setTimelineEvents(timelineData.events || []);
           }
         } else if (activeTab === 'communications') {
-          // Fetch all communications data in parallel
-          const [tagsRes, guestTagsRes, invitationsRes, campaignsRes, reminderRes, sendsRes] = await Promise.all([
+          // Fetch all communications data in parallel (including emails data)
+          const [tagsRes, guestTagsRes, invitationsRes, campaignsRes, reminderRes, sendsRes, emailsRes, addressesRes, rsvpsRes] = await Promise.all([
             fetch('/api/admin/tags'),
             fetch('/api/admin/guests/tags'),
             fetch('/api/admin/event-invitations'),
             fetch('/api/admin/campaigns'),
             fetch('/api/admin/reminders/status'),
             fetch('/api/admin/email-sends'),
+            fetch('/api/admin/emails'),
+            fetch('/api/admin/addresses'),
+            fetch('/api/admin/rsvps'),
           ]);
-          const [tagsData, guestTagsData, invitationsData, campaignsData, reminderData, sendsData] = await Promise.all([
+          const [tagsData, guestTagsData, invitationsData, campaignsData, reminderData, sendsData, emailsData, addressesData, rsvpsData] = await Promise.all([
             tagsRes.json(),
             guestTagsRes.json(),
             invitationsRes.json(),
             campaignsRes.json(),
             reminderRes.json(),
             sendsRes.json(),
+            emailsRes.json(),
+            addressesRes.json(),
+            rsvpsRes.json(),
           ]);
           if (!tagsData.error) {
             setTags(tagsData.tags || []);
@@ -1135,6 +1151,15 @@ export default function AdminPage() {
           }
           if (!sendsData.error) {
             setEmailSendHistory(sendsData.sends || []);
+          }
+          if (!emailsData.error) {
+            setEmails(emailsData.emails || []);
+          }
+          if (!addressesData.error) {
+            setAddresses(addressesData.addresses || []);
+          }
+          if (!rsvpsData.error) {
+            setRsvps(rsvpsData.rsvps || []);
           }
         } else if (activeTab === 'live') {
           // Fetch live feed data
@@ -1511,15 +1536,6 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'emails',
-      label: 'Emails',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
       ),
     },
@@ -2557,18 +2573,35 @@ export default function AdminPage() {
                               </div>
                               {editingAddressEvents === addr.id ? (
                                 <div className="flex gap-1">
-                                  <select
-                                    value={newAddressEvent}
-                                    onChange={(e) => setNewAddressEvent(e.target.value)}
-                                    className="w-32 px-2 py-1 text-xs bg-charcoal border border-olive-600 rounded text-cream"
-                                    autoFocus
-                                  >
-                                    <option value="">Select event...</option>
-                                    <option value="rehearsal_dinner">Rehearsal Dinner</option>
-                                    <option value="sunday_brunch">Sunday Brunch</option>
-                                    <option value="welcome_party">Welcome Party</option>
-                                    <option value="after_party">After Party</option>
-                                  </select>
+                                  {(() => {
+                                    const assignedEvents = addressEvents[addr.email.toLowerCase()] || [];
+                                    const availableEvents = [
+                                      { value: 'rehearsal_dinner', label: 'Rehearsal Dinner' },
+                                      { value: 'sunday_brunch', label: 'Sunday Brunch' },
+                                      { value: 'welcome_party', label: 'Welcome Party' },
+                                      { value: 'after_party', label: 'After Party' },
+                                    ].filter(e => !assignedEvents.includes(e.value));
+
+                                    if (availableEvents.length === 0) {
+                                      return (
+                                        <span className="text-olive-400 text-xs italic">All events assigned</span>
+                                      );
+                                    }
+
+                                    return (
+                                      <select
+                                        value={newAddressEvent}
+                                        onChange={(e) => setNewAddressEvent(e.target.value)}
+                                        className="w-32 px-2 py-1 text-xs bg-charcoal border border-olive-600 rounded text-cream"
+                                        autoFocus
+                                      >
+                                        <option value="">Select event...</option>
+                                        {availableEvents.map(e => (
+                                          <option key={e.value} value={e.value}>{e.label}</option>
+                                        ))}
+                                      </select>
+                                    );
+                                  })()}
                                   <button
                                     onClick={async () => {
                                       if (!newAddressEvent) return;
@@ -2938,238 +2971,6 @@ export default function AdminPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </motion.div>
-          )}
-
-          {activeTab === 'emails' && (
-            <motion.div
-              key="emails"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              {/* Compose Email Button */}
-              <div className="mb-6">
-                <button
-                  onClick={() => setShowComposeEmail(!showComposeEmail)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors font-medium"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  {showComposeEmail ? 'Hide Compose' : 'Compose Email'}
-                </button>
-              </div>
-
-              {/* Compose Email Section */}
-              <AnimatePresence>
-                {showComposeEmail && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mb-8"
-                  >
-                    <div className="bg-black/50 border border-olive-700 rounded-lg p-6">
-                      <h3 className="text-xl font-heading text-gold-400 mb-4">Send Bulk Email</h3>
-
-                      {/* Result Message */}
-                      {emailSendResult && (
-                        <div className={`mb-4 p-3 rounded-lg ${
-                          emailSendResult.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {emailSendResult.message}
-                        </div>
-                      )}
-
-                      {/* Recipients */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-olive-300 font-medium">Recipients</label>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm text-olive-400">
-                              {selectedRecipients.size} of {availableRecipients.length} selected
-                            </span>
-                            <button
-                              type="button"
-                              onClick={toggleAllRecipients}
-                              className="text-sm text-gold-400 hover:text-gold-300"
-                            >
-                              {selectedRecipients.size === availableRecipients.length ? 'Deselect All' : 'Select All'}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-charcoal border border-olive-600 rounded-lg p-3 max-h-48 overflow-y-auto">
-                          {availableRecipients.length === 0 ? (
-                            <p className="text-olive-400 text-sm">No recipients available. Add addresses or RSVPs first.</p>
-                          ) : (
-                            <div className="space-y-1">
-                              {availableRecipients.map(recipient => (
-                                <label
-                                  key={recipient.email}
-                                  className="flex items-center gap-3 p-2 hover:bg-olive-900/30 rounded cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedRecipients.has(recipient.email)}
-                                    onChange={() => toggleRecipient(recipient.email)}
-                                    className="w-4 h-4 rounded border-olive-600 text-gold-500 focus:ring-gold-500 bg-charcoal"
-                                  />
-                                  <span className="text-cream">{recipient.name}</span>
-                                  <span className="text-olive-400 text-sm">{recipient.email}</span>
-                                  <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
-                                    recipient.source === 'both' ? 'bg-purple-500/20 text-purple-400' :
-                                    recipient.source === 'rsvp' ? 'bg-blue-500/20 text-blue-400' :
-                                    'bg-olive-500/20 text-olive-400'
-                                  }`}>
-                                    {recipient.source === 'both' ? 'Address + RSVP' :
-                                     recipient.source === 'rsvp' ? 'RSVP' : 'Address'}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Subject */}
-                      <div className="mb-4">
-                        <label className="block text-olive-300 font-medium mb-2">Subject</label>
-                        <input
-                          type="text"
-                          value={emailSubject}
-                          onChange={(e) => setEmailSubject(e.target.value)}
-                          placeholder="Enter email subject..."
-                          className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Rich Text Editor */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-olive-300 font-medium">Message</label>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-olive-400">Insert:</span>
-                            <div className="flex flex-wrap gap-1">
-                              {templateVariables.map(v => (
-                                <button
-                                  key={v.key}
-                                  type="button"
-                                  onClick={() => setTextToInsert(v.key)}
-                                  className="px-2 py-1 text-xs bg-olive-800 hover:bg-olive-700 text-gold-400 rounded transition-colors"
-                                  title={v.description}
-                                >
-                                  {v.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <RichTextEditor
-                          onHtmlChange={setEmailHtmlContent}
-                          placeholder="Write your message to guests..."
-                          shouldClear={clearEditor}
-                          onCleared={() => setClearEditor(false)}
-                          textToInsert={textToInsert}
-                          onInserted={() => setTextToInsert(null)}
-                        />
-                        <p className="text-olive-400 text-sm mt-2">
-                          Your message will be wrapped in our branded email template. Use the insert buttons above to add personalized fields.
-                        </p>
-                      </div>
-
-                      {/* Send Button */}
-                      <div className="flex justify-end">
-                        <button
-                          onClick={sendBulkEmail}
-                          disabled={sendingEmail || selectedRecipients.size === 0}
-                          className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-colors ${
-                            sendingEmail || selectedRecipients.size === 0
-                              ? 'bg-olive-700 text-olive-400 cursor-not-allowed'
-                              : 'bg-gold-500 text-black hover:bg-gold-400'
-                          }`}
-                        >
-                          {sendingEmail ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-olive-400 border-t-transparent rounded-full animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                              </svg>
-                              Send to {selectedRecipients.size} Recipient{selectedRecipients.size === 1 ? '' : 's'}
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Email History */}
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
-              ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
-              ) : (
-                <>
-                  <h3 className="text-lg font-heading text-olive-300 mb-4">Email History</h3>
-                  {emails.length === 0 ? (
-                    <div className="text-center py-12 text-olive-400">No emails sent yet</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b border-olive-700">
-                            <th className="p-3 text-olive-300 font-medium">Direction</th>
-                            <th className="p-3 text-olive-300 font-medium">To</th>
-                            <th className="p-3 text-olive-300 font-medium">Subject</th>
-                            <th className="p-3 text-olive-300 font-medium">Type</th>
-                            <th className="p-3 text-olive-300 font-medium">Status</th>
-                            <th className="p-3 text-olive-300 font-medium">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {emails.map((email) => (
-                            <tr key={email.id} className="border-b border-olive-800 hover:bg-olive-900/30">
-                              <td className="p-3">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  email.direction === 'outbound'
-                                    ? 'bg-blue-500/20 text-blue-400'
-                                    : 'bg-purple-500/20 text-purple-400'
-                                }`}>
-                                  {email.direction === 'outbound' ? 'Sent' : 'Received'}
-                                </span>
-                              </td>
-                              <td className="p-3 text-cream">{email.to_address}</td>
-                              <td className="p-3 text-olive-300 max-w-xs truncate">{email.subject || '-'}</td>
-                              <td className="p-3 text-olive-400 capitalize">{email.email_type?.replace(/_/g, ' ') || '-'}</td>
-                              <td className="p-3">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  email.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
-                                  email.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
-                                  email.status === 'opened' ? 'bg-purple-500/20 text-purple-400' :
-                                  email.status === 'bounced' ? 'bg-red-500/20 text-red-400' :
-                                  email.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                  'bg-olive-500/20 text-olive-400'
-                                }`}>
-                                  {email.status}
-                                </span>
-                              </td>
-                              <td className="p-3 text-olive-400 text-sm">{formatDate(email.created_at)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </>
               )}
             </motion.div>
           )}
@@ -4937,6 +4738,7 @@ export default function AdminPage() {
               {/* Communications Sub-tabs */}
               <div className="flex flex-wrap gap-2 border-b border-olive-700 pb-4">
                 {[
+                  { id: 'emails', label: 'Email Inbox', icon: '📥' },
                   { id: 'tags', label: 'Guest Tags', icon: '🏷️' },
                   { id: 'event-invitations', label: 'Event Invitations', icon: '📨' },
                   { id: 'campaigns', label: 'Email Campaigns', icon: '📧' },
@@ -4957,6 +4759,232 @@ export default function AdminPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Emails Sub-tab */}
+              {communicationsSubTab === 'emails' && (
+                <div className="space-y-6">
+                  {/* Compose Email Button */}
+                  <div className="mb-6">
+                    <button
+                      onClick={() => setShowComposeEmail(!showComposeEmail)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors font-medium"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      {showComposeEmail ? 'Hide Compose' : 'Compose Email'}
+                    </button>
+                  </div>
+
+                  {/* Compose Email Section */}
+                  <AnimatePresence>
+                    {showComposeEmail && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden mb-8"
+                      >
+                        <div className="bg-black/50 border border-olive-700 rounded-lg p-6">
+                          <h3 className="text-xl font-heading text-gold-400 mb-4">Send Bulk Email</h3>
+
+                          {/* Result Message */}
+                          {emailSendResult && (
+                            <div className={`mb-4 p-3 rounded-lg ${
+                              emailSendResult.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                            }`}>
+                              {emailSendResult.message}
+                            </div>
+                          )}
+
+                          {/* Recipients */}
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-olive-300 font-medium">Recipients</label>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-olive-400">
+                                  {selectedRecipients.size} of {availableRecipients.length} selected
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={toggleAllRecipients}
+                                  className="text-sm text-gold-400 hover:text-gold-300"
+                                >
+                                  {selectedRecipients.size === availableRecipients.length ? 'Deselect All' : 'Select All'}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="bg-charcoal border border-olive-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                              {availableRecipients.length === 0 ? (
+                                <p className="text-olive-400 text-sm">No recipients available. Add addresses or RSVPs first.</p>
+                              ) : (
+                                <div className="space-y-1">
+                                  {availableRecipients.map(recipient => (
+                                    <label
+                                      key={recipient.email}
+                                      className="flex items-center gap-3 p-2 hover:bg-olive-900/30 rounded cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedRecipients.has(recipient.email)}
+                                        onChange={() => toggleRecipient(recipient.email)}
+                                        className="w-4 h-4 rounded border-olive-600 text-gold-500 focus:ring-gold-500 bg-charcoal"
+                                      />
+                                      <span className="text-cream">{recipient.name}</span>
+                                      <span className="text-olive-400 text-sm">{recipient.email}</span>
+                                      <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
+                                        recipient.source === 'both' ? 'bg-purple-500/20 text-purple-400' :
+                                        recipient.source === 'rsvp' ? 'bg-blue-500/20 text-blue-400' :
+                                        'bg-olive-500/20 text-olive-400'
+                                      }`}>
+                                        {recipient.source === 'both' ? 'Address + RSVP' :
+                                         recipient.source === 'rsvp' ? 'RSVP' : 'Address'}
+                                      </span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Subject */}
+                          <div className="mb-4">
+                            <label className="block text-olive-300 font-medium mb-2">Subject</label>
+                            <input
+                              type="text"
+                              value={emailSubject}
+                              onChange={(e) => setEmailSubject(e.target.value)}
+                              placeholder="Enter email subject..."
+                              className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream focus:border-gold-500 focus:outline-none"
+                            />
+                          </div>
+
+                          {/* Rich Text Editor */}
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-olive-300 font-medium">Message</label>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-olive-400">Insert:</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {templateVariables.map(v => (
+                                    <button
+                                      key={v.key}
+                                      type="button"
+                                      onClick={() => setTextToInsert(v.key)}
+                                      className="px-2 py-1 text-xs bg-olive-800 hover:bg-olive-700 text-gold-400 rounded transition-colors"
+                                      title={v.description}
+                                    >
+                                      {v.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <RichTextEditor
+                              onHtmlChange={setEmailHtmlContent}
+                              placeholder="Write your message to guests..."
+                              shouldClear={clearEditor}
+                              onCleared={() => setClearEditor(false)}
+                              textToInsert={textToInsert}
+                              onInserted={() => setTextToInsert(null)}
+                            />
+                            <p className="text-olive-400 text-sm mt-2">
+                              Your message will be wrapped in our branded email template. Use the insert buttons above to add personalized fields.
+                            </p>
+                          </div>
+
+                          {/* Send Button */}
+                          <div className="flex justify-end">
+                            <button
+                              onClick={sendBulkEmail}
+                              disabled={sendingEmail || selectedRecipients.size === 0}
+                              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-colors ${
+                                sendingEmail || selectedRecipients.size === 0
+                                  ? 'bg-olive-700 text-olive-400 cursor-not-allowed'
+                                  : 'bg-gold-500 text-black hover:bg-gold-400'
+                              }`}
+                            >
+                              {sendingEmail ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-olive-400 border-t-transparent rounded-full animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                  </svg>
+                                  Send to {selectedRecipients.size} Recipient{selectedRecipients.size === 1 ? '' : 's'}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Email History */}
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-heading text-olive-300 mb-4">Email History</h3>
+                      {emails.length === 0 ? (
+                        <div className="text-center py-12 text-olive-400">No emails sent yet</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="border-b border-olive-700">
+                                <th className="p-3 text-olive-300 font-medium">Direction</th>
+                                <th className="p-3 text-olive-300 font-medium">To</th>
+                                <th className="p-3 text-olive-300 font-medium">Subject</th>
+                                <th className="p-3 text-olive-300 font-medium">Type</th>
+                                <th className="p-3 text-olive-300 font-medium">Status</th>
+                                <th className="p-3 text-olive-300 font-medium">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {emails.map((email) => (
+                                <tr key={email.id} className="border-b border-olive-800 hover:bg-olive-900/30">
+                                  <td className="p-3">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      email.direction === 'outbound'
+                                        ? 'bg-blue-500/20 text-blue-400'
+                                        : 'bg-purple-500/20 text-purple-400'
+                                    }`}>
+                                      {email.direction === 'outbound' ? 'Sent' : 'Received'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-cream">{email.to_address}</td>
+                                  <td className="p-3 text-olive-300 max-w-xs truncate">{email.subject || '-'}</td>
+                                  <td className="p-3 text-olive-400 capitalize">{email.email_type?.replace(/_/g, ' ') || '-'}</td>
+                                  <td className="p-3">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      email.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                                      email.status === 'sent' ? 'bg-blue-500/20 text-blue-400' :
+                                      email.status === 'opened' ? 'bg-purple-500/20 text-purple-400' :
+                                      email.status === 'bounced' ? 'bg-red-500/20 text-red-400' :
+                                      email.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                                      'bg-olive-500/20 text-olive-400'
+                                    }`}>
+                                      {email.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 text-olive-400 text-sm">{formatDate(email.created_at)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* Tags Sub-tab */}
               {communicationsSubTab === 'tags' && (
