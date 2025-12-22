@@ -1,9 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
+
+// Helper to convert VAPID key for push subscription
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const buffer = new ArrayBuffer(rawData.length);
+  const outputArray = new Uint8Array(buffer);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 // US States for address form
 const US_STATES = [
@@ -107,6 +120,75 @@ export default function RSVPPage() {
   });
 
   const [additionalGuests, setAdditionalGuests] = useState<AdditionalGuest[]>([]);
+
+  // Push notification state
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+
+  // Check notification permission and subscription status on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.pushManager.getSubscription().then((subscription) => {
+          setIsSubscribed(!!subscription);
+        });
+      });
+    }
+  }, []);
+
+  // Subscribe to push notifications
+  const subscribeToPush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Push notifications are not supported in this browser.');
+      return;
+    }
+
+    setSubscribing(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+
+      if (permission !== 'granted') {
+        alert('Please enable notifications to receive wedding day updates.');
+        setSubscribing(false);
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+      if (!vapidPublicKey) {
+        console.error('VAPID public key not configured');
+        setSubscribing(false);
+        return;
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      const response = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+
+      if (response.ok) {
+        setIsSubscribed(true);
+      }
+    } catch (error) {
+      console.error('Failed to subscribe:', error);
+      alert('Failed to enable notifications. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   // Email lookup
   const handleEmailLookup = async (e: React.FormEvent) => {
@@ -512,15 +594,65 @@ export default function RSVPPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 text-center"
+                className="space-y-6"
               >
-                <div className="w-16 h-16 mx-auto mb-4 bg-olive-800 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                {/* Thank You Card */}
+                <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-olive-800 rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
+                  <p className="text-olive-300">{formState.message}</p>
                 </div>
-                <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
-                <p className="text-olive-300">{formState.message}</p>
+
+                {/* Push Notification Signup - Only show if attending */}
+                {formData.attending === 'yes' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-black/50 border border-gold-500/30 rounded-lg shadow-elegant p-6"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 flex-shrink-0 bg-gold-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-2xl">🔔</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-heading text-lg text-gold-400 mb-2">
+                          Get Wedding Day Updates
+                        </h3>
+                        <p className="text-olive-300 text-sm mb-4">
+                          Enable push notifications to receive real-time updates on the wedding day - ceremony timing, reception announcements, and celebration moments!
+                        </p>
+
+                        {isSubscribed ? (
+                          <div className="flex items-center gap-2 text-green-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Notifications enabled! You&apos;re all set.</span>
+                          </div>
+                        ) : notificationPermission === 'denied' ? (
+                          <p className="text-olive-400 text-sm">
+                            Notifications are blocked. Please enable them in your browser settings to receive updates.
+                          </p>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={subscribeToPush}
+                            isLoading={subscribing}
+                          >
+                            Enable Notifications
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
             )}
 
