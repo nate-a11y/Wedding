@@ -55,7 +55,9 @@ self.addEventListener('push', (event) => {
       icon: data.icon || '/icon-192.png',
       badge: data.badge || '/icon-192.png',
       tag: data.tag || 'wedding-update',
-      vibrate: [100, 50, 100],
+      // Long vibration pattern: vibrate-pause-vibrate-pause-vibrate (Android only)
+      vibrate: [300, 100, 300, 100, 300],
+      requireInteraction: true, // Keep notification visible until user interacts
       data: data.data || { url: '/live' },
       actions: [
         {
