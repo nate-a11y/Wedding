@@ -44,6 +44,7 @@ interface RSVP {
   song_request: string | null;
   message: string | null;
   created_at: string;
+  event_responses?: Record<string, boolean>;
 }
 
 interface GuestbookEntry {
