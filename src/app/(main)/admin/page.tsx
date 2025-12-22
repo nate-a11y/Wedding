@@ -425,8 +425,11 @@ export default function AdminPage() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [addresses, setAddresses] = useState<GuestAddress[]>([]);
   const [addressTags, setAddressTags] = useState<Record<string, string[]>>({});
+  const [addressEvents, setAddressEvents] = useState<Record<string, string[]>>({});
   const [editingAddressTags, setEditingAddressTags] = useState<string | null>(null);
+  const [editingAddressEvents, setEditingAddressEvents] = useState<string | null>(null);
   const [newAddressTag, setNewAddressTag] = useState('');
+  const [newAddressEvent, setNewAddressEvent] = useState('');
   const [seatingTables, setSeatingTables] = useState<SeatingTable[]>([]);
   const [seatingAssignments, setSeatingAssignments] = useState<SeatingAssignment[]>([]);
   const [unassignedGuests, setUnassignedGuests] = useState<UnassignedGuest[]>([]);
@@ -1017,17 +1020,31 @@ export default function AdminPage() {
           if (!addressesData.error) setAddresses(addressesData.addresses || []);
           if (!rsvpsData.error) setRsvps(rsvpsData.rsvps || []);
         } else if (activeTab === 'addresses') {
-          const [addressesRes, tagsRes] = await Promise.all([
+          const [addressesRes, tagsRes, eventsRes] = await Promise.all([
             fetch('/api/admin/addresses'),
             fetch('/api/admin/guests/tags'),
+            fetch('/api/admin/event-invitations'),
           ]);
-          const [addressesData, tagsData] = await Promise.all([
+          const [addressesData, tagsData, eventsData] = await Promise.all([
             addressesRes.json(),
             tagsRes.json(),
+            eventsRes.json(),
           ]);
           if (addressesData.error) throw new Error(addressesData.error);
           setAddresses(addressesData.addresses);
           if (!tagsData.error) setAddressTags(tagsData.guestTags || {});
+          if (!eventsData.error) {
+            // Convert invitations array to map of email -> event_slugs
+            const eventsMap: Record<string, string[]> = {};
+            for (const inv of eventsData.invitations || []) {
+              const email = inv.email.toLowerCase();
+              if (!eventsMap[email]) eventsMap[email] = [];
+              if (!eventsMap[email].includes(inv.event_slug)) {
+                eventsMap[email].push(inv.event_slug);
+              }
+            }
+            setAddressEvents(eventsMap);
+          }
         } else if (activeTab === 'seating') {
           const response = await fetch('/api/admin/seating');
           const data = await response.json();
@@ -2361,6 +2378,14 @@ export default function AdminPage() {
                 <div className="text-center py-12 text-olive-400">No addresses collected yet</div>
               ) : (
                 <>
+                  {/* Info Banner */}
+                  <div className="mb-4 p-3 bg-olive-800/30 border border-olive-700 rounded-lg text-sm">
+                    <p className="text-olive-300">
+                      <strong className="text-gold-400">Event System:</strong> Core events (ceremony, cocktail hour, reception, send-off) are automatically shown to all guests.
+                      Use <strong className="text-cream">Tags</strong> for email campaign segmentation.
+                      Use <strong className="text-cream">Events</strong> to invite guests to restricted events like rehearsal dinner or sunday brunch.
+                    </p>
+                  </div>
                   {/* Export Button */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     <button
@@ -2381,6 +2406,12 @@ export default function AdminPage() {
                         <th className="p-3 text-olive-300 font-medium">Email</th>
                         <th className="p-3 text-olive-300 font-medium">Address</th>
                         <th className="p-3 text-olive-300 font-medium">Tags</th>
+                        <th className="p-3 text-olive-300 font-medium">
+                          <span className="flex items-center gap-1">
+                            Events
+                            <span className="text-xs text-olive-500 font-normal" title="Core events (ceremony, cocktail, reception, sendoff) are shown to all guests. Add restricted events here.">ⓘ</span>
+                          </span>
+                        </th>
                         <th className="p-3 text-olive-300 font-medium">RSVP Status</th>
                         <th className="p-3 text-olive-300 font-medium">Actions</th>
                       </tr>
@@ -2482,6 +2513,101 @@ export default function AdminPage() {
                                   className="text-xs text-gold-500 hover:text-gold-400"
                                 >
                                   + Add tag
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          {/* Events Column - Restricted Event Invitations */}
+                          <td className="p-3">
+                            <div className="relative">
+                              <div className="flex flex-wrap gap-1 mb-1">
+                                {/* Show core events as greyed indicators */}
+                                <span className="px-2 py-0.5 bg-olive-800/50 text-olive-500 rounded text-xs" title="All guests invited to core events">
+                                  ceremony ✓
+                                </span>
+                                {/* Show additional restricted events */}
+                                {(addressEvents[addr.email.toLowerCase()] || []).map((eventSlug) => (
+                                  <span
+                                    key={eventSlug}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-gold-500/20 text-gold-400 rounded text-xs"
+                                  >
+                                    {eventSlug.replace(/_/g, ' ')}
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await fetch('/api/admin/event-invitations', {
+                                            method: 'DELETE',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ email: addr.email, eventSlug }),
+                                          });
+                                          setAddressEvents((prev) => ({
+                                            ...prev,
+                                            [addr.email.toLowerCase()]: (prev[addr.email.toLowerCase()] || []).filter((e) => e !== eventSlug),
+                                          }));
+                                        } catch (err) {
+                                          console.error('Failed to remove event invitation:', err);
+                                        }
+                                      }}
+                                      className="text-gold-600 hover:text-red-400"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                              {editingAddressEvents === addr.id ? (
+                                <div className="flex gap-1">
+                                  <select
+                                    value={newAddressEvent}
+                                    onChange={(e) => setNewAddressEvent(e.target.value)}
+                                    className="w-32 px-2 py-1 text-xs bg-charcoal border border-olive-600 rounded text-cream"
+                                    autoFocus
+                                  >
+                                    <option value="">Select event...</option>
+                                    <option value="rehearsal_dinner">Rehearsal Dinner</option>
+                                    <option value="sunday_brunch">Sunday Brunch</option>
+                                    <option value="welcome_party">Welcome Party</option>
+                                    <option value="after_party">After Party</option>
+                                  </select>
+                                  <button
+                                    onClick={async () => {
+                                      if (!newAddressEvent) return;
+                                      try {
+                                        await fetch('/api/admin/event-invitations', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ emails: [addr.email], eventSlug: newAddressEvent }),
+                                        });
+                                        setAddressEvents((prev) => ({
+                                          ...prev,
+                                          [addr.email.toLowerCase()]: [...(prev[addr.email.toLowerCase()] || []), newAddressEvent],
+                                        }));
+                                        setNewAddressEvent('');
+                                        setEditingAddressEvents(null);
+                                      } catch (err) {
+                                        console.error('Failed to add event invitation:', err);
+                                      }
+                                    }}
+                                    className="px-2 py-1 bg-gold-500 text-black rounded text-xs"
+                                  >
+                                    Add
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setNewAddressEvent('');
+                                      setEditingAddressEvents(null);
+                                    }}
+                                    className="text-olive-400 hover:text-olive-300 text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setEditingAddressEvents(addr.id)}
+                                  className="text-xs text-gold-500 hover:text-gold-400"
+                                >
+                                  + Add event
                                 </button>
                               )}
                             </div>
@@ -4962,6 +5088,19 @@ export default function AdminPage() {
                           e.preventDefault();
                           const form = e.target as HTMLFormElement;
                           const formData = new FormData(form);
+                          // Get selected tags (multi-select returns array)
+                          const selectedTags = formData.getAll('tags') as string[];
+                          const rsvpStatus = formData.get('segment') as string;
+                          // Build segment object
+                          const segment: Record<string, unknown> = {};
+                          if (rsvpStatus && rsvpStatus !== 'all') {
+                            segment.rsvp_status = rsvpStatus;
+                          } else {
+                            segment.all = true;
+                          }
+                          if (selectedTags.length > 0) {
+                            segment.tags = selectedTags;
+                          }
                           try {
                             const response = await fetch('/api/admin/campaigns', {
                               method: 'POST',
@@ -4971,7 +5110,7 @@ export default function AdminPage() {
                                 type: formData.get('type'),
                                 subject: formData.get('subject'),
                                 body_html: formData.get('body_html'),
-                                segment: { rsvp_status: formData.get('segment') },
+                                segment,
                               }),
                             });
                             if (response.ok) {
@@ -5019,17 +5158,34 @@ export default function AdminPage() {
                             className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm text-olive-300 mb-1">Audience Segment</label>
-                          <select
-                            name="segment"
-                            className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
-                          >
-                            <option value="all">All Guests</option>
-                            <option value="attending">Attending Only</option>
-                            <option value="not_attending">Not Attending</option>
-                            <option value="not_responded">Not Yet Responded</option>
-                          </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-olive-300 mb-1">RSVP Status</label>
+                            <select
+                              name="segment"
+                              className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream"
+                            >
+                              <option value="all">All Guests</option>
+                              <option value="attending">Attending Only</option>
+                              <option value="not_attending">Not Attending</option>
+                              <option value="not_responded">Not Yet Responded</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm text-olive-300 mb-1">Filter by Tags (optional)</label>
+                            <select
+                              name="tags"
+                              multiple
+                              className="w-full px-3 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream h-24"
+                            >
+                              {tags.map((t) => (
+                                <option key={t.tag} value={t.tag}>
+                                  {t.tag} ({t.count})
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-olive-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                          </div>
                         </div>
                         <div>
                           <label className="block text-sm text-olive-300 mb-1">Email Body (HTML)</label>
