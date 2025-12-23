@@ -138,6 +138,7 @@ export const siteConfig = {
         { name: 'FAQ', href: '/faq' },
       ],
     },
+    { name: 'Address', href: '/address' },
     { name: 'RSVP', href: '/rsvp', highlight: true },
     { name: 'Registry', href: '/registry' },
   ],
