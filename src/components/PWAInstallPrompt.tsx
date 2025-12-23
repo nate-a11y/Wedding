@@ -46,6 +46,7 @@ export default function PWAInstallPrompt() {
     // Check if already installed as PWA
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsStandalone(isInStandaloneMode);
 
     if (isInStandaloneMode) return;
