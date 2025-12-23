@@ -3,6 +3,34 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendAddressConfirmation } from '@/lib/email';
 
+const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
+
+// Verify Turnstile captcha token
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  if (!TURNSTILE_SECRET_KEY) {
+    // If Turnstile is not configured, skip verification
+    return true;
+  }
+
+  try {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        secret: TURNSTILE_SECRET_KEY,
+        response: token,
+        remoteip: ip,
+      }),
+    });
+
+    const result = await response.json();
+    return result.success === true;
+  } catch (error) {
+    console.error('Turnstile verification error:', error);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
   if (!isSupabaseConfigured() || !supabase) {
@@ -25,6 +53,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    // Verify Turnstile captcha if configured
+    if (TURNSTILE_SECRET_KEY) {
+      const turnstileToken = body.turnstileToken;
+      if (!turnstileToken) {
+        return NextResponse.json(
+          { error: 'Captcha verification required' },
+          { status: 400 }
+        );
+      }
+
+      const isValidCaptcha = await verifyTurnstile(turnstileToken, ip);
+      if (!isValidCaptcha) {
+        return NextResponse.json(
+          { error: 'Captcha verification failed. Please try again.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Validate required fields
     const requiredFields = ['name', 'email', 'phone', 'streetAddress', 'city', 'state', 'postalCode'];
