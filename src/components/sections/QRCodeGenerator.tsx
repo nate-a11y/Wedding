@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 interface QRCodeGeneratorProps {
@@ -62,12 +63,13 @@ export function QRCodeGenerator({
       {/* QR Code Display */}
       <div className="bg-charcoal p-4 rounded-lg inline-block mb-4">
         {qrDataUrl ? (
-          <img
+          <Image
             src={qrDataUrl}
             alt="Photo Booth QR Code"
             width={size}
             height={size}
             className="rounded"
+            unoptimized
           />
         ) : (
           <div

@@ -26,11 +26,11 @@ export function Header() {
   const pathname = usePathname();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if on admin subdomain
+  // Check if on admin subdomain (required for SSR hydration safety)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsAdminSubdomain(window.location.hostname.startsWith('admin.'));
-    }
+    const isAdmin = window.location.hostname.startsWith('admin.');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (isAdmin) setIsAdminSubdomain(true);
   }, []);
 
   // Check if we're on an admin page

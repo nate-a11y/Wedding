@@ -1,10 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation } from '@/components/ui';
 import { PageEffects, AnimatedHeader } from '@/components/ui/PageEffects';
 import type { FormState } from '@/types';
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        'error-callback'?: () => void;
+        'expired-callback'?: () => void;
+        theme?: 'light' | 'dark' | 'auto';
+      }) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+  }
+}
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -29,6 +45,57 @@ export default function AddressPage() {
     country: 'United States',
   });
 
+  // Turnstile captcha state
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  // Load Turnstile script and render widget
+  useEffect(() => {
+    if (!turnstileSiteKey) return;
+
+    const renderTurnstile = () => {
+      if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
+        turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: turnstileSiteKey,
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+          'error-callback': () => setTurnstileToken(null),
+          theme: 'dark',
+        });
+      }
+    };
+
+    // Check if script is already loaded
+    if (window.turnstile) {
+      renderTurnstile();
+      return;
+    }
+
+    // Load the Turnstile script
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = renderTurnstile;
+    document.head.appendChild(script);
+
+    return () => {
+      if (turnstileWidgetId.current && window.turnstile) {
+        window.turnstile.remove(turnstileWidgetId.current);
+        turnstileWidgetId.current = null;
+      }
+    };
+  }, [turnstileSiteKey]);
+
+  // Reset Turnstile after successful submission or error
+  const resetTurnstile = () => {
+    setTurnstileToken(null);
+    if (turnstileWidgetId.current && window.turnstile) {
+      window.turnstile.reset(turnstileWidgetId.current);
+    }
+  };
+
   // Address validation state
   const [validatedAddress, setValidatedAddress] = useState<{
     street_address: string;
@@ -47,12 +114,16 @@ export default function AddressPage() {
     const response = await fetch('/api/address', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(addressToSubmit),
+      body: JSON.stringify({
+        ...addressToSubmit,
+        turnstileToken,
+      }),
     });
 
     const result = await response.json();
 
     if (!response.ok) {
+      resetTurnstile();
       throw new Error(result.error || 'Failed to submit address');
     }
 
@@ -65,6 +136,16 @@ export default function AddressPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Verify captcha if Turnstile is configured
+    if (turnstileSiteKey && !turnstileToken) {
+      setFormState({
+        status: 'error',
+        message: 'Please complete the captcha verification.',
+      });
+      return;
+    }
+
     setFormState({ status: 'loading' });
 
     // Only validate US addresses
@@ -351,6 +432,13 @@ export default function AddressPage() {
                   </div>
                 </div>
 
+                {/* Turnstile Captcha */}
+                {turnstileSiteKey && (
+                  <div className="flex justify-center pt-4">
+                    <div ref={turnstileRef} />
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <Button
                     type="submit"
@@ -358,6 +446,7 @@ export default function AddressPage() {
                     size="lg"
                     className="w-full"
                     isLoading={formState.status === 'loading' || addressValidating}
+                    disabled={turnstileSiteKey ? !turnstileToken : false}
                   >
                     {addressValidating ? 'Validating Address...' : 'Submit Address'}
                   </Button>

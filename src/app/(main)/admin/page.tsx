@@ -280,7 +280,7 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'seating' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs' | 'qrcodes';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
 type CommunicationsSubTab = 'emails' | 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
 
@@ -399,7 +399,7 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'planning', 'communications', 'live'];
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'seating', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'qrcodes'];
 
 export default function AdminPage() {
   // Initialize tabs from URL params, fallback to localStorage
@@ -1585,6 +1585,15 @@ export default function AdminPage() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+        </svg>
+      ),
+    },
+    {
+      id: 'qrcodes',
+      label: 'QR Codes',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
         </svg>
       ),
     },
@@ -5994,6 +6003,105 @@ export default function AdminPage() {
                     No song requests yet. Songs will appear here when guests submit them.
                   </div>
                 )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'qrcodes' && (
+            <motion.div
+              key="qrcodes"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-heading text-cream">QR Code Generator</h2>
+              </div>
+
+              <p className="text-olive-400">
+                Generate QR codes for any page on your wedding website. Perfect for table cards, invitations, or signage.
+              </p>
+
+              {/* QR Code Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { name: 'RSVP', path: '/rsvp', description: 'For guests to RSVP' },
+                  { name: 'Address Collection', path: '/address', description: 'Collect mailing addresses' },
+                  { name: 'Photo Booth', path: '/photos', description: 'Upload & view photos' },
+                  { name: 'Song Requests', path: '/songs', description: 'Request songs for the playlist' },
+                  { name: 'Guest Book', path: '/guestbook', description: 'Leave messages for the couple' },
+                  { name: 'Live Feed', path: '/live', description: 'View live updates' },
+                  { name: 'Livestream', path: '/livestream', description: 'Watch the ceremony live' },
+                  { name: 'Events', path: '/events', description: 'View event schedule' },
+                  { name: 'Travel Info', path: '/travel', description: 'Accommodations & directions' },
+                  { name: 'Dress Code', path: '/dress-code', description: 'What to wear' },
+                  { name: 'Registry', path: '/registry', description: 'Gift registry' },
+                  { name: 'FAQ', path: '/faq', description: 'Frequently asked questions' },
+                ].map((item) => {
+                  const fullUrl = typeof window !== 'undefined'
+                    ? `${window.location.origin}${item.path}`
+                    : item.path;
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fullUrl)}&bgcolor=1a1a1a&color=d4af37`;
+
+                  return (
+                    <div key={item.path} className="bg-black/50 border border-olive-700 rounded-lg p-4">
+                      <div className="text-center mb-3">
+                        <h3 className="font-heading text-lg text-cream">{item.name}</h3>
+                        <p className="text-olive-500 text-xs">{item.description}</p>
+                      </div>
+
+                      <div className="bg-charcoal p-3 rounded-lg flex justify-center mb-3">
+                        <img
+                          src={qrUrl}
+                          alt={`QR Code for ${item.name}`}
+                          width={150}
+                          height={150}
+                          className="rounded"
+                        />
+                      </div>
+
+                      <div className="bg-olive-900/50 rounded p-2 mb-3">
+                        <p className="text-olive-300 text-xs break-all font-mono text-center">{fullUrl}</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <a
+                          href={qrUrl}
+                          download={`qr-${item.path.replace('/', '')}.png`}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gold-500 text-black rounded hover:bg-gold-400 transition-colors text-sm font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download
+                        </a>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(fullUrl);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-olive-700 text-cream rounded hover:bg-olive-600 transition-colors text-sm font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Copy URL
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Print All Section */}
+              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 mt-8">
+                <h3 className="font-heading text-xl text-cream mb-4">Print Tips</h3>
+                <ul className="text-olive-400 text-sm space-y-2">
+                  <li>• Download individual QR codes and print on card stock for table displays</li>
+                  <li>• Use a minimum size of 1 inch × 1 inch for reliable scanning</li>
+                  <li>• Test each QR code with your phone before printing</li>
+                  <li>• The gold-on-dark color scheme matches your wedding theme</li>
+                </ul>
               </div>
             </motion.div>
           )}
