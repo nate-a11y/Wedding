@@ -6039,9 +6039,19 @@ export default function AdminPage() {
                   { name: 'Registry', path: '/registry', description: 'Gift registry' },
                   { name: 'FAQ', path: '/faq', description: 'Frequently asked questions' },
                 ].map((item) => {
-                  const fullUrl = typeof window !== 'undefined'
-                    ? `${window.location.origin}${item.path}`
-                    : item.path;
+                  // Get the main domain URL (strip admin. subdomain if present)
+                  const getMainSiteUrl = () => {
+                    if (typeof window === 'undefined') return '';
+                    const hostname = window.location.hostname.replace(/^admin\./, '');
+                    const protocol = window.location.protocol;
+                    const port = window.location.port;
+                    // Include port for local development
+                    if (port && port !== '80' && port !== '443') {
+                      return `${protocol}//${hostname}:${port}`;
+                    }
+                    return `${protocol}//${hostname}`;
+                  };
+                  const fullUrl = `${getMainSiteUrl()}${item.path}`;
                   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fullUrl)}&bgcolor=1a1a1a&color=d4af37`;
 
                   return (
