@@ -73,8 +73,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate required fields
-    const requiredFields = ['name', 'email', 'phone', 'streetAddress', 'city', 'state', 'postalCode'];
+    // Validate required fields (state is optional for international addresses)
+    const country = body.country?.trim() || 'United States';
+    const isUSOrCanada = country === 'United States' || country === 'Canada';
+
+    // Base required fields
+    const requiredFields = ['name', 'email', 'phone', 'streetAddress', 'city', 'postalCode'];
+
+    // State is required for US and Canada
+    if (isUSOrCanada) {
+      requiredFields.push('state');
+    }
+
     const missingFields = requiredFields.filter(field => !body[field]?.trim());
 
     if (missingFields.length > 0) {
@@ -110,9 +120,9 @@ export async function POST(request: NextRequest) {
       street_address: body.streetAddress.trim(),
       street_address_2: body.streetAddress2?.trim() || null,
       city: body.city.trim(),
-      state: body.state.trim(),
+      state: body.state?.trim() || null,
       postal_code: body.postalCode.trim(),
-      country: body.country?.trim() || 'United States',
+      country: country,
     };
 
     let result;
