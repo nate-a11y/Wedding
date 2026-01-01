@@ -86,7 +86,7 @@ interface GuestAddress {
   street_address: string;
   street_address_2: string | null;
   city: string;
-  state: string;
+  state: string | null;
   postal_code: string;
   country: string;
   linked_rsvp_id: string | null;
@@ -957,7 +957,7 @@ export default function AdminPage() {
         street: string;
         street2?: string;
         city: string;
-        state: string;
+        state?: string;
         postalCode: string;
         country: string;
       };
@@ -977,7 +977,7 @@ export default function AdminPage() {
             street: addr.street_address,
             street2: addr.street_address_2 || undefined,
             city: addr.city,
-            state: addr.state,
+            state: addr.state || undefined,
             postalCode: addr.postal_code,
             country: addr.country,
           },
@@ -2606,7 +2606,7 @@ export default function AdminPage() {
                           <td className="p-3 text-olive-300 text-sm">
                             <div>{addr.street_address}</div>
                             {addr.street_address_2 && <div>{addr.street_address_2}</div>}
-                            <div>{addr.city}, {addr.state} {addr.postal_code}</div>
+                            <div>{addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.postal_code}</div>
                             {addr.country !== 'United States' && <div>{addr.country}</div>}
                           </td>
                           <td className="p-3">

@@ -30,6 +30,26 @@ const US_STATES = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
 ];
 
+const CANADIAN_PROVINCES = [
+  'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'
+];
+
+const COUNTRIES = [
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Australia',
+  'Germany',
+  'France',
+  'Mexico',
+  'Italy',
+  'Spain',
+  'Netherlands',
+  'Ireland',
+  'New Zealand',
+  'Other',
+];
+
 export default function AddressPage() {
   const [formState, setFormState] = useState<FormState>({ status: 'idle' });
   const [showCelebration, setShowCelebration] = useState(false);
@@ -43,6 +63,7 @@ export default function AddressPage() {
     state: '',
     postalCode: '',
     country: 'United States',
+    customCountry: '',
   });
 
   // Turnstile captcha state
@@ -111,11 +132,17 @@ export default function AddressPage() {
 
   // Submit the address to the API
   const submitAddress = async (addressToSubmit: typeof formData) => {
+    // Determine the actual country value
+    const actualCountry = addressToSubmit.country === 'Other'
+      ? addressToSubmit.customCountry
+      : addressToSubmit.country;
+
     const response = await fetch('/api/address', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...addressToSubmit,
+        country: actualCountry,
         turnstileToken,
       }),
     });
@@ -386,32 +413,61 @@ export default function AddressPage() {
                         required
                         placeholder="City"
                       />
-                      <div>
-                        <label className="block text-sm font-medium text-cream mb-2">
-                          State
-                        </label>
-                        <select
+                      {/* State/Province field - dropdown for US/Canada, text input for others */}
+                      {formData.country === 'United States' ? (
+                        <div>
+                          <label className="block text-sm font-medium text-cream mb-2">
+                            State
+                          </label>
+                          <select
+                            name="state"
+                            value={formData.state}
+                            onChange={handleChange}
+                            required
+                            className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                          >
+                            <option value="">Select</option>
+                            {US_STATES.map(state => (
+                              <option key={state} value={state}>{state}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : formData.country === 'Canada' ? (
+                        <div>
+                          <label className="block text-sm font-medium text-cream mb-2">
+                            Province
+                          </label>
+                          <select
+                            name="state"
+                            value={formData.state}
+                            onChange={handleChange}
+                            required
+                            className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                          >
+                            <option value="">Select</option>
+                            {CANADIAN_PROVINCES.map(province => (
+                              <option key={province} value={province}>{province}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <Input
+                          label="State / Province / Region (Optional)"
                           name="state"
                           value={formData.state}
                           onChange={handleChange}
-                          required
-                          className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
-                        >
-                          <option value="">Select</option>
-                          {US_STATES.map(state => (
-                            <option key={state} value={state}>{state}</option>
-                          ))}
-                        </select>
-                      </div>
+                          placeholder="State, province, or region"
+                        />
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <Input
-                        label="ZIP Code"
+                        label={formData.country === 'United States' ? 'ZIP Code' : 'Postal Code'}
                         name="postalCode"
                         value={formData.postalCode}
                         onChange={handleChange}
                         required
-                        placeholder="12345"
+                        placeholder={formData.country === 'United States' ? '12345' : 'Postal code'}
                       />
                       <div>
                         <label className="block text-sm font-medium text-cream mb-2">
@@ -420,15 +476,34 @@ export default function AddressPage() {
                         <select
                           name="country"
                           value={formData.country}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            // Clear state when country changes
+                            setFormData(prev => ({
+                              ...prev,
+                              country: e.target.value,
+                              state: '',
+                              customCountry: e.target.value === 'Other' ? prev.customCountry : '',
+                            }));
+                          }}
                           className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-2 text-base transition-colors focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                         >
-                          <option value="United States">United States</option>
-                          <option value="Canada">Canada</option>
-                          <option value="Other">Other</option>
+                          {COUNTRIES.map(country => (
+                            <option key={country} value={country}>{country}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
+                    {/* Custom country input when "Other" is selected */}
+                    {formData.country === 'Other' && (
+                      <Input
+                        label="Country Name"
+                        name="customCountry"
+                        value={formData.customCountry}
+                        onChange={handleChange}
+                        required
+                        placeholder="Enter your country"
+                      />
+                    )}
                   </div>
                 </div>
 

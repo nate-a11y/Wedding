@@ -313,7 +313,7 @@ interface AddressEmailData {
     street: string;
     street2?: string;
     city: string;
-    state: string;
+    state?: string | null;
     postalCode: string;
     country: string;
   };
@@ -331,10 +331,15 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
     ? "Your address has been updated!"
     : "You're on our list! 🎃";
 
+  // Format city/state/postal code line based on available fields
+  const cityStateLine = address.state
+    ? `${address.city}, ${address.state} ${address.postalCode}`
+    : `${address.city} ${address.postalCode}`;
+
   const addressLines = [
     address.street,
     address.street2,
-    `${address.city}, ${address.state} ${address.postalCode}`,
+    cityStateLine,
     address.country !== 'United States' ? address.country : null,
   ].filter(Boolean).join('<br/>');
 
@@ -506,7 +511,7 @@ interface BulkEmailRecipient {
     street: string;
     street2?: string;
     city: string;
-    state: string;
+    state?: string | null;
     postalCode: string;
     country: string;
   };
@@ -528,16 +533,19 @@ function processTemplateVariables(content: string, recipient: BulkEmailRecipient
     processed = processed.replace(/\{\{street\}\}/gi, addr.street);
     processed = processed.replace(/\{\{street2\}\}/gi, addr.street2 || '');
     processed = processed.replace(/\{\{city\}\}/gi, addr.city);
-    processed = processed.replace(/\{\{state\}\}/gi, addr.state);
+    processed = processed.replace(/\{\{state\}\}/gi, addr.state || '');
     processed = processed.replace(/\{\{zip\}\}/gi, addr.postalCode);
     processed = processed.replace(/\{\{postal_code\}\}/gi, addr.postalCode);
     processed = processed.replace(/\{\{country\}\}/gi, addr.country);
 
-    // Full address
+    // Full address - format city/state/postal code line based on available fields
+    const cityStateLine = addr.state
+      ? `${addr.city}, ${addr.state} ${addr.postalCode}`
+      : `${addr.city} ${addr.postalCode}`;
     const fullAddress = [
       addr.street,
       addr.street2,
-      `${addr.city}, ${addr.state} ${addr.postalCode}`,
+      cityStateLine,
       addr.country !== 'United States' ? addr.country : null,
     ].filter(Boolean).join(', ');
     processed = processed.replace(/\{\{full_address\}\}/gi, fullAddress);
