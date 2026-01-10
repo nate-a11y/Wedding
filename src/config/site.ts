@@ -58,13 +58,33 @@ export const siteConfig = {
     // Nate's side
     natesSide: [
       {
-        name: 'Best Man Name',
+        name: 'Michael Brandt',
         role: 'Best Man',
-        relation: 'Brother',
-        bio: 'Add bio here...',
+        relation: 'Friend',
+        bio: 'A great friend who will stand by Nate on this special day.',
         photo: '/images/party/placeholder.jpg',
       },
-      // Add more groomsmen...
+      {
+        name: 'Dawson Brandt',
+        role: 'Groomsman',
+        relation: 'Friend',
+        bio: 'A good friend who has been there through thick and thin.',
+        photo: '/images/party/placeholder.jpg',
+      },
+      {
+        name: 'Jasey Brandt',
+        role: 'Groomsman',
+        relation: 'Friend',
+        bio: 'A great friend who will celebrate this special occasion.',
+        photo: '/images/party/placeholder.jpg',
+      },
+      {
+        name: 'Tiffany Bullock',
+        role: 'Groomswoman',
+        relation: 'Sister',
+        bio: "Nate's sister and a cherished member of the wedding party.",
+        photo: '/images/party/placeholder.jpg',
+      },
     ],
     // Blake's side
     blakesSide: [
