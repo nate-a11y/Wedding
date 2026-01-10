@@ -39,13 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Ralph runtime files
-.call_count
-.circuit_breaker_history
-.circuit_breaker_state
-.exit_signals
-.last_reset
-/logs/
-progress.json
-status.json
