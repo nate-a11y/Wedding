@@ -146,8 +146,6 @@ The application uses the following tables:
 - `guestbook` - Guest book messages
 - `photos` - Photo gallery items
 - `guest_addresses` - Mailing addresses for invitations
-- `seating_tables` - Table definitions for seating chart
-- `seating_assignments` - Guest-to-table assignments
 - `emails` - Email tracking for notifications
 
 ### Quick Setup
