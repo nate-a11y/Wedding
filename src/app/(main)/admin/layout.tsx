@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
   title: 'Wedding Planner | Nate & Blake',
@@ -12,6 +12,9 @@ export const metadata: Metadata = {
     icon: '/icons/admin-icon-192.png',
     apple: '/icons/admin-icon-192.png',
   },
+};
+
+export const viewport: Viewport = {
   themeColor: '#536537',
 };
 
