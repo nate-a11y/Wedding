@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- Background -->
+  <rect width="400" height="400" fill="#f5e6e8"/>
+
+  <!-- Head -->
+  <circle cx="200" cy="140" r="60" fill="#8b6f7d"/>
+
+  <!-- Hair suggestion (long hair silhouette) -->
+  <ellipse cx="200" cy="145" rx="70" ry="80" fill="#6d5563"/>
+
+  <!-- Body -->
+  <path d="M 200 200 Q 120 220 100 320 L 300 320 Q 280 220 200 200 Z" fill="#8b6f7d"/>
+
+  <!-- Subtle details -->
+  <circle cx="200" cy="140" r="60" fill="none" stroke="#6d5563" stroke-width="2"/>
+</svg>
