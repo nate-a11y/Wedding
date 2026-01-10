@@ -60,9 +60,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate required fields
-    if (!body.name || !body.email || !body.message) {
+    if (!body.name || !body.email) {
       return NextResponse.json(
-        { error: 'Name, email, and message are required' },
+        { error: 'Name and email are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that either message or media is provided
+    if (!body.message && !body.media_url) {
+      return NextResponse.json(
+        { error: 'Please provide either a message or media' },
         { status: 400 }
       );
     }
@@ -76,10 +84,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate message length
-    if (body.message.length > 500) {
+    // Validate message length if provided
+    if (body.message && body.message.length > 500) {
       return NextResponse.json(
         { error: 'Message must be 500 characters or less' },
+        { status: 400 }
+      );
+    }
+
+    // Validate media duration if provided
+    if (body.media_duration && (body.media_duration > 120 || body.media_duration < 0)) {
+      return NextResponse.json(
+        { error: 'Media duration must be between 0 and 120 seconds' },
         { status: 400 }
       );
     }
@@ -87,7 +103,10 @@ export async function POST(request: NextRequest) {
     const entryData = {
       name: body.name.trim(),
       email: body.email.trim().toLowerCase(),
-      message: body.message.trim(),
+      message: body.message ? body.message.trim() : null,
+      media_url: body.media_url || null,
+      media_type: body.media_type || null,
+      media_duration: body.media_duration || null,
     };
 
     const { data, error } = await supabase
@@ -109,7 +128,7 @@ export async function POST(request: NextRequest) {
       await sendGuestbookThankYou({
         to: entryData.email,
         name: entryData.name,
-        message: entryData.message,
+        message: entryData.message || 'Thank you for your message!',
       });
     } catch (err) {
       console.error('Failed to send guestbook thank you email:', err);

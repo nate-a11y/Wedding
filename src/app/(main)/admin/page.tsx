@@ -50,7 +50,10 @@ interface RSVP {
 interface GuestbookEntry {
   id: string;
   name: string;
-  message: string;
+  message: string | null;
+  media_url: string | null;
+  media_type: 'video' | 'audio' | null;
+  media_duration: number | null;
   created_at: string;
 }
 
@@ -2722,11 +2725,18 @@ export default function AdminPage() {
               ) : (
                 guestbook.map((entry) => (
                   <div key={entry.id} className="bg-black/50 border border-olive-700 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-cream font-medium">{entry.name}</p>
-                        <p className="text-olive-300 mt-1">{entry.message}</p>
-                        <p className="text-olive-400 text-sm mt-2">{formatDate(entry.created_at)}</p>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-cream font-medium">{entry.name}</p>
+                          {entry.media_type && (
+                            <span className="px-2 py-0.5 bg-gold-500/20 text-gold-400 text-xs rounded">
+                              {entry.media_type === 'video' ? '🎥 Video' : '🎙️ Audio'}
+                              {entry.media_duration && ` · ${Math.floor(entry.media_duration / 60)}:${(entry.media_duration % 60).toString().padStart(2, '0')}`}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-olive-400 text-sm mt-1">{formatDate(entry.created_at)}</p>
                       </div>
                       <button
                         onClick={() => deleteGuestbookEntry(entry.id)}
@@ -2737,6 +2747,26 @@ export default function AdminPage() {
                         </svg>
                       </button>
                     </div>
+
+                    {entry.media_url && entry.media_type === 'video' && (
+                      <video
+                        src={entry.media_url}
+                        controls
+                        className="w-full rounded-lg bg-black aspect-video mb-3"
+                      />
+                    )}
+
+                    {entry.media_url && entry.media_type === 'audio' && (
+                      <audio
+                        src={entry.media_url}
+                        controls
+                        className="w-full mb-3"
+                      />
+                    )}
+
+                    {entry.message && (
+                      <p className="text-olive-300 whitespace-pre-wrap">{entry.message}</p>
+                    )}
                   </div>
                 ))
               )}
