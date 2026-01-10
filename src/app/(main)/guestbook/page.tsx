@@ -236,6 +236,10 @@ export default function GuestBookPage() {
 
       // Upload media if present
       if (recordedBlob && messageType !== 'text') {
+        if (!supabase) {
+          throw new Error('Storage is not configured. Please try submitting a text message instead.');
+        }
+
         const fileName = `${Date.now()}-${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}.${messageType === 'video' ? 'webm' : 'webm'}`;
         const filePath = `${messageType}/${fileName}`;
 
