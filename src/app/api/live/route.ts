@@ -15,9 +15,16 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    const now = Date.now();
+    const visibleUpdates = (updates || []).filter((update) => {
+      const scheduledFor = typeof update.scheduled_for === 'string'
+        ? new Date(update.scheduled_for).getTime()
+        : null;
+      return !scheduledFor || scheduledFor <= now;
+    });
 
     return NextResponse.json({
-      updates: updates || [],
+      updates: visibleUpdates,
     });
   } catch (error) {
     console.error('Live updates fetch error:', error);

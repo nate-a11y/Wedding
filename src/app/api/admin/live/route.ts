@@ -65,11 +65,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { message, type = 'info', posted_by, pinned = false, send_push = true } = body;
+    const { message, type = 'info', posted_by, pinned = false, send_push = true, scheduled_for } = body;
 
     if (!message || typeof message !== 'string' || message.trim() === '') {
       return NextResponse.json(
         { error: 'Message is required' },
+        { status: 400 }
+      );
+    }
+
+    const scheduledFor = typeof scheduled_for === 'string' && scheduled_for.trim()
+      ? new Date(scheduled_for)
+      : null;
+
+    if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
+      return NextResponse.json(
+        { error: 'scheduled_for must be a valid date/time' },
         { status: 400 }
       );
     }
@@ -82,6 +93,7 @@ export async function POST(request: NextRequest) {
         type,
         posted_by,
         pinned,
+        scheduled_for: scheduledFor?.toISOString() || null,
       })
       .select()
       .single();
@@ -89,13 +101,15 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     // Send push notifications if enabled
-    if (send_push && vapidPublicKey && vapidPrivateKey) {
+    const isFutureScheduled = scheduledFor ? scheduledFor.getTime() > Date.now() : false;
+    if (send_push && !isFutureScheduled && vapidPublicKey && vapidPrivateKey) {
       await sendPushNotifications(message.trim(), type);
     }
 
     return NextResponse.json({
       success: true,
       update,
+      pushSkippedReason: send_push && isFutureScheduled ? 'scheduled_for_future' : null,
     });
   } catch (error) {
     console.error('Post live update error:', error);

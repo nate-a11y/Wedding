@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS live_updates (
   type TEXT NOT NULL DEFAULT 'info', -- 'info', 'celebration', 'action', 'alert'
   posted_by TEXT, -- 'nate', 'blake', 'wedding_party'
   pinned BOOLEAN DEFAULT false,
+  scheduled_for TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS live_updates (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_live_updates_pinned ON live_updates(pinned) WHERE pinned = true;
 CREATE INDEX IF NOT EXISTS idx_live_updates_created_at ON live_updates(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_live_updates_scheduled_for ON live_updates(scheduled_for) WHERE scheduled_for IS NOT NULL;
 
 -- Enable RLS
 ALTER TABLE live_updates ENABLE ROW LEVEL SECURITY;

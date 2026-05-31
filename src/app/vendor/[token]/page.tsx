@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { PageEffects } from '@/components/ui';
 
 interface TimelineEvent {
   id: string;
@@ -83,6 +84,10 @@ function formatTime(time: string): string {
   return `${hour}:${minutes} ${ampm}`;
 }
 
+function getMapsUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
 export default function VendorPortalPage() {
   const params = useParams();
   const token = params?.token as string;
@@ -157,11 +162,14 @@ export default function VendorPortalPage() {
     day: 'numeric',
     year: 'numeric',
   });
+  const milestoneCount = data.timeline.filter((event) => event.is_milestone).length;
+  const nextMilestone = data.timeline.find((event) => event.is_milestone) || data.timeline[0];
 
   return (
-    <div className="min-h-screen bg-charcoal">
+    <div className="min-h-screen bg-charcoal relative overflow-hidden">
+      <PageEffects variant="minimal" />
       {/* Header */}
-      <header className="bg-charcoal-light border-b border-olive-700 sticky top-0 z-10">
+      <header className="bg-charcoal/95 border-b border-olive-700 sticky top-0 z-20 backdrop-blur">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -179,11 +187,56 @@ export default function VendorPortalPage() {
       </header>
 
       {/* Tab Navigation */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="flex gap-2 mb-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-6">
+        <section className="mb-6 overflow-hidden rounded-3xl border border-gold-500/40 bg-gradient-to-br from-black via-charcoal to-olive-900/70 p-6 shadow-elegant">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold-300">Vendor command sheet</p>
+          <h2 className="mt-2 font-heading text-3xl text-cream">{data.vendor.name}</h2>
+          <p className="mt-1 text-olive-200">{data.vendor.role} · {data.wedding.coupleName} · {data.wedding.displayDate || formattedDate}</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-olive-700 bg-black/35 p-4">
+              <p className="text-2xl font-semibold text-cream">{data.timeline.length}</p>
+              <p className="text-xs uppercase tracking-wide text-olive-400">Schedule items</p>
+            </div>
+            <div className="rounded-2xl border border-gold-500/40 bg-black/35 p-4">
+              <p className="text-2xl font-semibold text-gold-300">{milestoneCount}</p>
+              <p className="text-xs uppercase tracking-wide text-olive-400">Key moments</p>
+            </div>
+            <div className="rounded-2xl border border-olive-700 bg-black/35 p-4">
+              <p className="truncate text-lg font-semibold text-cream">{nextMilestone ? formatTime(nextMilestone.start_time) : '—'}</p>
+              <p className="text-xs uppercase tracking-wide text-olive-400">First cue</p>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-xl bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400"
+            >
+              Print schedule
+            </button>
+            <a
+              href={getMapsUrl(data.venue.address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-xl border border-olive-600 px-4 py-2 text-sm font-semibold text-cream hover:border-gold-500/60 hover:text-gold-300"
+            >
+              Open venue map ↗
+            </a>
+            {data.wedding.contactEmail && (
+              <a
+                href={`mailto:${data.wedding.contactEmail}`}
+                className="rounded-xl border border-olive-600 px-4 py-2 text-sm font-semibold text-cream hover:border-gold-500/60 hover:text-gold-300"
+              >
+                Email couple
+              </a>
+            )}
+          </div>
+        </section>
+
+        <div className="flex gap-2 mb-6 rounded-2xl border border-olive-700 bg-black/40 p-2">
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
               activeTab === 'timeline'
                 ? 'bg-gold-500 text-black'
                 : 'bg-olive-700 text-cream hover:bg-olive-600'
@@ -193,7 +246,7 @@ export default function VendorPortalPage() {
           </button>
           <button
             onClick={() => setActiveTab('venue')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
               activeTab === 'venue'
                 ? 'bg-gold-500 text-black'
                 : 'bg-olive-700 text-cream hover:bg-olive-600'
@@ -211,7 +264,10 @@ export default function VendorPortalPage() {
           >
             {/* Controls */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-cream">Day-of Schedule</h2>
+              <div>
+                <h2 className="text-lg font-medium text-cream">Day-of Schedule</h2>
+                <p className="text-sm text-olive-400">Built for load-in, cues, and quick vendor reference.</p>
+              </div>
               <label className="flex items-center gap-2 text-sm text-olive-300">
                 <input
                   type="checkbox"
@@ -236,7 +292,7 @@ export default function VendorPortalPage() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.03 }}
-                    className={`bg-charcoal-light rounded-lg p-4 border ${
+                    className={`bg-black/45 rounded-2xl p-4 border shadow-elegant ${
                       event.is_milestone
                         ? 'border-gold-500/50 bg-gold-500/5'
                         : 'border-olive-700'
@@ -322,7 +378,7 @@ export default function VendorPortalPage() {
             className="space-y-6"
           >
             {/* Venue Details */}
-            <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+            <div className="bg-black/50 rounded-2xl p-6 border border-olive-700 shadow-elegant">
               <h2 className="text-lg font-medium text-cream mb-4">Venue</h2>
               <div className="space-y-3">
                 <div>
@@ -341,7 +397,7 @@ export default function VendorPortalPage() {
 
             {/* Contact Info - only show if contact details available */}
             {(data.venue.contactPhone || data.venue.contactEmail) && (
-              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+              <div className="bg-black/50 rounded-2xl p-6 border border-olive-700 shadow-elegant">
                 <h2 className="text-lg font-medium text-cream mb-4">Venue Contact</h2>
                 <div className="space-y-2">
                   {data.venue.contactName && <p className="text-cream">{data.venue.contactName}</p>}
@@ -364,7 +420,7 @@ export default function VendorPortalPage() {
             )}
 
             {/* Logistics */}
-            <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+            <div className="bg-black/50 rounded-2xl p-6 border border-olive-700 shadow-elegant">
               <h2 className="text-lg font-medium text-cream mb-4">Logistics</h2>
               <div className="space-y-4">
                 <div>
@@ -386,7 +442,7 @@ export default function VendorPortalPage() {
 
             {/* WiFi - only show if available */}
             {data.venue.wifiNetwork && (
-              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+              <div className="bg-black/50 rounded-2xl p-6 border border-olive-700 shadow-elegant">
                 <h2 className="text-lg font-medium text-cream mb-4">WiFi Access</h2>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -404,7 +460,7 @@ export default function VendorPortalPage() {
             )}
 
             {/* Wedding Summary */}
-            <div className="bg-charcoal-light rounded-lg p-6 border border-olive-700">
+            <div className="bg-black/50 rounded-2xl p-6 border border-olive-700 shadow-elegant">
               <h2 className="text-lg font-medium text-cream mb-4">Event Summary</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>

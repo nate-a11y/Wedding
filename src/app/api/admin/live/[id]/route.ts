@@ -20,12 +20,26 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { message, type, pinned } = body;
+    const { message, type, pinned, scheduled_for } = body;
 
     const updateData: Record<string, unknown> = {};
     if (message !== undefined) updateData.message = message;
     if (type !== undefined) updateData.type = type;
     if (pinned !== undefined) updateData.pinned = pinned;
+    if (scheduled_for !== undefined) {
+      if (scheduled_for === null || scheduled_for === '') {
+        updateData.scheduled_for = null;
+      } else {
+        const scheduledFor = new Date(scheduled_for);
+        if (Number.isNaN(scheduledFor.getTime())) {
+          return NextResponse.json(
+            { error: 'scheduled_for must be a valid date/time' },
+            { status: 400 }
+          );
+        }
+        updateData.scheduled_for = scheduledFor.toISOString();
+      }
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(

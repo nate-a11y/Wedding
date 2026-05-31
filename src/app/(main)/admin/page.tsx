@@ -311,6 +311,7 @@ interface LiveUpdate {
   type: 'info' | 'action' | 'celebration';
   posted_by: string | null;
   pinned: boolean;
+  scheduled_for?: string | null;
   created_at: string;
 }
 
@@ -518,6 +519,7 @@ function AdminPageContent() {
   const [newLiveType, setNewLiveType] = useState<'info' | 'action' | 'celebration'>('info');
   const [sendPushNotification, setSendPushNotification] = useState(true);
   const [newLivePinned, setNewLivePinned] = useState(false);
+  const [newLiveScheduledFor, setNewLiveScheduledFor] = useState('');
   const [postingLiveUpdate, setPostingLiveUpdate] = useState(false);
   const [liveActionMessage, setLiveActionMessage] = useState<{ success: boolean; message: string } | null>(null);
   const [rsvpEditLinkSendingEmail, setRsvpEditLinkSendingEmail] = useState<string | null>(null);
@@ -1197,6 +1199,7 @@ function AdminPageContent() {
           type: newLiveType,
           pinned: newLivePinned,
           send_push: sendPushNotification,
+          scheduled_for: newLiveScheduledFor ? new Date(newLiveScheduledFor).toISOString() : null,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -1207,10 +1210,13 @@ function AdminPageContent() {
 
       setNewLiveMessage('');
       setNewLivePinned(false);
+      setNewLiveScheduledFor('');
       await refreshLiveFeed();
       setLiveActionMessage({
         success: true,
-        message: `Posted${sendPushNotification ? ` and pushed to ${liveSubscriberCount} subscriber${liveSubscriberCount === 1 ? '' : 's'}` : ''}.`,
+        message: newLiveScheduledFor
+          ? 'Scheduled live update saved. It will appear in the guest feed at the scheduled time.'
+          : `Posted${sendPushNotification ? ` and pushed to ${liveSubscriberCount} subscriber${liveSubscriberCount === 1 ? '' : 's'}` : ''}.`,
       });
     } catch (error) {
       setLiveActionMessage({
@@ -1267,6 +1273,46 @@ function AdminPageContent() {
       setLiveActionMessage({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to delete update.',
+      });
+    }
+  };
+
+  const broadcastTimelineEvent = async (event: TimelineEvent, mode: 'now' | 'next') => {
+    const isNow = mode === 'now';
+    const message = isNow
+      ? `Happening now: ${event.title}${event.location ? ` at ${event.location}` : ''}.`
+      : `Up next: ${event.title}${event.start_time ? ` at ${formatTime(event.start_time)}` : ''}${event.location ? ` — ${event.location}` : ''}.`;
+
+    if (isNow && !confirm(`Post and push this as the current live instruction?\n\n${message}`)) return;
+
+    try {
+      const response = await fetch('/api/admin/live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          type: isNow ? 'action' : 'info',
+          pinned: true,
+          send_push: isNow,
+          posted_by: 'run_of_show',
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to broadcast timeline event.');
+      }
+
+      await refreshLiveFeed();
+      setLiveActionMessage({
+        success: true,
+        message: isNow
+          ? `Run-of-show update posted and pushed: ${event.title}`
+          : `Next-up cue pinned to the live feed: ${event.title}`,
+      });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to broadcast timeline event.',
       });
     }
   };
@@ -4205,6 +4251,9 @@ function AdminPageContent() {
                         <div>
                           <h3 className="text-lg font-heading text-gold-400">Wedding Day Timeline</h3>
                           <p className="text-olive-400 text-sm">{timelineEvents.length} events • {timelineEvents.filter(e => e.is_milestone).length} key moments</p>
+                          <p className="mt-1 text-xs text-olive-500">
+                            Run-of-show controls can pin “now” and “next up” cues directly to the public Live Hub.
+                          </p>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -4425,6 +4474,20 @@ function AdminPageContent() {
 
                                   {/* Actions */}
                                   <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button
+                                      onClick={() => broadcastTimelineEvent(event, 'now')}
+                                      className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-200 hover:bg-orange-500/20"
+                                      title="Post and push this as happening now"
+                                    >
+                                      Now
+                                    </button>
+                                    <button
+                                      onClick={() => broadcastTimelineEvent(event, 'next')}
+                                      className="rounded-lg border border-gold-500/40 bg-gold-500/10 px-2 py-1 text-xs font-medium text-gold-200 hover:bg-gold-500/20"
+                                      title="Pin this as the next-up cue"
+                                    >
+                                      Next
+                                    </button>
                                     <button
                                       onClick={() => setEditingTimelineId(event.id)}
                                       className="p-1.5 text-olive-400 hover:text-cream"
@@ -5277,6 +5340,7 @@ function AdminPageContent() {
                         setNewLiveMessage('');
                         setNewLiveType('info');
                         setNewLivePinned(false);
+                        setNewLiveScheduledFor('');
                         setSendPushNotification(true);
                         setLiveActionMessage(null);
                       }}
@@ -5383,6 +5447,19 @@ function AdminPageContent() {
                     </label>
                   </div>
 
+                  <div className="mt-5 rounded-xl border border-olive-700 bg-black/25 p-4">
+                    <label className="mb-2 block text-sm font-medium text-olive-200">Schedule for later</label>
+                    <input
+                      type="datetime-local"
+                      value={newLiveScheduledFor}
+                      onChange={(event) => setNewLiveScheduledFor(event.target.value)}
+                      className="w-full rounded-lg border border-olive-600 bg-charcoal px-3 py-2 text-cream focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                    />
+                    <p className="mt-2 text-xs text-olive-500">
+                      Optional. Future-scheduled updates are saved now and appear in the public feed at that time. Push is intentionally skipped until posted manually.
+                    </p>
+                  </div>
+
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-olive-500">
                       Pushes are best for time-sensitive moments. Turn push off for low-priority feed-only notes.
@@ -5393,7 +5470,7 @@ function AdminPageContent() {
                       disabled={!newLiveMessage.trim() || postingLiveUpdate}
                       className="rounded-xl bg-gold-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {postingLiveUpdate ? 'Posting…' : sendPushNotification ? 'Post + send push' : 'Post to feed'}
+                      {postingLiveUpdate ? 'Posting…' : newLiveScheduledFor ? 'Schedule update' : sendPushNotification ? 'Post + send push' : 'Post to feed'}
                     </button>
                   </div>
                 </div>
@@ -5422,11 +5499,14 @@ function AdminPageContent() {
                     }`}>
                       <div className="mb-2 flex items-center gap-2 text-sm text-olive-300">
                         <span className="text-lg" aria-hidden="true">{liveTypeMeta.icon}</span>
-                        <span>{newLivePinned ? 'Pinned live update' : 'Live update'}</span>
+                        <span>{newLiveScheduledFor ? 'Scheduled live update' : newLivePinned ? 'Pinned live update' : 'Live update'}</span>
                         {newLivePinned && <span className="rounded-full bg-gold-500/25 px-2 py-0.5 text-xs text-gold-300">📌 Pinned</span>}
                       </div>
                       <p className="text-lg leading-relaxed text-cream">{liveDraftPreview}</p>
-                      <p className="mt-3 text-xs text-olive-500">Just now {sendPushNotification ? `• Push to ${liveSubscriberCount}` : '• Feed only'}</p>
+                      <p className="mt-3 text-xs text-olive-500">
+                        {newLiveScheduledFor ? `Scheduled ${new Date(newLiveScheduledFor).toLocaleString()}` : 'Just now'}
+                        {newLiveScheduledFor ? ' • Feed at scheduled time' : sendPushNotification ? ` • Push to ${liveSubscriberCount}` : ' • Feed only'}
+                      </p>
                     </div>
                   </div>
 
@@ -5498,11 +5578,17 @@ function AdminPageContent() {
                               {update.pinned && (
                                 <span className="rounded-full bg-gold-500/30 px-2 py-0.5 text-xs text-gold-300">📌 Pinned</span>
                               )}
+                              {update.scheduled_for && new Date(update.scheduled_for).getTime() > Date.now() && (
+                                <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-xs text-blue-300">
+                                  Scheduled {formatDate(update.scheduled_for)}
+                                </span>
+                              )}
                             </div>
                             <p className="text-cream">{update.message}</p>
                             <p className="mt-2 text-sm text-olive-400">
                               {formatDate(update.created_at)}
                               {update.posted_by && ` • ${update.posted_by}`}
+                              {update.scheduled_for && ` • Feed time ${formatDate(update.scheduled_for)}`}
                             </p>
                           </div>
                           <div className="flex shrink-0 gap-2">
