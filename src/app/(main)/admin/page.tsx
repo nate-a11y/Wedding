@@ -392,7 +392,7 @@ const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'pl
 const VALID_PLANNING_SUBTABS = ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'];
 const VALID_COMMUNICATIONS_SUBTABS = ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'];
 
-export default function AdminPage() {
+function AdminPageContent() {
   // Keep first render deterministic for hydration; URL/localStorage restoration happens after mount.
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
@@ -5457,4 +5457,31 @@ export default function AdminPage() {
       </div>
     </div>
   );
+}
+
+function AdminMountShell() {
+  return (
+    <div className="min-h-screen bg-charcoal text-cream">
+      <div className="container-wedding py-20 text-center">
+        <p className="font-accent text-3xl text-gold-500 mb-2">Wedding</p>
+        <h1 className="font-heading text-4xl text-cream mb-8">Admin Dashboard</h1>
+        <AdminLoadingState label="Loading secure admin dashboard..." />
+      </div>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsMounted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  if (!isMounted) {
+    return <AdminMountShell />;
+  }
+
+  return <AdminPageContent />;
 }
