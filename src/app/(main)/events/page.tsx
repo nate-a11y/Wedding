@@ -171,7 +171,7 @@ export default function EventsPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant overflow-hidden"
+              className="overflow-hidden rounded-3xl border border-olive-700/80 bg-black/55 shadow-elegant backdrop-blur-sm"
             >
               <div className="flex flex-col md:flex-row">
                 {/* Left accent */}
@@ -207,14 +207,14 @@ export default function EventsPage() {
                         </svg>
                         <div>
                           <p className="font-medium">{event.location}</p>
-                          <p className="text-sm text-olive-400">{event.address}</p>
+                          <p className="text-sm text-olive-300/80">{event.address}</p>
                         </div>
                       </div>
                     </div>
                     <div>
                       <p className="text-olive-300 mb-3">{event.description}</p>
                       {event.dressCode && (
-                        <p className="text-sm text-olive-400">
+                        <p className="text-sm text-olive-300/80">
                           <span className="font-medium text-gold-400">Dress Code:</span> {event.dressCode}
                         </p>
                       )}

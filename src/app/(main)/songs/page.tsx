@@ -149,32 +149,32 @@ export default function SongsPage() {
           description="Vote for your favorites to help us build the perfect wedding playlist."
         />
 
-        <div className="max-w-2xl mx-auto mt-8">
+        <div className="max-w-2xl mx-auto">
           {/* Email Gate */}
           {!isEmailSet && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-charcoal-light rounded-xl p-6 border border-olive-600 mb-8"
+              className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm mb-8"
             >
               <h3 className="text-lg font-medium text-cream mb-4">Enter your email to vote</h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
-                  className="flex-1 px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500 focus:outline-none focus:border-gold-500"
+                  className="min-h-11 flex-1 rounded-xl border border-olive-700/80 bg-black/40 px-4 py-2 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                   onKeyDown={(e) => e.key === 'Enter' && handleSetEmail()}
                 />
                 <button
                   onClick={handleSetEmail}
-                  className="px-6 py-2 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors"
+                  className="min-h-11 rounded-xl bg-gold-500 px-6 py-2 font-semibold text-black transition-colors hover:bg-gold-400"
                 >
                   Vote
                 </button>
               </div>
-              <p className="text-olive-400 text-sm mt-2">
+              <p className="text-olive-300 text-sm mt-2">
                 Use the same email you used for your RSVP
               </p>
             </motion.div>
@@ -188,12 +188,12 @@ export default function SongsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search songs..."
-                className="w-full px-4 py-2 bg-charcoal-light border border-olive-600 rounded-lg text-cream placeholder-olive-500 focus:outline-none focus:border-gold-500"
+                className="min-h-11 w-full rounded-xl border border-olive-700/80 bg-black/45 px-4 py-2 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
               />
             </div>
             <button
               onClick={() => setShowSubmitForm(!showSubmitForm)}
-              className="px-4 py-2 bg-olive-700 text-cream rounded-lg hover:bg-olive-600 transition-colors"
+              className="min-h-11 rounded-xl border border-olive-600 bg-olive-800/80 px-4 py-2 font-medium text-cream transition-colors hover:border-gold-500/60 hover:bg-olive-700"
             >
               {showSubmitForm ? 'Cancel' : '+ Request a Song'}
             </button>
@@ -206,7 +206,7 @@ export default function SongsPage() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="bg-charcoal-light rounded-xl p-6 border border-olive-600 mb-6"
+                className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm mb-6"
               >
                 <h3 className="text-lg font-medium text-cream mb-4">Request a Song</h3>
                 <div className="space-y-4">
@@ -217,7 +217,7 @@ export default function SongsPage() {
                       value={newSongTitle}
                       onChange={(e) => setNewSongTitle(e.target.value)}
                       placeholder="Song name"
-                      className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500"
+                      className="min-h-11 w-full rounded-xl border border-olive-700/80 bg-black/40 px-4 py-2 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                     />
                   </div>
                   <div>
@@ -227,7 +227,7 @@ export default function SongsPage() {
                       value={newSongArtist}
                       onChange={(e) => setNewSongArtist(e.target.value)}
                       placeholder="Artist name"
-                      className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500"
+                      className="min-h-11 w-full rounded-xl border border-olive-700/80 bg-black/40 px-4 py-2 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                     />
                   </div>
                   <div>
@@ -237,13 +237,13 @@ export default function SongsPage() {
                       value={submitName}
                       onChange={(e) => setSubmitName(e.target.value)}
                       placeholder="Your name"
-                      className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500"
+                      className="min-h-11 w-full rounded-xl border border-olive-700/80 bg-black/40 px-4 py-2 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                     />
                   </div>
                   <button
                     onClick={handleSubmitSong}
                     disabled={!newSongTitle.trim() || submitting}
-                    className="px-6 py-2 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors disabled:opacity-50"
+                    className="min-h-11 rounded-xl bg-gold-500 px-6 py-2 font-semibold text-black transition-colors hover:bg-gold-400 disabled:opacity-50"
                   >
                     {submitting ? 'Submitting...' : 'Submit Request'}
                   </button>
@@ -259,7 +259,7 @@ export default function SongsPage() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="bg-green-500/20 border border-green-500 rounded-lg p-4 mb-6 text-center"
+                className="bg-green-500/20 border border-green-500 rounded-2xl p-4 mb-6 text-center"
               >
                 <span className="text-green-400">✓ Song submitted! It will appear after review.</span>
               </motion.div>
@@ -278,8 +278,8 @@ export default function SongsPage() {
           {!loading && (
             <div className="space-y-3">
               {sortedSongs.length === 0 ? (
-                <div className="text-center py-12 bg-charcoal-light rounded-xl border border-olive-700">
-                  <p className="text-olive-400">
+                <div className="text-center py-12 rounded-2xl border border-olive-700/80 bg-black/45 shadow-elegant backdrop-blur-sm">
+                  <p className="text-olive-300">
                     {searchQuery ? 'No songs match your search.' : 'No songs in the playlist yet.'}
                   </p>
                 </div>
@@ -294,8 +294,8 @@ export default function SongsPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className={`p-4 rounded-lg border ${
-                        isTop3 ? 'bg-gold-500/10 border-gold-500/50' : 'bg-charcoal-light border-olive-700'
+                      className={`p-4 rounded-2xl border ${
+                        isTop3 ? 'bg-gold-500/10 border-gold-500/50' : 'bg-black/45 border-olive-700/80'
                       }`}
                     >
                       <div className="flex items-center gap-4">
@@ -315,10 +315,10 @@ export default function SongsPage() {
                             {isTop3 && <span className="ml-2">🔥</span>}
                           </p>
                           {song.artist && (
-                            <p className="text-olive-400 text-sm truncate">{song.artist}</p>
+                            <p className="text-olive-300 text-sm truncate">{song.artist}</p>
                           )}
                           {song.submitted_by_name && (
-                            <p className="text-olive-500 text-xs">
+                            <p className="text-olive-300/75 text-xs">
                               Requested by {song.submitted_by_name.split(' ')[0]}
                             </p>
                           )}
@@ -358,7 +358,7 @@ export default function SongsPage() {
 
           {/* Email reminder */}
           {isEmailSet && (
-            <p className="text-center text-olive-500 text-xs mt-8">
+            <p className="text-center text-olive-300/75 text-xs mt-8">
               Voting as {email} •{' '}
               <button
                 onClick={() => {

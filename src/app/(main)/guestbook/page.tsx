@@ -360,7 +360,7 @@ export default function GuestBookPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 md:p-8 mb-12"
+            className="rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8 mb-12"
           >
             <h2 className="font-heading text-2xl text-cream mb-6">
               Leave a Message
@@ -452,9 +452,9 @@ export default function GuestBookPage() {
                     required
                     maxLength={500}
                     rows={4}
-                    className="flex w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-3 text-base transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                    className="flex w-full resize-none rounded-xl border border-olive-700/80 bg-black/40 px-4 py-3 text-base text-cream transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  <p className="mt-1.5 text-sm text-olive-400">
+                  <p className="mt-1.5 text-sm text-olive-300/80">
                     {formData.message.length}/500 characters
                   </p>
                 </div>
@@ -485,7 +485,7 @@ export default function GuestBookPage() {
                           <div className="w-full border-t border-olive-600"></div>
                         </div>
                         <div className="relative flex justify-center text-sm">
-                          <span className="px-2 bg-black/50 text-olive-400">or</span>
+                          <span className="px-2 bg-black/55 text-olive-300">or</span>
                         </div>
                       </div>
 
@@ -514,7 +514,7 @@ export default function GuestBookPage() {
                         />
                       )}
 
-                      <div className="flex items-center justify-between bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between bg-red-500/10 border border-red-500/50 rounded-2xl p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                           <span className="text-cream font-medium">
@@ -534,7 +534,7 @@ export default function GuestBookPage() {
 
                   {recordedBlob && mediaPreviewUrl && (
                     <div className="space-y-3">
-                      <div className="bg-olive-900/30 border border-olive-700 rounded-lg p-4">
+                      <div className="bg-olive-900/30 border border-olive-700 rounded-2xl p-4">
                         {messageType === 'video' ? (
                           <video
                             src={mediaPreviewUrl}
@@ -548,7 +548,7 @@ export default function GuestBookPage() {
                             className="w-full"
                           />
                         )}
-                        <p className="text-olive-400 text-sm mt-2">
+                        <p className="text-olive-300 text-sm mt-2">
                           Duration: {formatDuration(recordingTime)}
                         </p>
                       </div>
@@ -618,10 +618,10 @@ export default function GuestBookPage() {
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                <p className="text-olive-400 mt-4">Loading messages...</p>
+                <p className="text-olive-300 mt-4">Loading messages...</p>
               </div>
             ) : entries.length === 0 ? (
-              <div className="text-center py-12 bg-black/30 border border-olive-700 rounded-lg">
+              <div className="text-center py-12 rounded-2xl border border-olive-700/70 bg-black/40 shadow-elegant backdrop-blur-sm">
                 <svg
                   className="w-16 h-16 mx-auto text-olive-600 mb-4"
                   fill="none"
@@ -635,7 +635,7 @@ export default function GuestBookPage() {
                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                   />
                 </svg>
-                <p className="text-olive-400 text-lg">
+                <p className="text-olive-300 text-lg">
                   Be the first to sign our guest book!
                 </p>
               </div>
@@ -648,7 +648,7 @@ export default function GuestBookPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: index * 0.05 }}
-                    className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6"
+                    className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -662,7 +662,7 @@ export default function GuestBookPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-sm text-olive-500">
+                      <span className="text-sm text-olive-300/75">
                         {formatDate(entry.created_at)}
                       </span>
                     </div>

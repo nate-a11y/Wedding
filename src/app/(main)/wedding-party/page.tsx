@@ -29,7 +29,7 @@ function PartyMemberCard({ member, index }: { member: PartyMember; index: number
       viewport={{ once: true }}
       className="group"
     >
-      <div className="bg-black/50 border border-olive-700 rounded-lg overflow-hidden hover:border-gold-500/50 transition-colors">
+      <div className="overflow-hidden rounded-2xl border border-olive-700/80 bg-black/55 shadow-elegant backdrop-blur-sm hover:border-gold-500/50 transition-colors">
         {/* Photo */}
         <div className="aspect-[3/4] bg-olive-900/50 relative overflow-hidden">
           {showPhoto ? (
@@ -54,7 +54,7 @@ function PartyMemberCard({ member, index }: { member: PartyMember; index: number
         <div className="p-4 text-center">
           <h3 className="font-heading text-xl text-cream mb-1">{member.name}</h3>
           <p className="text-gold-400 font-medium mb-1">{member.role}</p>
-          <p className="text-olive-400 text-sm mb-3">{member.relation}</p>
+          <p className="text-olive-300 text-sm mb-3">{member.relation}</p>
           {member.bio && member.bio !== 'Add bio here...' && (
             <p className="text-olive-300 text-sm leading-relaxed">{member.bio}</p>
           )}
@@ -165,7 +165,7 @@ export default function WeddingPartyPage() {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center"
+              className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm text-center"
             >
               <h3 className="font-heading text-xl text-gold-400 mb-4">
                 Parents of {couple.person1.firstName}
@@ -180,7 +180,7 @@ export default function WeddingPartyPage() {
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center"
+              className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm text-center"
             >
               <h3 className="font-heading text-xl text-gold-400 mb-4">
                 Parents of {couple.person2.firstName}

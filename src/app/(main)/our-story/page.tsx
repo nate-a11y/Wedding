@@ -71,7 +71,7 @@ export default function OurStoryPage() {
                 <div className={`ml-24 md:ml-0 md:w-[calc(50%-3rem)] ${
                   index % 2 === 0 ? 'md:pr-8 md:text-right' : 'md:pl-8 md:text-left'
                 }`}>
-                  <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6">
+                  <div className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm">
                     <span className="text-gold-400 font-medium text-sm uppercase tracking-wider">
                       {event.date}
                     </span>
@@ -99,7 +99,7 @@ export default function OurStoryPage() {
           transition={{ duration: 0.6 }}
           className="mt-20 text-center"
         >
-          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8">
             <p className="font-accent text-2xl text-gold-500 mb-2">Our Song</p>
             <h3 className="font-heading text-xl text-cream mb-4">&ldquo;Precious&rdquo;</h3>
             <p className="text-olive-300 mb-6 text-sm italic">
@@ -125,11 +125,11 @@ export default function OurStoryPage() {
           transition={{ duration: 0.6 }}
           className="mt-12 text-center"
         >
-          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-12 max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-10">
             <div className="w-full h-64 bg-olive-900/50 rounded-lg flex items-center justify-center mb-6">
               <div className="text-center">
                 <span className="text-6xl mb-4 block">📷</span>
-                <p className="text-olive-400">Our photos coming soon</p>
+                <p className="text-olive-300">Our photos coming soon</p>
               </div>
             </div>
             <p className="font-accent text-2xl text-gold-500">

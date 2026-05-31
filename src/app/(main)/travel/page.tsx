@@ -112,7 +112,7 @@ export default function TravelPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 mb-12 max-w-4xl mx-auto"
+          className="mx-auto mb-12 max-w-4xl rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8"
         >
           <div className="grid md:grid-cols-2 gap-8">
             {/* Map */}
@@ -283,7 +283,7 @@ export default function TravelPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6"
+                className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm"
               >
                 <div className="w-full h-24 bg-olive-800 rounded-lg mb-4 flex items-center justify-center">
                   <svg className="w-10 h-10 text-olive-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,7 +292,7 @@ export default function TravelPage() {
                 </div>
                 <h3 className="font-heading text-lg text-cream mb-2">{hotel.name}</h3>
                 <p className="text-gold-500 text-sm font-medium mb-1">{hotel.distance}</p>
-                <p className="text-olive-400 text-xs mb-3">{hotel.address}</p>
+                <p className="text-olive-300/80 text-xs mb-3">{hotel.address}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {hotel.amenities.map((amenity) => (
                     <span
@@ -328,7 +328,7 @@ export default function TravelPage() {
             Getting Around
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6">
+            <div className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-olive-800 rounded-full flex items-center justify-center">
                   <svg className="w-5 h-5 text-olive-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +343,7 @@ export default function TravelPage() {
               </p>
             </div>
 
-            <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6">
+            <div className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-olive-800 rounded-full flex items-center justify-center">
                   <svg className="w-5 h-5 text-olive-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +384,7 @@ export default function TravelPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 hover:border-gold-500/50 transition-colors group"
+                className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm hover:border-gold-500/50 transition-colors group"
               >
                 <div className="flex items-start gap-4">
                   <span className="text-3xl">{attraction.icon}</span>
@@ -393,7 +393,7 @@ export default function TravelPage() {
                       {attraction.name}
                     </h3>
                     <p className="text-gold-500 text-xs font-medium mb-2">{attraction.distance} from venue</p>
-                    <p className="text-olive-400 text-sm">{attraction.description}</p>
+                    <p className="text-olive-300 text-sm">{attraction.description}</p>
                   </div>
                 </div>
               </motion.a>

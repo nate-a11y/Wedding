@@ -291,7 +291,7 @@ export default function AddressPage() {
   };
 
   return (
-    <div className="min-h-screen bg-charcoal py-12 px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-charcoal px-4 py-10 relative overflow-hidden md:py-12">
       <PageEffects variant="subtle" />
       <CelebrationAnimation isActive={showCelebration} />
       <div className="max-w-xl mx-auto relative z-10">
@@ -309,7 +309,7 @@ export default function AddressPage() {
           <p className="text-olive-300 max-w-md mx-auto mb-4">
             We&apos;re so excited to share our big day with you! Please provide your mailing address so we can send you a save the date and, when the time comes, your formal invitation.
           </p>
-          <p className="text-olive-400 text-sm max-w-md mx-auto">
+          <p className="text-olive-300 text-sm max-w-md mx-auto">
             Save the dates will be mailed around Halloween 2026, with formal invitations following in April 2027.
           </p>
         </motion.div>
@@ -321,7 +321,7 @@ export default function AddressPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           {formState.status === 'success' ? (
-            <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 text-center">
+            <div className="rounded-3xl border border-olive-700/80 bg-black/55 p-6 text-center shadow-elegant backdrop-blur-sm md:p-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-olive-800 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -329,15 +329,15 @@ export default function AddressPage() {
               </div>
               <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
               <p className="text-olive-300 mb-4">{formState.message}</p>
-              <p className="text-olive-400 text-sm mb-2">
+              <p className="text-olive-300 text-sm mb-2">
                 A confirmation email has been sent to your inbox.
               </p>
-              <p className="text-olive-400 text-sm">
+              <p className="text-olive-300 text-sm">
                 Keep an eye on your mailbox for a save the date, and later, your formal invitation!
               </p>
             </div>
           ) : formState.status === 'error' ? (
-            <div className="bg-black/50 border border-red-700 rounded-lg shadow-elegant p-8 text-center">
+            <div className="rounded-3xl border border-red-700/80 bg-black/55 p-6 text-center shadow-elegant backdrop-blur-sm md:p-8">
               <div className="w-16 h-16 mx-auto mb-4 bg-red-900/50 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -350,7 +350,7 @@ export default function AddressPage() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8">
+            <form onSubmit={handleSubmit} className="rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8">
               <div className="space-y-6">
                 {/* Contact Information */}
                 <div className="pb-4 border-b border-olive-700">
@@ -527,7 +527,7 @@ export default function AddressPage() {
                   </Button>
                 </div>
 
-                <p className="text-olive-500 text-sm text-center">
+                <p className="text-olive-300/75 text-sm text-center">
                   Already submitted? No problem! Enter your email again to update your address. Moving soon? You can update anytime before we send out the invitations.
                 </p>
               </div>
@@ -548,7 +548,7 @@ export default function AddressPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-charcoal border border-olive-600 rounded-lg shadow-elegant p-6 max-w-md w-full"
+                  className="w-full max-w-md rounded-3xl border border-olive-700/80 bg-black/70 p-5 shadow-elegant backdrop-blur-sm md:p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-3 mb-4">
@@ -564,10 +564,10 @@ export default function AddressPage() {
                     USPS suggests this standardized format for your address. Would you like to use it?
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="grid gap-4 mb-6 sm:grid-cols-2">
                     {/* Original Address */}
                     <div className="bg-olive-900/30 border border-olive-700 rounded-lg p-3">
-                      <p className="text-xs text-olive-400 uppercase tracking-wide mb-2">Your Entry</p>
+                      <p className="text-xs text-olive-300/80 uppercase tracking-wide mb-2">Your Entry</p>
                       <p className="text-cream text-sm">
                         {formData.streetAddress}
                         {formData.streetAddress2 && <><br />{formData.streetAddress2}</>}
@@ -619,7 +619,7 @@ export default function AddressPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-center mt-8"
         >
-          <p className="text-olive-500 text-sm">
+          <p className="text-olive-300/75 text-sm">
             October 31, 2027
           </p>
           <p className="text-gold-500 text-sm mt-1">

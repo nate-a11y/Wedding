@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useMemo } from 'react';
+import type { CSSProperties } from 'react';
 
 // Floating particle component
 function FloatingParticle({ delay, duration, size, left, top, xOffset1, xOffset2, repeatDelay }: {
@@ -43,7 +44,7 @@ function FloatingParticle({ delay, duration, size, left, top, xOffset1, xOffset2
 }
 
 // Sparkle star component
-function Sparkle({ style, delay, repeatDelay }: { style: React.CSSProperties; delay: number; repeatDelay: number }) {
+function Sparkle({ style, delay, repeatDelay }: { style: CSSProperties; delay: number; repeatDelay: number }) {
   return (
     <motion.div
       className="absolute pointer-events-none"
@@ -166,7 +167,10 @@ export function PageEffects({
   );
 
   return (
-    <>
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(212,175,55,0.08),transparent_32rem),linear-gradient(180deg,rgba(0,0,0,0.12),rgba(0,0,0,0.42))]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(83,101,55,0.10)_0%,transparent_38%,rgba(212,175,55,0.04)_100%)]" />
       {/* Animated gradient background */}
       {showGradient && (
         <>
@@ -214,7 +218,7 @@ export function PageEffects({
       {sparkles.map((s) => (
         <Sparkle key={s.id} style={s.style} delay={s.delay} repeatDelay={s.repeatDelay} />
       ))}
-    </>
+    </div>
   );
 }
 
@@ -260,30 +264,30 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className="text-center mb-16 relative"
+      className="relative mx-auto mb-10 max-w-4xl text-center md:mb-14"
     >
       {showGlow && (
         <GlowEffect
-          className="w-96 h-32 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          className="left-1/2 top-1/2 h-28 w-[min(28rem,90vw)] -translate-x-1/2 -translate-y-1/2"
           color="gold"
           intensity="low"
         />
       )}
 
       <motion.p
-        className="font-accent relative mx-auto mb-4 max-w-3xl px-4 text-2xl leading-[1.35] tracking-[0.03em] text-gold-500 sm:text-3xl"
+        className="font-accent relative mx-auto mb-3 max-w-[min(42rem,92vw)] px-2 text-[clamp(1.65rem,8vw,2.6rem)] leading-[1.15] tracking-[0.02em] text-gold-400 drop-shadow-[0_2px_14px_rgba(212,175,55,0.18)] [overflow-wrap:anywhere] sm:text-[clamp(2rem,5vw,3.4rem)]"
         animate={{ opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
         {subtitle}
       </motion.p>
 
-      <h1 className="font-heading text-4xl md:text-5xl text-cream mb-6 relative">
+      <h1 className="relative mx-auto mb-5 max-w-4xl font-heading text-[clamp(2.6rem,10vw,4.75rem)] leading-[0.98] text-cream">
         {title}
       </h1>
 
       {/* Animated gold line */}
-      <div className="relative mb-8 flex justify-center">
+      <div className="relative mb-6 flex justify-center md:mb-7">
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
@@ -303,7 +307,7 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-olive-300 max-w-2xl mx-auto text-lg relative"
+          className="relative mx-auto max-w-2xl text-base leading-relaxed text-olive-200 md:text-lg"
         >
           {description}
         </motion.p>

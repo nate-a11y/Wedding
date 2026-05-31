@@ -370,7 +370,7 @@ export default function PhotosPage() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="max-w-2xl mx-auto mb-16"
         >
-          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 md:p-8">
+          <div className="rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8">
             {/* Name Input */}
             <div className="mb-6">
               <Input
@@ -381,7 +381,7 @@ export default function PhotosPage() {
                 maxLength={100}
               />
               {guestName.trim() && (
-                <p className="text-olive-400 text-xs mt-2">
+                <p className="text-olive-300/80 text-xs mt-2">
                   {remainingUploads > 0
                     ? `${remainingUploads} photo${remainingUploads !== 1 ? 's' : ''} remaining`
                     : 'Upload limit reached'}
@@ -390,7 +390,7 @@ export default function PhotosPage() {
             </div>
 
             {/* Camera/Upload Buttons */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid gap-4 mb-6 sm:grid-cols-2">
               <button
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={remainingUploads <= 0 && guestName.trim() !== ''}
@@ -418,7 +418,7 @@ export default function PhotosPage() {
                 <span className="text-olive-300 group-hover:text-cream text-sm font-medium transition-colors">
                   Take Photo
                 </span>
-                <span className="text-olive-500 text-xs">with retro filter</span>
+                <span className="text-olive-300/75 text-xs">with retro filter</span>
               </button>
 
               <button
@@ -442,7 +442,7 @@ export default function PhotosPage() {
                 <span className="text-olive-300 group-hover:text-cream text-sm font-medium transition-colors">
                   Upload Photos
                 </span>
-                <span className="text-olive-500 text-xs">select multiple</span>
+                <span className="text-olive-300/75 text-xs">select multiple</span>
               </button>
             </div>
 
@@ -616,10 +616,10 @@ export default function PhotosPage() {
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-              <p className="text-olive-400 mt-4">Loading photos...</p>
+              <p className="text-olive-300 mt-4">Loading photos...</p>
             </div>
           ) : photos.length === 0 ? (
-            <div className="text-center py-12 bg-black/30 border border-olive-700 rounded-lg max-w-md mx-auto">
+            <div className="text-center py-12 rounded-2xl border border-olive-700/70 bg-black/40 shadow-elegant backdrop-blur-sm max-w-md mx-auto">
               <svg
                 className="w-16 h-16 mx-auto text-olive-600 mb-4"
                 fill="none"
@@ -633,7 +633,7 @@ export default function PhotosPage() {
                   d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <p className="text-olive-400 text-lg">
+              <p className="text-olive-300 text-lg">
                 No photos yet. Be the first to share!
               </p>
             </div>

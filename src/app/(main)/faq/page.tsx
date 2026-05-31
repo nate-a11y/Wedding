@@ -92,7 +92,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="border-b border-olive-200 last:border-0">
+    <div className="border-b border-olive-800/80 last:border-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full py-4 flex items-center justify-between text-left"
@@ -102,7 +102,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-olive-400 flex-shrink-0"
+          className="flex-shrink-0 text-olive-300"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -149,7 +149,7 @@ export default function FAQPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: categoryIndex * 0.1 }}
-              className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant overflow-hidden"
+              className="overflow-hidden rounded-3xl border border-olive-700/80 bg-black/55 shadow-elegant backdrop-blur-sm"
             >
               <div className="bg-olive-700 px-6 py-3">
                 <h2 className="font-heading text-xl text-white">{category.category}</h2>
@@ -171,7 +171,7 @@ export default function FAQPage() {
           transition={{ duration: 0.6 }}
           className="mt-16 text-center"
         >
-          <div className="bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-8 max-w-2xl mx-auto">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm md:p-8">
             <h3 className="font-heading text-2xl text-cream mb-4">
               Still Have Questions?
             </h3>

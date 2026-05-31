@@ -77,7 +77,7 @@ export default function DressCodePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-olive-400 text-center -mt-10 mb-12 max-w-2xl mx-auto"
+          className="-mt-6 mx-auto mb-12 max-w-2xl text-center leading-relaxed text-olive-200 md:-mt-8"
         >
           Our Halloween wedding celebrates elegance with a touch of autumn magic.
           Dress to impress while staying comfortable for an evening of celebration!
@@ -114,7 +114,7 @@ export default function DressCodePage() {
               </div>
             ))}
           </div>
-          <p className="text-olive-500 text-sm text-center mt-4">
+          <p className="text-olive-300/75 text-sm text-center mt-4">
             Feel free to incorporate these colors into your outfit!
           </p>
         </motion.div>
@@ -127,7 +127,7 @@ export default function DressCodePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-              className="bg-black/50 border border-olive-700 rounded-lg p-6"
+              className="rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm"
             >
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-4xl">{item.icon}</span>
@@ -144,7 +144,7 @@ export default function DressCodePage() {
                 </h4>
                 <ul className="space-y-1">
                   {item.suggestions.map((suggestion, i) => (
-                    <li key={i} className="text-olive-400 text-sm flex items-start gap-2">
+                    <li key={i} className="text-olive-300 text-sm flex items-start gap-2">
                       <span className="text-olive-600">•</span>
                       {suggestion}
                     </li>
@@ -161,7 +161,7 @@ export default function DressCodePage() {
                 </h4>
                 <ul className="space-y-1">
                   {item.avoid.map((avoidItem, i) => (
-                    <li key={i} className="text-olive-500 text-sm flex items-start gap-2">
+                    <li key={i} className="text-olive-300/75 text-sm flex items-start gap-2">
                       <span className="text-olive-600">•</span>
                       {avoidItem}
                     </li>
@@ -199,9 +199,9 @@ export default function DressCodePage() {
           transition={{ delay: 0.6 }}
           className="text-center mt-12"
         >
-          <div className="bg-black/30 border border-olive-700 rounded-lg p-6 max-w-xl mx-auto">
+          <div className="rounded-2xl border border-olive-700/70 bg-black/40 p-6 shadow-elegant backdrop-blur-sm max-w-xl mx-auto">
             <h4 className="font-heading text-lg text-cream mb-3">Practical Tips</h4>
-            <ul className="text-olive-400 text-sm space-y-2 text-left">
+            <ul className="text-olive-300 text-sm space-y-2 text-left">
               <li className="flex items-start gap-2">
                 <span>👠</span>
                 <span>The Callaway Jewel has both indoor and outdoor areas - comfortable shoes recommended</span>

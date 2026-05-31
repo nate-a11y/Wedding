@@ -86,7 +86,7 @@ export default function RegistryPage() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
             >
               {registry.comingSoon ? (
-                <div className="relative bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 opacity-75">
+                <div className="relative rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm opacity-75">
                   <div className="absolute top-3 right-3 bg-olive-700 text-olive-200 text-xs px-2 py-1 rounded">
                     Coming Soon
                   </div>
@@ -94,14 +94,14 @@ export default function RegistryPage() {
                     {registry.icon}
                   </div>
                   <h3 className="font-heading text-xl text-cream mb-2">{registry.name}</h3>
-                  <p className="text-olive-400 text-sm">{registry.description}</p>
+                  <p className="text-olive-300 text-sm">{registry.description}</p>
                 </div>
               ) : (
                 <Link
                   href={registry.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block bg-black/50 border border-olive-700 rounded-lg shadow-elegant p-6 hover:border-gold-500 hover:bg-olive-900/30 transition-all group"
+                  className="block rounded-2xl border border-olive-700/80 bg-black/55 p-6 shadow-elegant backdrop-blur-sm hover:border-gold-500 hover:bg-olive-900/30 transition-all group"
                 >
                   <div className={`w-14 h-14 ${registry.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
                     {registry.icon}
@@ -109,7 +109,7 @@ export default function RegistryPage() {
                   <h3 className="font-heading text-xl text-cream mb-2 group-hover:text-gold-500 transition-colors">
                     {registry.name}
                   </h3>
-                  <p className="text-olive-400 text-sm">{registry.description}</p>
+                  <p className="text-olive-300 text-sm">{registry.description}</p>
                   <div className="mt-4 text-gold-500 text-sm font-medium flex items-center gap-1">
                     View Registry
                     <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +160,7 @@ export default function RegistryPage() {
           transition={{ delay: 0.6 }}
           className="text-center mt-12"
         >
-          <div className="bg-black/30 border border-olive-700 rounded-lg p-6 max-w-xl mx-auto">
+          <div className="rounded-2xl border border-olive-700/70 bg-black/40 p-6 shadow-elegant backdrop-blur-sm max-w-xl mx-auto">
             <p className="font-accent text-2xl text-gold-500 mb-2">Thank You</p>
             <p className="text-olive-300">
               We are so grateful for your love and support. Your presence on our special day

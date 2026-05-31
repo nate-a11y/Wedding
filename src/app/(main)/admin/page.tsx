@@ -517,7 +517,11 @@ function AdminPageContent() {
   const [newLiveMessage, setNewLiveMessage] = useState('');
   const [newLiveType, setNewLiveType] = useState<'info' | 'action' | 'celebration'>('info');
   const [sendPushNotification, setSendPushNotification] = useState(true);
+  const [newLivePinned, setNewLivePinned] = useState(false);
   const [postingLiveUpdate, setPostingLiveUpdate] = useState(false);
+  const [liveActionMessage, setLiveActionMessage] = useState<{ success: boolean; message: string } | null>(null);
+  const [rsvpEditLinkSendingEmail, setRsvpEditLinkSendingEmail] = useState<string | null>(null);
+  const [rsvpEditLinkMessage, setRsvpEditLinkMessage] = useState<{ email: string; success: boolean; message: string } | null>(null);
 
   // Song Request state
   const [songRequests, setSongRequests] = useState<SongRequest[]>([]);
@@ -542,6 +546,15 @@ function AdminPageContent() {
     { label: 'Thank you', message: 'Thank you for celebrating with us! 🎃', type: 'celebration' as const },
   ];
 
+
+  const liveTypeOptions: { value: LiveUpdate['type']; label: string; description: string; icon: string; activeClass: string }[] = [
+    { value: 'info', label: 'Info', description: 'FYI / schedule note', icon: 'ℹ️', activeClass: 'bg-olive-700 border-olive-500 text-cream' },
+    { value: 'action', label: 'Action', description: 'Guests should do something', icon: '📢', activeClass: 'bg-orange-500/20 border-orange-400 text-orange-100' },
+    { value: 'celebration', label: 'Celebration', description: 'High-energy moment', icon: '🎉', activeClass: 'bg-gold-500/20 border-gold-400 text-gold-100' },
+  ];
+
+  const liveTypeMeta = liveTypeOptions.find((option) => option.value === newLiveType) || liveTypeOptions[0];
+  const liveDraftPreview = newLiveMessage.trim() || 'Choose a template or type a live announcement...';
 
   // Restore tab state from URL/localStorage only after hydration to avoid React #418 hydration mismatches.
   useEffect(() => {
@@ -1118,6 +1131,143 @@ function AdminPageContent() {
       setRsvps(rsvps.filter(r => r.id !== id));
     } catch (err) {
       console.error('Failed to delete RSVP:', err);
+    }
+  };
+
+  const resendRsvpEditLink = async (email: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    setRsvpEditLinkSendingEmail(normalizedEmail);
+    setRsvpEditLinkMessage(null);
+
+    try {
+      const response = await fetch('/api/rsvp/edit-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to send edit link.');
+      }
+
+      setRsvpEditLinkMessage({
+        email: normalizedEmail,
+        success: true,
+        message: data?.message || 'If an RSVP exists for that email, a private edit link is on the way.',
+      });
+    } catch (error) {
+      setRsvpEditLinkMessage({
+        email: normalizedEmail,
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send edit link.',
+      });
+    } finally {
+      setRsvpEditLinkSendingEmail(null);
+    }
+  };
+
+  const refreshLiveFeed = useCallback(async () => {
+    const response = await fetch('/api/admin/live');
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Failed to refresh live feed.');
+    }
+
+    setLiveUpdates(data.updates || []);
+    setLiveSubscriberCount(data.subscriberCount || 0);
+  }, []);
+
+  const postLiveUpdate = async () => {
+    const message = newLiveMessage.trim();
+    if (!message) return;
+
+    setPostingLiveUpdate(true);
+    setLiveActionMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          type: newLiveType,
+          pinned: newLivePinned,
+          send_push: sendPushNotification,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to post update.');
+      }
+
+      setNewLiveMessage('');
+      setNewLivePinned(false);
+      await refreshLiveFeed();
+      setLiveActionMessage({
+        success: true,
+        message: `Posted${sendPushNotification ? ` and pushed to ${liveSubscriberCount} subscriber${liveSubscriberCount === 1 ? '' : 's'}` : ''}.`,
+      });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to post update.',
+      });
+    } finally {
+      setPostingLiveUpdate(false);
+    }
+  };
+
+  const toggleLiveUpdatePinned = async (update: LiveUpdate) => {
+    try {
+      const response = await fetch(`/api/admin/live/${update.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pinned: !update.pinned }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to update pin status.');
+      }
+
+      await refreshLiveFeed();
+      setLiveActionMessage({
+        success: true,
+        message: update.pinned ? 'Update unpinned.' : 'Update pinned to the top.',
+      });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update pin status.',
+      });
+    }
+  };
+
+  const deleteLiveUpdate = async (update: LiveUpdate) => {
+    if (!confirm('Delete this update?')) return;
+
+    try {
+      const response = await fetch(`/api/admin/live/${update.id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to delete update.');
+      }
+
+      setLiveUpdates((prev) => prev.filter((u) => u.id !== update.id));
+      setLiveActionMessage({ success: true, message: 'Live update deleted.' });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to delete update.',
+      });
     }
   };
 
@@ -1873,6 +2023,42 @@ function AdminPageContent() {
     };
   };
 
+  const operationChecks = useMemo(() => Object.entries(operationsData?.checks || {}), [operationsData]);
+  const passingOperationChecks = operationChecks.filter(([, passed]) => passed);
+  const failingOperationChecks = operationChecks.filter(([, passed]) => !passed);
+  const recentAuditFailures = useMemo(
+    () => (operationsData?.auditEvents || []).filter((event) => event.status === 'failure'),
+    [operationsData]
+  );
+  const pinnedLiveUpdates = useMemo(() => liveUpdates.filter((update) => update.pinned), [liveUpdates]);
+
+  const formatOperationCheckLabel = (key: string) => key
+    .replace(/[_-]/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const getOperationCheckDescription = (key: string, passed: boolean) => {
+    const normalized = key.toLowerCase();
+    if (normalized.includes('supabase') || normalized.includes('database')) return passed ? 'Database/API reads are responding.' : 'Check Supabase/server configuration.';
+    if (normalized.includes('email') || normalized.includes('resend')) return passed ? 'Email sending path is configured.' : 'Email provider or sender config needs attention.';
+    if (normalized.includes('push') || normalized.includes('vapid')) return passed ? 'Push notification prerequisites are present.' : 'Push keys or subscriptions may be missing.';
+    if (normalized.includes('auth') || normalized.includes('admin')) return passed ? 'Admin protection is available.' : 'Review admin auth/session configuration.';
+    if (normalized.includes('storage') || normalized.includes('photo')) return passed ? 'Media storage path is available.' : 'Media upload/storage path needs attention.';
+    return passed ? 'Operational check is passing.' : 'Needs review before event day.';
+  };
+
+  const formatAuditDetail = (value: unknown) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+
+    try {
+      const serialized = JSON.stringify(value);
+      return serialized.length > 96 ? `${serialized.slice(0, 96)}…` : serialized;
+    } catch {
+      return 'Details unavailable';
+    }
+  };
+
   return (
     <div className="section-padding bg-charcoal min-h-screen">
       <div className="container-wedding">
@@ -1960,6 +2146,15 @@ function AdminPageContent() {
                       Export All RSVPs
                     </button>
                   </div>
+                  {rsvpEditLinkMessage && (
+                    <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+                      rsvpEditLinkMessage.success
+                        ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                        : 'border-red-500/40 bg-red-500/10 text-red-200'
+                    }`}>
+                      <span className="font-medium">{rsvpEditLinkMessage.email}:</span> {rsvpEditLinkMessage.message}
+                    </div>
+                  )}
                   <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
@@ -2037,15 +2232,26 @@ function AdminPageContent() {
                             </td>
                             <td className="p-3 text-olive-400 text-sm">{formatDate(rsvp.created_at)}</td>
                             <td className="p-3">
-                              <button
-                                onClick={() => deleteRsvp(rsvp.id)}
-                                className="text-red-400 hover:text-red-300 p-1"
-                                title="Delete RSVP"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => resendRsvpEditLink(rsvp.email)}
+                                  disabled={rsvpEditLinkSendingEmail === rsvp.email.trim().toLowerCase()}
+                                  className="rounded-md border border-gold-500/40 px-2 py-1 text-xs font-medium text-gold-300 hover:bg-gold-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                  title="Send private RSVP edit link"
+                                >
+                                  {rsvpEditLinkSendingEmail === rsvp.email.trim().toLowerCase() ? 'Sending…' : 'Send edit link'}
+                                </button>
+                                <button
+                                  onClick={() => deleteRsvp(rsvp.id)}
+                                  className="text-red-400 hover:text-red-300 p-1"
+                                  title="Delete RSVP"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -5021,126 +5227,249 @@ function AdminPageContent() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-2xl font-display text-gold-400">Live Feed</h2>
-                <div className="text-olive-300 text-sm">
-                  {liveSubscriberCount} subscriber{liveSubscriberCount !== 1 ? 's' : ''} for push notifications
+              <div className="overflow-hidden rounded-3xl border border-gold-500/30 bg-gradient-to-br from-gold-500/15 via-olive-900/40 to-black/60 p-6 shadow-2xl shadow-black/30">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold-300">Guest comms command center</p>
+                    <h2 className="mt-2 font-heading text-3xl text-cream">Live Feed</h2>
+                    <p className="mt-2 max-w-2xl text-sm text-olive-200">
+                      Send concise event-day updates, pin the must-see note, and preview exactly what guests will see before pushing.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-olive-600/60 bg-black/35 px-4 py-3">
+                      <p className="text-2xl font-semibold text-cream">{liveUpdates.length}</p>
+                      <p className="text-xs uppercase tracking-wide text-olive-400">Updates</p>
+                    </div>
+                    <div className="rounded-2xl border border-gold-500/40 bg-black/35 px-4 py-3">
+                      <p className="text-2xl font-semibold text-gold-300">{pinnedLiveUpdates.length}</p>
+                      <p className="text-xs uppercase tracking-wide text-olive-400">Pinned</p>
+                    </div>
+                    <div className="rounded-2xl border border-olive-600/60 bg-black/35 px-4 py-3 col-span-2 sm:col-span-1">
+                      <p className="text-2xl font-semibold text-cream">{liveSubscriberCount}</p>
+                      <p className="text-xs uppercase tracking-wide text-olive-400">Push subscribers</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Post New Update */}
-              <div className="bg-charcoal-light rounded-lg p-6 border border-olive-600">
-                <h3 className="text-lg font-medium text-cream mb-4">Post Update</h3>
-
-                {/* Quick Templates */}
-                <div className="mb-4">
-                  <label className="block text-sm text-olive-300 mb-2">Quick Templates</label>
-                  <div className="flex flex-wrap gap-2">
-                    {LIVE_TEMPLATES.map((template) => (
-                      <button
-                        key={template.label}
-                        onClick={() => {
-                          setNewLiveMessage(template.message);
-                          setNewLiveType(template.type);
-                        }}
-                        className="px-3 py-1.5 text-xs bg-olive-700 hover:bg-olive-600 text-cream rounded-lg transition-colors"
-                      >
-                        {template.label}
-                      </button>
-                    ))}
-                  </div>
+              {liveActionMessage && (
+                <div className={`rounded-xl border px-4 py-3 text-sm ${
+                  liveActionMessage.success
+                    ? 'border-green-500/40 bg-green-500/10 text-green-200'
+                    : 'border-red-500/40 bg-red-500/10 text-red-200'
+                }`}>
+                  {liveActionMessage.message}
                 </div>
+              )}
 
-                {/* Message Input */}
-                <div className="mb-4">
-                  <label className="block text-sm text-olive-300 mb-2">Message</label>
-                  <textarea
-                    value={newLiveMessage}
-                    onChange={(e) => setNewLiveMessage(e.target.value)}
-                    rows={3}
-                    placeholder="Enter your announcement..."
-                    className="w-full px-4 py-2 bg-charcoal border border-olive-600 rounded-lg text-cream placeholder-olive-500 focus:outline-none focus:border-gold-500"
-                  />
-                </div>
-
-                {/* Type Selection */}
-                <div className="mb-4">
-                  <label className="block text-sm text-olive-300 mb-2">Type</label>
-                  <div className="flex gap-3">
-                    {[
-                      { value: 'info', label: 'ℹ️ Info', color: 'bg-olive-700 border-olive-600' },
-                      { value: 'action', label: '📢 Action', color: 'bg-orange-500/20 border-orange-500' },
-                      { value: 'celebration', label: '🎉 Celebration', color: 'bg-gold-500/20 border-gold-500' },
-                    ].map((type) => (
-                      <button
-                        key={type.value}
-                        onClick={() => setNewLiveType(type.value as 'info' | 'action' | 'celebration')}
-                        className={`px-4 py-2 rounded-lg border transition-colors ${
-                          newLiveType === type.value
-                            ? type.color
-                            : 'bg-charcoal border-olive-700 text-olive-400'
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Send Push Option */}
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendPushNotification}
-                      onChange={(e) => setSendPushNotification(e.target.checked)}
-                      className="w-4 h-4 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500"
-                    />
-                    <span className="text-cream">Send push notification to subscribers</span>
-                  </label>
-                </div>
-
-                {/* Post Button */}
-                <button
-                  onClick={async () => {
-                    if (!newLiveMessage.trim()) return;
-                    setPostingLiveUpdate(true);
-                    try {
-                      const response = await fetch('/api/admin/live', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          message: newLiveMessage.trim(),
-                          type: newLiveType,
-                          send_push: sendPushNotification,
-                        }),
-                      });
-                      if (response.ok) {
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+                {/* Post New Update */}
+                <div className="rounded-2xl border border-olive-600 bg-charcoal-light p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-xl font-medium text-cream">Compose update</h3>
+                      <p className="text-sm text-olive-400">Pick a template, tune the tone, then decide whether it gets pinned or pushed.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setNewLiveMessage('');
-                        // Refresh updates
-                        const refreshRes = await fetch('/api/admin/live');
-                        const data = await refreshRes.json();
-                        if (!data.error) {
-                          setLiveUpdates(data.updates || []);
-                          setLiveSubscriberCount(data.subscriberCount || 0);
-                        }
-                      }
-                    } catch (err) {
-                      console.error('Failed to post update:', err);
-                    } finally {
-                      setPostingLiveUpdate(false);
-                    }
-                  }}
-                  disabled={!newLiveMessage.trim() || postingLiveUpdate}
-                  className="px-6 py-3 bg-gold-500 text-black rounded-lg font-medium hover:bg-gold-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {postingLiveUpdate ? 'Posting...' : 'Post Update'}
-                </button>
+                        setNewLiveType('info');
+                        setNewLivePinned(false);
+                        setSendPushNotification(true);
+                        setLiveActionMessage(null);
+                      }}
+                      className="self-start rounded-lg border border-olive-700 px-3 py-1.5 text-xs font-medium text-olive-300 hover:bg-olive-800/60"
+                    >
+                      Reset draft
+                    </button>
+                  </div>
+
+                  {/* Quick Templates */}
+                  <div className="mt-6">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <label className="block text-sm font-medium text-olive-200">Quick templates</label>
+                      <span className="text-xs text-olive-500">Tap to load message + type</span>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {LIVE_TEMPLATES.map((template) => (
+                        <button
+                          key={template.label}
+                          type="button"
+                          onClick={() => {
+                            setNewLiveMessage(template.message);
+                            setNewLiveType(template.type);
+                            setLiveActionMessage(null);
+                          }}
+                          className="group rounded-xl border border-olive-700 bg-black/25 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-gold-500/60 hover:bg-gold-500/10"
+                        >
+                          <span className="block text-sm font-medium text-cream group-hover:text-gold-200">{template.label}</span>
+                          <span className="mt-1 block truncate text-xs text-olive-400">{template.message}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Message Input */}
+                  <div className="mt-6">
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="block text-sm font-medium text-olive-200">Message</label>
+                      <span className={`text-xs ${newLiveMessage.length > 180 ? 'text-gold-300' : 'text-olive-500'}`}>
+                        {newLiveMessage.length}/240 suggested
+                      </span>
+                    </div>
+                    <textarea
+                      value={newLiveMessage}
+                      onChange={(e) => setNewLiveMessage(e.target.value)}
+                      rows={4}
+                      placeholder="Example: Please make your way to the reception — dinner starts soon."
+                      className="w-full rounded-xl border border-olive-600 bg-charcoal px-4 py-3 text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                    />
+                  </div>
+
+                  {/* Type Selection */}
+                  <div className="mt-5">
+                    <label className="mb-3 block text-sm font-medium text-olive-200">Update type</label>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {liveTypeOptions.map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setNewLiveType(type.value)}
+                          className={`rounded-xl border p-3 text-left transition-colors ${
+                            newLiveType === type.value
+                              ? type.activeClass
+                              : 'border-olive-700 bg-black/25 text-olive-300 hover:border-olive-500'
+                          }`}
+                        >
+                          <span className="text-lg" aria-hidden="true">{type.icon}</span>
+                          <span className="ml-2 font-medium">{type.label}</span>
+                          <span className="mt-1 block text-xs opacity-80">{type.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Send Options */}
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                      newLivePinned ? 'border-gold-500/60 bg-gold-500/10' : 'border-olive-700 bg-black/25 hover:border-olive-500'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={newLivePinned}
+                        onChange={(e) => setNewLivePinned(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500"
+                      />
+                      <span>
+                        <span className="block font-medium text-cream">Pin to top</span>
+                        <span className="text-xs text-olive-400">Best for current location, schedule, or urgent instructions.</span>
+                      </span>
+                    </label>
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                      sendPushNotification ? 'border-green-500/50 bg-green-500/10' : 'border-olive-700 bg-black/25 hover:border-olive-500'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={sendPushNotification}
+                        onChange={(e) => setSendPushNotification(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-olive-600 bg-charcoal text-gold-500 focus:ring-gold-500"
+                      />
+                      <span>
+                        <span className="block font-medium text-cream">Send push notification</span>
+                        <span className="text-xs text-olive-400">Targets {liveSubscriberCount} opted-in guest{liveSubscriberCount === 1 ? '' : 's'}.</span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-olive-500">
+                      Pushes are best for time-sensitive moments. Turn push off for low-priority feed-only notes.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={postLiveUpdate}
+                      disabled={!newLiveMessage.trim() || postingLiveUpdate}
+                      className="rounded-xl bg-gold-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {postingLiveUpdate ? 'Posting…' : sendPushNotification ? 'Post + send push' : 'Post to feed'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-olive-600 bg-black/40 p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-heading text-xl text-cream">Guest preview</h3>
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        newLiveType === 'celebration'
+                          ? 'bg-gold-500/20 text-gold-300'
+                          : newLiveType === 'action'
+                          ? 'bg-orange-500/20 text-orange-300'
+                          : 'bg-olive-700 text-olive-200'
+                      }`}>
+                        {liveTypeMeta.icon} {liveTypeMeta.label}
+                      </span>
+                    </div>
+                    <div className={`rounded-2xl border p-4 ${
+                      newLiveType === 'celebration'
+                        ? 'border-gold-500/50 bg-gold-500/10'
+                        : newLiveType === 'action'
+                        ? 'border-orange-500/50 bg-orange-500/10'
+                        : 'border-olive-700 bg-olive-900/40'
+                    }`}>
+                      <div className="mb-2 flex items-center gap-2 text-sm text-olive-300">
+                        <span className="text-lg" aria-hidden="true">{liveTypeMeta.icon}</span>
+                        <span>{newLivePinned ? 'Pinned live update' : 'Live update'}</span>
+                        {newLivePinned && <span className="rounded-full bg-gold-500/25 px-2 py-0.5 text-xs text-gold-300">📌 Pinned</span>}
+                      </div>
+                      <p className="text-lg leading-relaxed text-cream">{liveDraftPreview}</p>
+                      <p className="mt-3 text-xs text-olive-500">Just now {sendPushNotification ? `• Push to ${liveSubscriberCount}` : '• Feed only'}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-olive-700 bg-charcoal-light p-5">
+                    <h3 className="font-heading text-lg text-cream">Pinned now</h3>
+                    {pinnedLiveUpdates.length === 0 ? (
+                      <p className="mt-2 text-sm text-olive-400">No pinned updates. Pin one for the current instruction guests should not miss.</p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {pinnedLiveUpdates.slice(0, 3).map((update) => (
+                          <div key={update.id} className="rounded-lg border border-gold-500/30 bg-gold-500/10 p-3">
+                            <p className="text-sm text-cream">{update.message}</p>
+                            <p className="mt-1 text-xs text-gold-300">Pinned • {formatDate(update.created_at)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Current Updates */}
-              <div className="bg-charcoal-light rounded-lg p-6">
-                <h3 className="text-lg font-medium text-cream mb-4">Current Updates</h3>
+              <div className="rounded-2xl border border-olive-700 bg-charcoal-light p-6">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-cream">Current updates</h3>
+                    <p className="text-sm text-olive-400">Pinned updates stay first; use pin/unpin to manage the top of the guest feed.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await refreshLiveFeed();
+                        setLiveActionMessage({ success: true, message: 'Live feed refreshed.' });
+                      } catch (error) {
+                        setLiveActionMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to refresh live feed.' });
+                      }
+                    }}
+                    className="self-start rounded-lg border border-olive-700 px-3 py-2 text-sm text-olive-300 hover:bg-olive-800/60"
+                  >
+                    Refresh feed
+                  </button>
+                </div>
 
                 {liveUpdates.length === 0 ? (
                   <p className="text-olive-400 italic">No updates posted yet.</p>
@@ -5149,68 +5478,53 @@ function AdminPageContent() {
                     {liveUpdates.map((update) => (
                       <div
                         key={update.id}
-                        className={`p-4 rounded-lg border ${
+                        className={`rounded-xl border p-4 ${
                           update.type === 'celebration'
-                            ? 'bg-gold-500/10 border-gold-500/50'
+                            ? 'border-gold-500/50 bg-gold-500/10'
                             : update.type === 'action'
-                            ? 'bg-orange-500/10 border-orange-500/50'
-                            : 'bg-olive-800/50 border-olive-700'
+                            ? 'border-orange-500/50 bg-orange-500/10'
+                            : 'border-olive-700 bg-olive-800/50'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                              <span className="text-lg" aria-hidden="true">
                                 {update.type === 'celebration' ? '🎉' : update.type === 'action' ? '📢' : 'ℹ️'}
                               </span>
+                              <span className="rounded-full bg-black/30 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-olive-300">
+                                {update.type}
+                              </span>
                               {update.pinned && (
-                                <span className="text-xs bg-gold-500/30 text-gold-400 px-2 py-0.5 rounded">📌 Pinned</span>
+                                <span className="rounded-full bg-gold-500/30 px-2 py-0.5 text-xs text-gold-300">📌 Pinned</span>
                               )}
                             </div>
                             <p className="text-cream">{update.message}</p>
-                            <p className="text-olive-400 text-sm mt-1">
+                            <p className="mt-2 text-sm text-olive-400">
                               {formatDate(update.created_at)}
                               {update.posted_by && ` • ${update.posted_by}`}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex shrink-0 gap-2">
                             <button
-                              onClick={async () => {
-                                try {
-                                  await fetch(`/api/admin/live/${update.id}`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ pinned: !update.pinned }),
-                                  });
-                                  // Refresh
-                                  const res = await fetch('/api/admin/live');
-                                  const data = await res.json();
-                                  if (!data.error) setLiveUpdates(data.updates || []);
-                                } catch (err) {
-                                  console.error('Failed to toggle pin:', err);
-                                }
-                              }}
-                              className={`p-2 rounded ${update.pinned ? 'text-gold-400' : 'text-olive-400 hover:text-gold-400'}`}
-                              title={update.pinned ? 'Unpin' : 'Pin'}
+                              type="button"
+                              onClick={() => toggleLiveUpdatePinned(update)}
+                              className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                                update.pinned
+                                  ? 'border-gold-500/50 bg-gold-500/10 text-gold-300 hover:bg-gold-500/20'
+                                  : 'border-olive-700 text-olive-300 hover:border-gold-500/50 hover:text-gold-300'
+                              }`}
+                              title={update.pinned ? 'Unpin update' : 'Pin update'}
                             >
-                              📌
+                              {update.pinned ? 'Unpin' : 'Pin'}
                             </button>
                             <button
-                              onClick={async () => {
-                                if (!confirm('Delete this update?')) return;
-                                try {
-                                  await fetch(`/api/admin/live/${update.id}`, {
-                                    method: 'DELETE',
-                                  });
-                                  setLiveUpdates((prev) => prev.filter((u) => u.id !== update.id));
-                                } catch (err) {
-                                  console.error('Failed to delete:', err);
-                                }
-                              }}
-                              className="p-2 text-red-400 hover:text-red-300"
-                              title="Delete"
+                              type="button"
+                              onClick={() => deleteLiveUpdate(update)}
+                              className="rounded-lg border border-red-500/30 px-3 py-2 text-sm font-medium text-red-300 hover:bg-red-500/10"
+                              title="Delete update"
                             >
-                              🗑️
+                              Delete
                             </button>
                           </div>
                         </div>
@@ -5503,17 +5817,20 @@ function AdminPageContent() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-2xl font-heading text-cream">Operations</h2>
-                  <p className="mt-1 text-sm text-olive-400">Launch readiness, integration health, and recent admin audit events.</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold-300">Admin operations</p>
+                  <h2 className="mt-1 text-3xl font-heading text-cream">Ops Control Center</h2>
+                  <p className="mt-2 max-w-2xl text-sm text-olive-400">
+                    Launch readiness checks and recent admin audit activity from <code className="rounded bg-black/40 px-1.5 py-0.5 text-olive-200">/api/admin/operations</code>.
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={retryCurrentFetch}
-                  className="rounded-lg bg-olive-700 px-4 py-2 text-sm font-medium text-cream hover:bg-olive-600"
+                  className="self-start rounded-xl bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400"
                 >
-                  Refresh
+                  Refresh status
                 </button>
               </div>
 
@@ -5523,35 +5840,67 @@ function AdminPageContent() {
                 <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : operationsData ? (
                 <>
-                  <div className={`rounded-2xl border p-5 ${
+                  <div className={`overflow-hidden rounded-3xl border p-6 ${
                     operationsData.status === 'ok'
-                      ? 'border-green-500/50 bg-green-500/10'
-                      : 'border-gold-500/50 bg-gold-500/10'
+                      ? 'border-green-500/40 bg-gradient-to-br from-green-500/15 via-olive-900/35 to-black/60'
+                      : 'border-gold-500/50 bg-gradient-to-br from-gold-500/20 via-olive-900/40 to-black/60'
                   }`}>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-olive-300">System Status</p>
-                        <h3 className={`mt-1 font-heading text-3xl ${
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-olive-300">System status</p>
+                        <h3 className={`mt-2 font-heading text-4xl ${
                           operationsData.status === 'ok' ? 'text-green-300' : 'text-gold-300'
                         }`}>
-                          {operationsData.status === 'ok' ? 'Ready' : 'Needs Attention'}
+                          {operationsData.status === 'ok' ? 'Ready for guests' : 'Needs attention'}
                         </h3>
+                        <p className="mt-2 text-sm text-olive-300">Last checked {formatDate(operationsData.timestamp)}</p>
                       </div>
-                      <p className="text-sm text-olive-300">Last checked {formatDate(operationsData.timestamp)}</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-2xl border border-olive-600/60 bg-black/35 px-4 py-3 text-center">
+                          <p className="text-2xl font-semibold text-cream">{operationChecks.length}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-400">Checks</p>
+                        </div>
+                        <div className="rounded-2xl border border-green-500/40 bg-black/35 px-4 py-3 text-center">
+                          <p className="text-2xl font-semibold text-green-300">{passingOperationChecks.length}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-400">Passing</p>
+                        </div>
+                        <div className="rounded-2xl border border-red-500/40 bg-black/35 px-4 py-3 text-center">
+                          <p className="text-2xl font-semibold text-red-300">{failingOperationChecks.length}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-400">Needs fix</p>
+                        </div>
+                      </div>
                     </div>
+
+                    {failingOperationChecks.length > 0 && (
+                      <div className="mt-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+                        <p className="text-sm font-semibold text-red-200">Attention needed before relying on event-day automation:</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {failingOperationChecks.map(([key]) => (
+                            <span key={key} className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-medium text-red-200">
+                              {formatOperationCheckLabel(key)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {Object.entries(operationsData.checks).map(([key, passed]) => (
-                      <div key={key} className="rounded-xl border border-olive-700 bg-black/40 p-4">
-                        <div className="flex items-center justify-between gap-3">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {operationChecks.map(([key, passed]) => (
+                      <div
+                        key={key}
+                        className={`rounded-2xl border p-4 ${
+                          passed
+                            ? 'border-green-500/25 bg-green-500/10'
+                            : 'border-red-500/35 bg-red-500/10'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
                           <div>
-                            <p className="font-medium text-cream">
-                              {key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase())}
-                            </p>
-                            <p className="mt-1 text-xs text-olive-400">{passed ? 'Configured' : 'Missing or failing'}</p>
+                            <p className="font-medium text-cream">{formatOperationCheckLabel(key)}</p>
+                            <p className="mt-1 text-sm text-olive-400">{getOperationCheckDescription(key, passed)}</p>
                           </div>
-                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                             passed ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
                           }`}>
                             {passed ? 'OK' : 'Fix'}
@@ -5561,45 +5910,88 @@ function AdminPageContent() {
                     ))}
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-olive-700 bg-black/40">
-                    <div className="border-b border-olive-800 p-4">
-                      <h3 className="font-heading text-xl text-cream">Recent Admin Activity</h3>
-                    </div>
-                    {operationsData.auditEvents.length === 0 ? (
-                      <p className="p-6 text-olive-400">No admin audit events yet.</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-olive-900/50">
-                            <tr>
-                              <th className="px-4 py-3 text-left font-medium text-olive-300">Action</th>
-                              <th className="px-4 py-3 text-left font-medium text-olive-300">Entity</th>
-                              <th className="px-4 py-3 text-left font-medium text-olive-300">Status</th>
-                              <th className="px-4 py-3 text-left font-medium text-olive-300">When</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {operationsData.auditEvents.map((event) => (
-                              <tr key={event.id} className="border-t border-olive-800">
-                                <td className="px-4 py-3 text-cream">{event.action.replace(/_/g, ' ')}</td>
-                                <td className="px-4 py-3 text-olive-300">
-                                  {event.entity}
-                                  {event.entity_id && <span className="block text-xs text-olive-500">{event.entity_id}</span>}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                    event.status === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
-                                  }`}>
-                                    {event.status}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-olive-400">{formatDate(event.created_at)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  <div className="grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
+                    <div className="rounded-2xl border border-olive-700 bg-black/40 p-5">
+                      <h3 className="font-heading text-xl text-cream">Audit snapshot</h3>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-olive-700 bg-olive-900/30 p-4">
+                          <p className="text-2xl font-semibold text-cream">{operationsData.auditEvents.length}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-400">Recent events</p>
+                        </div>
+                        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
+                          <p className="text-2xl font-semibold text-red-300">{recentAuditFailures.length}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-400">Failures</p>
+                        </div>
                       </div>
-                    )}
+                      <div className="mt-4 rounded-xl border border-olive-700 bg-charcoal/60 p-4">
+                        <p className="text-sm font-medium text-olive-200">Review cue</p>
+                        <p className="mt-1 text-sm text-olive-400">
+                          Failures or unknown entities are the first things to inspect after admin mutations like deletes, moderation, token/link generation, and vendor updates.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-olive-700 bg-black/40">
+                      <div className="flex flex-col gap-2 border-b border-olive-800 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h3 className="font-heading text-xl text-cream">Recent Admin Activity</h3>
+                          <p className="text-sm text-olive-400">Latest audited actions with entity, status, and compact details.</p>
+                        </div>
+                      </div>
+                      {operationsData.auditEvents.length === 0 ? (
+                        <p className="p-6 text-olive-400">No admin audit events yet.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-olive-900/50">
+                              <tr>
+                                <th className="px-4 py-3 text-left font-medium text-olive-300">Action</th>
+                                <th className="px-4 py-3 text-left font-medium text-olive-300">Entity</th>
+                                <th className="px-4 py-3 text-left font-medium text-olive-300">Status</th>
+                                <th className="px-4 py-3 text-left font-medium text-olive-300">Details</th>
+                                <th className="px-4 py-3 text-left font-medium text-olive-300">When</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {operationsData.auditEvents.map((event) => {
+                                const detailPreview = formatAuditDetail(event.details);
+                                const requestPreview = formatAuditDetail(event.request_metadata);
+
+                                return (
+                                  <tr key={event.id} className="border-t border-olive-800 align-top hover:bg-olive-900/20">
+                                    <td className="px-4 py-3 text-cream">
+                                      <span className="capitalize">{event.action.replace(/_/g, ' ')}</span>
+                                    </td>
+                                    <td className="px-4 py-3 text-olive-300">
+                                      {event.entity}
+                                      {event.entity_id && <span className="block max-w-[180px] truncate text-xs text-olive-500">{event.entity_id}</span>}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                        event.status === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                                      }`}>
+                                        {event.status}
+                                      </span>
+                                    </td>
+                                    <td className="max-w-sm px-4 py-3 text-xs text-olive-400">
+                                      {detailPreview || requestPreview ? (
+                                        <div className="space-y-1">
+                                          {detailPreview && <p className="break-words"><span className="text-olive-300">Details:</span> {detailPreview}</p>}
+                                          {requestPreview && <p className="break-words"><span className="text-olive-300">Request:</span> {requestPreview}</p>}
+                                        </div>
+                                      ) : (
+                                        <span className="text-olive-600">—</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-olive-400">{formatDate(event.created_at)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : null}

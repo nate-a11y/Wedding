@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageEffects } from '@/components/ui';
+import { ScanActionCard, type LiveHubAction } from '@/components/live/ScanActionCard';
 
 interface LiveUpdate {
   id: string;
@@ -12,15 +13,6 @@ interface LiveUpdate {
   posted_by: string | null;
   pinned: boolean;
   created_at: string;
-}
-
-interface HubAction {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  eyebrow: string;
-  primary?: boolean;
 }
 
 interface TimelineItem {
@@ -38,13 +30,14 @@ const VENUE_ADDRESS = 'The Callaway Jewel, 4910 County Rd 105, Fulton, MO 65251'
 const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(VENUE_ADDRESS)}`;
 const LIVE_URL = 'https://nateandblake.me/live';
 
-const hubActions: HubAction[] = [
+const hubActions: LiveHubAction[] = [
   {
     title: 'Add Photos',
     description: 'Snap or upload your favorite moments from the dance floor, tables, and after-party.',
     href: '/photos',
     icon: '📸',
     eyebrow: 'Most used today',
+    command: 'Upload moments',
     primary: true,
   },
   {
@@ -53,6 +46,7 @@ const hubActions: HubAction[] = [
     href: '/guestbook',
     icon: '💌',
     eyebrow: 'Leave some love',
+    command: 'Record a note',
   },
   {
     title: 'Request a Song',
@@ -60,6 +54,7 @@ const hubActions: HubAction[] = [
     href: '/songs',
     icon: '🎶',
     eyebrow: 'Build the playlist',
+    command: 'Vote + request',
   },
   {
     title: 'Watch Livestream',
@@ -67,6 +62,7 @@ const hubActions: HubAction[] = [
     href: '/livestream',
     icon: '🎥',
     eyebrow: 'Remote guests',
+    command: 'Share the stream',
   },
 ];
 
@@ -142,8 +138,7 @@ const infoCards = [
   },
 ];
 
-function isWeddingDay(): boolean {
-  const now = new Date();
+function isWeddingDay(now: Date): boolean {
   return now >= WEDDING_START && now < WEDDING_END;
 }
 
@@ -195,42 +190,6 @@ function DayOfStatus({ isLive }: { isLive: boolean }) {
   );
 }
 
-function ActionCard({ action, index }: { action: HubAction; index: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.08 * index }}
-      className={action.primary ? 'sm:col-span-2' : undefined}
-    >
-      <Link
-        href={action.href}
-        className={`group block h-full rounded-2xl border p-5 shadow-elegant transition-all active:scale-[0.99] ${
-          action.primary
-            ? 'border-gold-500/70 bg-gradient-to-br from-gold-500/20 via-black/70 to-olive-900/70 hover:border-gold-400'
-            : 'border-olive-700 bg-black/50 hover:border-gold-500/70 hover:bg-olive-900/30'
-        }`}
-      >
-        <div className="flex items-start gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-olive-900/80 text-3xl ring-1 ring-olive-700 group-hover:ring-gold-500/60">
-            {action.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-gold-400">
-              {action.eyebrow}
-            </p>
-            <h2 className="mb-2 font-heading text-2xl text-cream">{action.title}</h2>
-            <p className="mb-0 text-sm leading-relaxed text-olive-200">{action.description}</p>
-          </div>
-          <span className="mt-1 text-2xl text-gold-400 transition-transform group-hover:translate-x-1" aria-hidden="true">
-            →
-          </span>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
 function NotificationPanel({
   isSubscribed,
   subscribing,
@@ -279,70 +238,162 @@ function NotificationPanel({
           {subscribing ? 'Enabling...' : notificationPermission === 'denied' ? 'Blocked' : 'Enable alerts'}
         </button>
       </div>
-      <p className="mb-0 mt-3 text-xs text-olive-400">
+      <p className="mb-0 mt-3 text-xs text-olive-200">
         iPhone users: add this site to your Home Screen first, then reopen it to enable notifications.
       </p>
     </div>
   );
 }
 
-function getCurrentTimelineIndex(isLive: boolean): number {
-  if (!isLive) return -1;
 
-  const now = new Date();
+type TimelineState = {
+  currentIndex: number;
+  nextIndex: number;
+  isBefore: boolean;
+  isAfter: boolean;
+};
+
+function getTimelineState(now: Date | null): TimelineState {
+  if (!now || now < WEDDING_START) {
+    return { currentIndex: -1, nextIndex: 0, isBefore: true, isAfter: false };
+  }
+
+  if (now >= WEDDING_END) {
+    return { currentIndex: timeline.length - 1, nextIndex: -1, isBefore: false, isAfter: true };
+  }
+
   let currentIndex = -1;
+  let nextIndex = -1;
 
   timeline.forEach((item, index) => {
     if (now >= item.startsAt) {
       currentIndex = index;
+    } else if (nextIndex === -1) {
+      nextIndex = index;
     }
   });
 
-  return currentIndex;
+  return { currentIndex, nextIndex, isBefore: false, isAfter: false };
 }
 
-function TimelineCard({ isLive }: { isLive: boolean }) {
-  const currentTimelineIndex = getCurrentTimelineIndex(isLive);
+function getTimeUntil(target: Date, now: Date | null): string {
+  if (!now) return 'Wedding day preview';
+
+  const diffMins = Math.max(0, Math.ceil((target.getTime() - now.getTime()) / 60000));
+  if (diffMins === 0) return 'Starting now';
+  if (diffMins < 60) return `In ${diffMins} min`;
+
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  return mins ? `In ${hours} hr ${mins} min` : `In ${hours} hr`;
+}
+
+function ScheduleFocusCard({ label, item, tone, helper }: { label: string; item: TimelineItem | null; tone: 'now' | 'next' | 'standby'; helper: string }) {
+  const toneClass =
+    tone === 'now'
+      ? 'border-gold-400 bg-gold-500/15'
+      : tone === 'next'
+        ? 'border-olive-500 bg-olive-900/45'
+        : 'border-olive-700 bg-black/50';
 
   return (
-    <section className="rounded-3xl border border-olive-700 bg-black/50 p-5 shadow-elegant md:p-7">
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.2em] text-gold-300">{label}</p>
+      {item ? (
+        <div className="flex items-start gap-3">
+          <span className="text-3xl" aria-hidden="true">{item.icon}</span>
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <h3 className="font-heading text-2xl leading-tight text-cream">{item.title}</h3>
+              <span className="rounded-full border border-white/10 bg-black/45 px-2 py-0.5 text-xs font-bold text-olive-100">
+                {item.time}
+              </span>
+            </div>
+            <p className="mb-0 text-sm font-semibold text-olive-100">{helper}</p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h3 className="mb-1 font-heading text-2xl text-cream">Wedding day wrapped</h3>
+          <p className="mb-0 text-sm text-olive-100">Thanks for celebrating with us.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimelineCard({ now }: { now: Date | null }) {
+  const timelineState = getTimelineState(now);
+  const currentItem = timelineState.currentIndex >= 0 && !timelineState.isBefore ? timeline[timelineState.currentIndex] : null;
+  const nextItem = timelineState.nextIndex >= 0 ? timeline[timelineState.nextIndex] : null;
+
+  return (
+    <section className="rounded-3xl border border-olive-600 bg-black/60 p-5 shadow-elegant md:p-7">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold-400">Schedule</p>
-          <h2 className="font-heading text-3xl text-cream">Today at a Glance</h2>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-gold-300">Now / Next</p>
+          <h2 className="font-heading text-3xl text-cream">Wedding Day Run of Show</h2>
         </div>
-        <Link href="/events" className="text-sm font-medium text-gold-400 hover:text-gold-300">
+        <Link href="/events" className="text-sm font-bold text-gold-300 hover:text-gold-200">
           Full event details →
         </Link>
       </div>
 
-      <div className="space-y-4">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <ScheduleFocusCard
+          label={currentItem ? 'Happening now' : timelineState.isAfter ? 'Status' : 'Standby'}
+          item={currentItem}
+          tone={currentItem ? 'now' : 'standby'}
+          helper={currentItem ? 'You are right on time.' : timelineState.isAfter ? 'All scheduled moments are complete.' : 'First scheduled moment is below.'}
+        />
+        <ScheduleFocusCard
+          label={nextItem ? 'Next up' : 'Final status'}
+          item={nextItem}
+          tone={nextItem ? 'next' : 'standby'}
+          helper={nextItem ? getTimeUntil(nextItem.startsAt, now) : 'Keep sharing photos and guest book notes.'}
+        />
+      </div>
+
+      <div className="space-y-3">
         {timeline.map((item, index) => {
-          const isCurrent = index === currentTimelineIndex;
+          const isCurrent = index === timelineState.currentIndex && !timelineState.isBefore && !timelineState.isAfter;
+          const isNext = index === timelineState.nextIndex;
+          const isComplete = timelineState.isAfter || (timelineState.currentIndex > index && !timelineState.isBefore);
+          const statusLabel = isCurrent ? 'Now' : isNext ? 'Next' : isComplete ? 'Done' : 'Later';
 
           return (
-            <div key={`${item.time}-${item.title}`} className="grid grid-cols-[5.25rem_1fr] gap-3 sm:grid-cols-[6.5rem_1fr]">
-            <div className="pt-1 text-sm font-semibold text-gold-300">{item.time}</div>
-            <div
-              className={`rounded-2xl border p-4 ${
-                isCurrent ? 'border-gold-500/70 bg-gold-500/10' : 'border-olive-800 bg-olive-900/20'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-2xl" aria-hidden="true">{item.icon}</span>
-                <div>
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <h3 className="font-heading text-xl text-cream">{item.title}</h3>
-                    {isCurrent && (
-                      <span className="rounded-full bg-gold-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-black">
-                        Now
+            <div key={`${item.time}-${item.title}`} className="grid grid-cols-[4.75rem_1fr] gap-3 sm:grid-cols-[6rem_1fr]">
+              <div className="pt-4 text-sm font-extrabold text-gold-200 sm:text-base">{item.time}</div>
+              <div
+                className={`rounded-2xl border p-4 ${
+                  isCurrent
+                    ? 'border-gold-400 bg-gold-500/15 shadow-[0_0_0_1px_rgba(212,175,55,0.15)]'
+                    : isNext
+                      ? 'border-olive-500 bg-olive-900/45'
+                      : isComplete
+                        ? 'border-olive-800 bg-black/35 opacity-80'
+                        : 'border-olive-700 bg-black/45'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/45 text-2xl ring-1 ring-white/10" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h3 className="font-heading text-2xl leading-tight text-cream">{item.title}</h3>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] ${
+                          isCurrent || isNext ? 'bg-gold-500 text-black' : isComplete ? 'bg-olive-700 text-olive-50' : 'bg-olive-900 text-olive-100'
+                        }`}
+                      >
+                        {statusLabel}
                       </span>
-                    )}
+                    </div>
+                    <p className="mb-0 text-sm leading-relaxed text-olive-100">{item.detail}</p>
                   </div>
-                  <p className="mb-0 text-sm leading-relaxed text-olive-300">{item.detail}</p>
                 </div>
               </div>
-            </div>
             </div>
           );
         })}
@@ -385,24 +436,27 @@ function InfoGrid() {
 }
 
 function UpdatesFeed({ loading, updates }: { loading: boolean; updates: LiveUpdate[] }) {
-  const pinnedUpdates = updates.filter((u) => u.pinned);
-  const regularUpdates = updates.filter((u) => !u.pinned);
   const latestUpdate = updates[0];
+  const pinnedUpdates = updates.filter((u) => u.pinned && u.id !== latestUpdate?.id);
+  const earlierUpdates = updates.filter((u) => !u.pinned && u.id !== latestUpdate?.id);
 
   return (
-    <section className="rounded-3xl border border-olive-700 bg-black/50 p-5 shadow-elegant md:p-7">
+    <section className="rounded-3xl border border-olive-600 bg-black/60 p-5 shadow-elegant md:p-7">
       <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-gold-400">Live feed</p>
-          <h2 className="font-heading text-3xl text-cream">Announcements</h2>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-gold-300">Command Center</p>
+          <h2 className="font-heading text-3xl text-cream">Live Announcements</h2>
         </div>
-        <p className="mb-0 text-xs text-olive-500">Refreshes every 30 seconds</p>
+        <div className="inline-flex items-center gap-2 rounded-full border border-green-500/40 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-200">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-green-300" />
+          Refreshes every 30s
+        </div>
       </div>
 
       {loading && (
         <div className="py-10 text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gold-500 border-t-transparent" />
-          <p className="mb-0 text-olive-400">Loading updates...</p>
+          <p className="mb-0 text-olive-200">Loading updates...</p>
         </div>
       )}
 
@@ -410,83 +464,106 @@ function UpdatesFeed({ loading, updates }: { loading: boolean; updates: LiveUpda
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-2xl border border-olive-800 bg-olive-900/20 p-6 text-center"
+          className="rounded-2xl border border-olive-700 bg-olive-900/35 p-6 text-center"
         >
-          <div className="mb-3 text-4xl">📢</div>
-          <p className="mb-1 font-medium text-cream">No live updates yet.</p>
-          <p className="mb-0 text-sm text-olive-400">This space will show timing changes, reminders, and celebration moments.</p>
+          <div className="mb-3 text-4xl">📡</div>
+          <p className="mb-1 font-semibold text-cream">Standing by for wedding day broadcasts.</p>
+          <p className="mb-0 text-sm text-olive-100">Timing changes, reminders, and celebration moments will land here first.</p>
         </motion.div>
       )}
 
-      {latestUpdate && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className={`mb-5 rounded-2xl border-2 p-5 ${getTypeStyles(latestUpdate.type).bg} ${getTypeStyles(latestUpdate.type).border}`}
-        >
-          <div className="flex items-start gap-3">
-            <span className="text-3xl" aria-hidden="true">{getTypeStyles(latestUpdate.type).icon}</span>
-            <div className="min-w-0 flex-1">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gold-300">
-                Latest {getTypeStyles(latestUpdate.type).label}
-              </p>
-              <p className="mb-0 text-lg font-medium leading-relaxed text-cream">{latestUpdate.message}</p>
-              <p className="mb-0 mt-2 text-sm text-olive-400">
-                {getRelativeTime(latestUpdate.created_at)}
-                {latestUpdate.posted_by && ` • Posted by ${latestUpdate.posted_by}`}
-              </p>
+      {latestUpdate && (() => {
+        const styles = getTypeStyles(latestUpdate.type);
+        return (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`mb-5 overflow-hidden rounded-3xl border-2 ${styles.bg} ${styles.border}`}
+          >
+            <div className="border-b border-white/10 bg-black/35 px-5 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="mb-0 text-[11px] font-extrabold uppercase tracking-[0.22em] text-gold-200">
+                  Latest Broadcast
+                </p>
+                <span className="rounded-full bg-cream/10 px-2.5 py-1 text-xs font-bold text-olive-50">
+                  {styles.label}
+                </span>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      )}
+            <div className="p-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black/45 text-3xl ring-1 ring-white/10" aria-hidden="true">
+                  {styles.icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="mb-0 text-lg font-semibold leading-relaxed text-cream">{latestUpdate.message}</p>
+                  <p className="mb-0 mt-3 text-sm font-medium text-olive-100">
+                    {getRelativeTime(latestUpdate.created_at)}
+                    {latestUpdate.posted_by && ` • Posted by ${latestUpdate.posted_by}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {pinnedUpdates.length > 0 && (
         <div className="mb-5">
-          <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-olive-400">📌 Pinned</h3>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="mb-0 text-sm font-extrabold uppercase tracking-[0.18em] text-gold-200">📌 Pinned directives</h3>
+            <span className="rounded-full border border-olive-600 px-2 py-0.5 text-xs font-bold text-olive-100">{pinnedUpdates.length}</span>
+          </div>
           <AnimatePresence>
-            {pinnedUpdates.map((update) => (
-              <motion.div
-                key={update.id}
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 12 }}
-                className={`mb-3 rounded-xl border p-4 ${getTypeStyles(update.type).bg} ${getTypeStyles(update.type).border}`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-xl" aria-hidden="true">{getTypeStyles(update.type).icon}</span>
-                  <div>
-                    <p className="mb-0 text-cream">{update.message}</p>
-                    <p className="mb-0 mt-1 text-sm text-olive-400">{getRelativeTime(update.created_at)}</p>
+            {pinnedUpdates.map((update) => {
+              const styles = getTypeStyles(update.type);
+              return (
+                <motion.div
+                  key={update.id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 12 }}
+                  className={`mb-3 rounded-2xl border p-4 ${styles.bg} ${styles.border}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl" aria-hidden="true">{styles.icon}</span>
+                    <div>
+                      <p className="mb-0 font-medium text-cream">{update.message}</p>
+                      <p className="mb-0 mt-1 text-sm text-olive-100">{getRelativeTime(update.created_at)}</p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
 
-      {regularUpdates.length > 1 && (
+      {earlierUpdates.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-medium uppercase tracking-wide text-olive-400">Earlier Updates</h3>
+          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-[0.18em] text-olive-200">Earlier updates</h3>
           <div className="space-y-3">
             <AnimatePresence>
-              {regularUpdates.slice(1).map((update) => (
-                <motion.div
-                  key={update.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`rounded-xl border border-olive-700/50 p-4 ${getTypeStyles(update.type).bg}`}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg opacity-70" aria-hidden="true">{getTypeStyles(update.type).icon}</span>
-                    <div>
-                      <p className="mb-0 text-cream/90">{update.message}</p>
-                      <p className="mb-0 mt-1 text-sm text-olive-400">{getRelativeTime(update.created_at)}</p>
+              {earlierUpdates.slice(0, 5).map((update) => {
+                const styles = getTypeStyles(update.type);
+                return (
+                  <motion.div
+                    key={update.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-2xl border border-olive-700/70 bg-black/35 p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg" aria-hidden="true">{styles.icon}</span>
+                      <div>
+                        <p className="mb-0 text-cream/95">{update.message}</p>
+                        <p className="mb-0 mt-1 text-sm text-olive-100">{getRelativeTime(update.created_at)}</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </div>
         </div>
@@ -501,7 +578,7 @@ export default function LiveFeedPage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [subscribing, setSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isLiveDay, setIsLiveDay] = useState(false);
+  const [liveClock, setLiveClock] = useState<Date | null>(null);
 
   const fetchUpdates = useCallback(async () => {
     try {
@@ -518,7 +595,9 @@ export default function LiveFeedPage() {
   }, []);
 
   useEffect(() => {
-    setIsLiveDay(isWeddingDay());
+    setLiveClock(new Date());
+    const interval = setInterval(() => setLiveClock(new Date()), 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // Check notification permission and subscription status.
@@ -613,6 +692,8 @@ export default function LiveFeedPage() {
     }
   };
 
+  const isLiveDay = liveClock ? isWeddingDay(liveClock) : false;
+
   return (
     <div className="min-h-screen bg-charcoal relative overflow-hidden">
       <PageEffects variant="subtle" />
@@ -678,7 +759,7 @@ export default function LiveFeedPage() {
 
           <div className="mb-6 grid gap-4 sm:grid-cols-2">
             {hubActions.map((action, index) => (
-              <ActionCard key={action.href} action={action} index={index} />
+              <ScanActionCard key={action.href} action={action} index={index} />
             ))}
           </div>
 
@@ -693,7 +774,7 @@ export default function LiveFeedPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)] lg:items-start">
-            <TimelineCard isLive={isLiveDay} />
+            <TimelineCard now={liveClock} />
             <UpdatesFeed loading={loading} updates={updates} />
           </div>
 
