@@ -90,6 +90,49 @@ interface Email {
   created_at: string;
 }
 
+interface GuestDedupeAnalysis {
+  stats: {
+    addresses: number;
+    rsvps: number;
+    duplicateEmailGroups: number;
+    duplicateNameGroups: number;
+    linkableExactEmailMatches: number;
+  };
+  duplicateEmails: Array<{
+    email: string;
+    addresses: Array<Pick<GuestAddress, 'id' | 'name' | 'email' | 'linked_rsvp_id' | 'created_at'>>;
+    rsvps: Array<{ id: string; name: string; email: string; attending: boolean; created_at: string }>;
+  }>;
+  duplicateNames: Array<{
+    name: string;
+    addresses: Array<Pick<GuestAddress, 'id' | 'name' | 'email' | 'linked_rsvp_id' | 'created_at'>>;
+    rsvps: Array<{ id: string; name: string; email: string; attending: boolean; created_at: string }>;
+  }>;
+  linkableExactEmailMatches: Array<{
+    address: Pick<GuestAddress, 'id' | 'name' | 'email' | 'linked_rsvp_id' | 'created_at'>;
+    rsvp: { id: string; name: string; email: string; attending: boolean; created_at: string };
+  }>;
+}
+
+interface GuestImportPreviewRow {
+  row: number;
+  name: string;
+  email: string;
+  city: string;
+  state: string | null;
+  postal_code: string;
+  country: string;
+  status: 'ready' | 'duplicate' | 'invalid';
+  issues: string[];
+}
+
+interface GuestImportPreview {
+  applied: boolean;
+  inserted: number;
+  summary: { total: number; ready: number; duplicate: number; invalid: number };
+  rows: GuestImportPreviewRow[];
+}
+
 interface GuestAddress {
   id: string;
   name: string;
@@ -312,6 +355,13 @@ interface LiveUpdate {
   posted_by: string | null;
   pinned: boolean;
   scheduled_for?: string | null;
+  push_requested?: boolean | null;
+  push_sent_at?: string | null;
+  push_status?: string | null;
+  push_error?: string | null;
+  deleted_at?: string | null;
+  deleted_reason?: string | null;
+  restored_at?: string | null;
   created_at: string;
 }
 
@@ -440,6 +490,11 @@ function AdminPageContent() {
   const [editingAddressEvents, setEditingAddressEvents] = useState<string | null>(null);
   const [newAddressTag, setNewAddressTag] = useState('');
   const [newAddressEvent, setNewAddressEvent] = useState('');
+  const [guestDedupeAnalysis, setGuestDedupeAnalysis] = useState<GuestDedupeAnalysis | null>(null);
+  const [guestToolsLoading, setGuestToolsLoading] = useState(false);
+  const [guestToolsMessage, setGuestToolsMessage] = useState<{ success: boolean; message: string } | null>(null);
+  const [guestImportCsv, setGuestImportCsv] = useState('');
+  const [guestImportPreview, setGuestImportPreview] = useState<GuestImportPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { retryKey, retry: retryCurrentFetch } = useAdminRetry();
@@ -514,6 +569,7 @@ function AdminPageContent() {
 
   // Live Feed state
   const [liveUpdates, setLiveUpdates] = useState<LiveUpdate[]>([]);
+  const [deletedLiveUpdates, setDeletedLiveUpdates] = useState<LiveUpdate[]>([]);
   const [liveSubscriberCount, setLiveSubscriberCount] = useState(0);
   const [newLiveMessage, setNewLiveMessage] = useState('');
   const [newLiveType, setNewLiveType] = useState<'info' | 'action' | 'celebration'>('info');
@@ -521,6 +577,7 @@ function AdminPageContent() {
   const [newLivePinned, setNewLivePinned] = useState(false);
   const [newLiveScheduledFor, setNewLiveScheduledFor] = useState('');
   const [postingLiveUpdate, setPostingLiveUpdate] = useState(false);
+  const [runningScheduledLive, setRunningScheduledLive] = useState(false);
   const [liveActionMessage, setLiveActionMessage] = useState<{ success: boolean; message: string } | null>(null);
   const [rsvpEditLinkSendingEmail, setRsvpEditLinkSendingEmail] = useState<string | null>(null);
   const [rsvpEditLinkMessage, setRsvpEditLinkMessage] = useState<{ email: string; success: boolean; message: string } | null>(null);
@@ -1050,9 +1107,10 @@ function AdminPageContent() {
             setIfActive(() => setEmailSendHistory(sendsData.sends || []));
           }
         } else if (activeTab === 'live') {
-          const data = await fetchJson<{ updates?: LiveUpdate[]; subscriberCount?: number }>('/api/admin/live');
+          const data = await fetchJson<{ updates?: LiveUpdate[]; deletedUpdates?: LiveUpdate[]; subscriberCount?: number }>('/api/admin/live');
           setIfActive(() => {
             setLiveUpdates(data.updates || []);
+            setDeletedLiveUpdates(data.deletedUpdates || []);
             setLiveSubscriberCount(data.subscriberCount || 0);
           });
         } else if (activeTab === 'songs') {
@@ -1171,6 +1229,85 @@ function AdminPageContent() {
     }
   };
 
+
+  const refreshAddresses = useCallback(async () => {
+    const response = await fetch('/api/admin/addresses');
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.error) throw new Error(data?.error || 'Failed to refresh addresses.');
+    setAddresses(data.addresses || []);
+  }, []);
+
+  const analyzeGuestDuplicates = async () => {
+    setGuestToolsLoading(true);
+    setGuestToolsMessage(null);
+    try {
+      const response = await fetch('/api/admin/guests/dedupe');
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.error) throw new Error(data?.error || 'Failed to analyze guests.');
+      setGuestDedupeAnalysis(data as GuestDedupeAnalysis);
+      setGuestToolsMessage({ success: true, message: 'Guest dedupe scan complete.' });
+    } catch (error) {
+      setGuestToolsMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to analyze guests.' });
+    } finally {
+      setGuestToolsLoading(false);
+    }
+  };
+
+  const linkExactGuestMatches = async () => {
+    setGuestToolsLoading(true);
+    setGuestToolsMessage(null);
+    try {
+      const response = await fetch('/api/admin/guests/dedupe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'link_exact_email' }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.error) throw new Error(data?.error || 'Failed to link exact matches.');
+      setGuestDedupeAnalysis(data);
+      await refreshAddresses();
+      setGuestToolsMessage({ success: true, message: `Linked ${data.linked || 0} address/RSVP match${data.linked === 1 ? '' : 'es'}.` });
+    } catch (error) {
+      setGuestToolsMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to link exact matches.' });
+    } finally {
+      setGuestToolsLoading(false);
+    }
+  };
+
+  const previewGuestImport = async (apply = false) => {
+    if (!guestImportCsv.trim()) {
+      setGuestToolsMessage({ success: false, message: 'Paste a CSV first.' });
+      return;
+    }
+
+    setGuestToolsLoading(true);
+    setGuestToolsMessage(null);
+    try {
+      const response = await fetch('/api/admin/guests/import-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv: guestImportCsv, apply }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.error) throw new Error(data?.error || 'Failed to process import.');
+      setGuestImportPreview(data);
+      if (apply) {
+        await refreshAddresses();
+        setGuestImportCsv('');
+      }
+      setGuestToolsMessage({
+        success: true,
+        message: apply
+          ? `Imported ${data.inserted || 0} new guest address${data.inserted === 1 ? '' : 'es'}.`
+          : `Preview ready: ${data.summary?.ready || 0} ready, ${data.summary?.duplicate || 0} duplicate, ${data.summary?.invalid || 0} invalid.`,
+      });
+    } catch (error) {
+      setGuestToolsMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to process import.' });
+    } finally {
+      setGuestToolsLoading(false);
+    }
+  };
+
   const refreshLiveFeed = useCallback(async () => {
     const response = await fetch('/api/admin/live');
     const data = await response.json();
@@ -1180,6 +1317,7 @@ function AdminPageContent() {
     }
 
     setLiveUpdates(data.updates || []);
+    setDeletedLiveUpdates(data.deletedUpdates || []);
     setLiveSubscriberCount(data.subscriberCount || 0);
   }, []);
 
@@ -1255,25 +1393,76 @@ function AdminPageContent() {
   };
 
   const deleteLiveUpdate = async (update: LiveUpdate) => {
-    if (!confirm('Delete this update?')) return;
+    if (!confirm('Archive this update? You can restore it from rollback history.')) return;
 
     try {
       const response = await fetch(`/api/admin/live/${update.id}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'admin_rollback_archive' }),
       });
       const data = await response.json().catch(() => null);
 
       if (!response.ok || data?.error) {
-        throw new Error(data?.error || 'Failed to delete update.');
+        throw new Error(data?.error || 'Failed to archive update.');
       }
 
-      setLiveUpdates((prev) => prev.filter((u) => u.id !== update.id));
-      setLiveActionMessage({ success: true, message: 'Live update deleted.' });
+      await refreshLiveFeed();
+      setLiveActionMessage({ success: true, message: 'Live update archived. Restore is available below.' });
     } catch (error) {
       setLiveActionMessage({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to delete update.',
+        message: error instanceof Error ? error.message : 'Failed to archive update.',
       });
+    }
+  };
+
+  const restoreLiveUpdate = async (update: LiveUpdate) => {
+    try {
+      const response = await fetch(`/api/admin/live/${update.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || 'Failed to restore update.');
+      }
+
+      await refreshLiveFeed();
+      setLiveActionMessage({ success: true, message: 'Live update restored.' });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to restore update.',
+      });
+    }
+  };
+
+  const runScheduledLiveUpdates = async () => {
+    setRunningScheduledLive(true);
+    setLiveActionMessage(null);
+    try {
+      const response = await fetch('/api/admin/live/run-scheduled', { method: 'POST' });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok && response.status !== 207) {
+        throw new Error(data?.error || 'Failed to run scheduled updates.');
+      }
+
+      await refreshLiveFeed();
+      setLiveActionMessage({
+        success: response.ok,
+        message: `Scheduled runner processed ${data?.processed || 0} update${data?.processed === 1 ? '' : 's'} (${data?.sent || 0} pushes sent).`,
+      });
+    } catch (error) {
+      setLiveActionMessage({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to run scheduled updates.',
+      });
+    } finally {
+      setRunningScheduledLive(false);
     }
   };
 
@@ -2325,6 +2514,105 @@ function AdminPageContent() {
                 <div className="text-center py-12 text-olive-400">No addresses collected yet</div>
               ) : (
                 <>
+                  {/* Guest Ops Tools */}
+                  <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+                    <div className="rounded-2xl border border-olive-700 bg-charcoal-light p-5 shadow-elegant">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold-300">Guest ops</p>
+                          <h3 className="mt-1 font-heading text-xl text-cream">Dedupe + RSVP linking</h3>
+                          <p className="mt-1 text-sm text-olive-400">Find duplicate records and safely link exact email matches across address + RSVP tables.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={analyzeGuestDuplicates}
+                          disabled={guestToolsLoading}
+                          className="rounded-lg border border-olive-700 px-3 py-2 text-sm font-medium text-olive-300 hover:bg-olive-800/60 disabled:opacity-50"
+                        >
+                          Analyze
+                        </button>
+                      </div>
+
+                      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-xl border border-olive-700 bg-black/25 p-3">
+                          <p className="text-xl font-semibold text-cream">{guestDedupeAnalysis?.stats.duplicateEmailGroups ?? '—'}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-500">Email groups</p>
+                        </div>
+                        <div className="rounded-xl border border-olive-700 bg-black/25 p-3">
+                          <p className="text-xl font-semibold text-cream">{guestDedupeAnalysis?.stats.duplicateNameGroups ?? '—'}</p>
+                          <p className="text-xs uppercase tracking-wide text-olive-500">Name groups</p>
+                        </div>
+                        <div className="rounded-xl border border-gold-500/30 bg-gold-500/10 p-3">
+                          <p className="text-xl font-semibold text-gold-300">{guestDedupeAnalysis?.stats.linkableExactEmailMatches ?? '—'}</p>
+                          <p className="text-xs uppercase tracking-wide text-gold-200/80">Auto-linkable</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={linkExactGuestMatches}
+                          disabled={guestToolsLoading || !guestDedupeAnalysis?.stats.linkableExactEmailMatches}
+                          className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Link exact matches
+                        </button>
+                        {guestDedupeAnalysis?.duplicateEmails?.slice(0, 2).map((group) => (
+                          <span key={group.email} className="rounded-full border border-olive-700 bg-black/25 px-3 py-1 text-xs text-olive-300">
+                            {group.email} · {group.addresses.length + group.rsvps.length} records
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-olive-700 bg-charcoal-light p-5 shadow-elegant">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold-300">Import assist</p>
+                        <h3 className="mt-1 font-heading text-xl text-cream">CSV preview</h3>
+                        <p className="mt-1 text-sm text-olive-400">Paste columns like name,email,phone,address,city,state,zip,country. Preview catches duplicates before writing.</p>
+                      </div>
+                      <textarea
+                        value={guestImportCsv}
+                        onChange={(event) => setGuestImportCsv(event.target.value)}
+                        rows={5}
+                        placeholder="name,email,phone,street_address,city,state,postal_code,country"
+                        className="mt-4 w-full rounded-xl border border-olive-600 bg-charcoal px-4 py-3 text-sm text-cream placeholder-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                      />
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => previewGuestImport(false)}
+                          disabled={guestToolsLoading || !guestImportCsv.trim()}
+                          className="rounded-lg border border-olive-700 px-4 py-2 text-sm font-medium text-olive-300 hover:bg-olive-800/60 disabled:opacity-50"
+                        >
+                          Preview CSV
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => previewGuestImport(true)}
+                          disabled={guestToolsLoading || !guestImportPreview?.summary.ready}
+                          className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Import ready rows
+                        </button>
+                      </div>
+                      {guestImportPreview && (
+                        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                          <span className="rounded-xl border border-olive-700 bg-black/25 p-3 text-sm text-olive-300">Total <strong className="text-cream">{guestImportPreview.summary.total}</strong></span>
+                          <span className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-300">Ready <strong>{guestImportPreview.summary.ready}</strong></span>
+                          <span className="rounded-xl border border-gold-500/30 bg-gold-500/10 p-3 text-sm text-gold-300">Dupes <strong>{guestImportPreview.summary.duplicate}</strong></span>
+                          <span className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Invalid <strong>{guestImportPreview.summary.invalid}</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {guestToolsMessage && (
+                    <div className={`mb-4 rounded-xl border p-3 text-sm ${guestToolsMessage.success ? 'border-green-500/30 bg-green-500/10 text-green-300' : 'border-red-500/30 bg-red-500/10 text-red-300'}`}>
+                      {guestToolsMessage.message}
+                    </div>
+                  )}
+
                   {/* Info Banner */}
                   <div className="mb-4 p-3 bg-olive-800/30 border border-olive-700 rounded-lg text-sm">
                     <p className="text-olive-300">
@@ -5456,7 +5744,7 @@ function AdminPageContent() {
                       className="w-full rounded-lg border border-olive-600 bg-charcoal px-3 py-2 text-cream focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                     />
                     <p className="mt-2 text-xs text-olive-500">
-                      Optional. Future-scheduled updates are saved now and appear in the public feed at that time. Push is intentionally skipped until posted manually.
+                      Optional. Future-scheduled updates are saved now, appear in the feed at that time, and the cron runner sends push when due.
                     </p>
                   </div>
 
@@ -5535,20 +5823,30 @@ function AdminPageContent() {
                     <h3 className="text-lg font-medium text-cream">Current updates</h3>
                     <p className="text-sm text-olive-400">Pinned updates stay first; use pin/unpin to manage the top of the guest feed.</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        await refreshLiveFeed();
-                        setLiveActionMessage({ success: true, message: 'Live feed refreshed.' });
-                      } catch (error) {
-                        setLiveActionMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to refresh live feed.' });
-                      }
-                    }}
-                    className="self-start rounded-lg border border-olive-700 px-3 py-2 text-sm text-olive-300 hover:bg-olive-800/60"
-                  >
-                    Refresh feed
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={runScheduledLiveUpdates}
+                      disabled={runningScheduledLive}
+                      className="self-start rounded-lg bg-gold-500 px-3 py-2 text-sm font-semibold text-black hover:bg-gold-400 disabled:opacity-50"
+                    >
+                      {runningScheduledLive ? 'Running…' : 'Run scheduled'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await refreshLiveFeed();
+                          setLiveActionMessage({ success: true, message: 'Live feed refreshed.' });
+                        } catch (error) {
+                          setLiveActionMessage({ success: false, message: error instanceof Error ? error.message : 'Failed to refresh live feed.' });
+                        }
+                      }}
+                      className="self-start rounded-lg border border-olive-700 px-3 py-2 text-sm text-olive-300 hover:bg-olive-800/60"
+                    >
+                      Refresh feed
+                    </button>
+                  </div>
                 </div>
 
                 {liveUpdates.length === 0 ? (
@@ -5583,13 +5881,28 @@ function AdminPageContent() {
                                   Scheduled {formatDate(update.scheduled_for)}
                                 </span>
                               )}
+                              {update.push_status && (
+                                <span className={`rounded-full px-2 py-0.5 text-xs ${
+                                  update.push_status === 'sent'
+                                    ? 'bg-green-500/20 text-green-300'
+                                    : update.push_status === 'failed'
+                                    ? 'bg-red-500/20 text-red-300'
+                                    : 'bg-gold-500/20 text-gold-300'
+                                }`}>
+                                  Push {update.push_status}
+                                </span>
+                              )}
                             </div>
                             <p className="text-cream">{update.message}</p>
                             <p className="mt-2 text-sm text-olive-400">
                               {formatDate(update.created_at)}
                               {update.posted_by && ` • ${update.posted_by}`}
                               {update.scheduled_for && ` • Feed time ${formatDate(update.scheduled_for)}`}
+                              {update.push_sent_at && ` • Push sent ${formatDate(update.push_sent_at)}`}
                             </p>
+                            {update.push_error && (
+                              <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">{update.push_error}</p>
+                            )}
                           </div>
                           <div className="flex shrink-0 gap-2">
                             <button
@@ -5613,6 +5926,42 @@ function AdminPageContent() {
                               Delete
                             </button>
                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-olive-700 bg-charcoal-light p-6">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold-300">Rollback controls</p>
+                    <h3 className="text-lg font-medium text-cream">Recently archived updates</h3>
+                    <p className="text-sm text-olive-400">Deletes are soft now — restore a mistaken archive without touching the database.</p>
+                  </div>
+                </div>
+                {deletedLiveUpdates.length === 0 ? (
+                  <p className="text-sm italic text-olive-400">No archived updates.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {deletedLiveUpdates.map((update) => (
+                      <div key={update.id} className="rounded-xl border border-olive-700 bg-black/25 p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm text-cream">{update.message}</p>
+                            <p className="mt-2 text-xs text-olive-500">
+                              Archived {update.deleted_at ? formatDate(update.deleted_at) : 'recently'}
+                              {update.deleted_reason && ` • ${update.deleted_reason}`}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => restoreLiveUpdate(update)}
+                            className="self-start rounded-lg border border-gold-500/40 px-3 py-2 text-sm font-medium text-gold-300 hover:bg-gold-500/10"
+                          >
+                            Restore
+                          </button>
                         </div>
                       </div>
                     ))}

@@ -162,6 +162,7 @@ const TABLE_CHECKS: Array<{ name: string; required: boolean }> = [
   { name: 'timeline_events', required: true },
   { name: 'vendors', required: true },
   { name: 'vendor_portal_tokens', required: true },
+  { name: 'vendor_checklist_items', required: true },
   { name: 'microsoft_auth', required: false },
   { name: 'admin_audit_events', required: true },
   { name: 'wedding_rate_limits', required: true },

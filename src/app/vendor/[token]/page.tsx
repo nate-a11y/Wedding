@@ -39,11 +39,22 @@ interface VenueInfo {
   notes?: string;
 }
 
+interface VendorChecklistItem {
+  id: string;
+  label: string;
+  details: string | null;
+  completed_at: string | null;
+  sort_order: number;
+}
+
 interface VendorData {
   vendor: {
     name: string;
     role: string;
+    checkedInAt: string | null;
+    checkInNote: string | null;
   };
+  checklist: VendorChecklistItem[];
   timeline: TimelineEvent[];
   venue: VenueInfo;
   wedding: {
@@ -95,8 +106,11 @@ export default function VendorPortalPage() {
   const [data, setData] = useState<VendorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'timeline' | 'venue'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'checklist' | 'venue'>('timeline');
   const [showStaffNotes, setShowStaffNotes] = useState(true);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -164,6 +178,56 @@ export default function VendorPortalPage() {
   });
   const milestoneCount = data.timeline.filter((event) => event.is_milestone).length;
   const nextMilestone = data.timeline.find((event) => event.is_milestone) || data.timeline[0];
+  const completedChecklistItems = data.checklist.filter((item) => item.completed_at).length;
+
+  const markCheckedIn = async () => {
+    setCheckingIn(true);
+    setActionMessage(null);
+    try {
+      const response = await fetch(`/api/vendor/${token}/check-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: 'Confirmed from vendor portal' }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Check-in failed');
+      setData((prev) => prev ? {
+        ...prev,
+        vendor: {
+          ...prev.vendor,
+          checkedInAt: result.checkedInAt,
+          checkInNote: result.checkInNote,
+        },
+      } : prev);
+      setActionMessage('Arrival confirmed — thank you.');
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Could not check in.');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  const toggleChecklistItem = async (item: VendorChecklistItem) => {
+    setUpdatingItemId(item.id);
+    setActionMessage(null);
+    try {
+      const response = await fetch(`/api/vendor/${token}/checklist/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !item.completed_at }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Checklist update failed');
+      setData((prev) => prev ? {
+        ...prev,
+        checklist: prev.checklist.map((entry) => entry.id === item.id ? result.item : entry),
+      } : prev);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Could not update checklist.');
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-charcoal relative overflow-hidden">
@@ -205,7 +269,30 @@ export default function VendorPortalPage() {
               <p className="truncate text-lg font-semibold text-cream">{nextMilestone ? formatTime(nextMilestone.start_time) : '—'}</p>
               <p className="text-xs uppercase tracking-wide text-olive-400">First cue</p>
             </div>
+            <div className="rounded-2xl border border-olive-700 bg-black/35 p-4 sm:col-span-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-olive-400">Arrival status</p>
+                  <p className="text-lg font-semibold text-cream">
+                    {data.vendor.checkedInAt
+                      ? `Checked in ${new Date(data.vendor.checkedInAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                      : 'Not checked in yet'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={markCheckedIn}
+                  disabled={checkingIn || Boolean(data.vendor.checkedInAt)}
+                  className="rounded-xl bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400 disabled:cursor-not-allowed disabled:bg-olive-700 disabled:text-olive-300"
+                >
+                  {data.vendor.checkedInAt ? 'Arrival confirmed' : checkingIn ? 'Confirming…' : 'Mark arrived'}
+                </button>
+              </div>
+            </div>
           </div>
+          {actionMessage && (
+            <p className="mt-4 rounded-xl border border-olive-700 bg-black/35 px-4 py-3 text-sm text-olive-200">{actionMessage}</p>
+          )}
           <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
@@ -233,10 +320,10 @@ export default function VendorPortalPage() {
           </div>
         </section>
 
-        <div className="flex gap-2 mb-6 rounded-2xl border border-olive-700 bg-black/40 p-2">
+        <div className="grid gap-2 mb-6 rounded-2xl border border-olive-700 bg-black/40 p-2 sm:grid-cols-3">
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
+            className={`px-4 py-3 rounded-xl font-medium transition-colors ${
               activeTab === 'timeline'
                 ? 'bg-gold-500 text-black'
                 : 'bg-olive-700 text-cream hover:bg-olive-600'
@@ -245,8 +332,18 @@ export default function VendorPortalPage() {
             Timeline
           </button>
           <button
+            onClick={() => setActiveTab('checklist')}
+            className={`px-4 py-3 rounded-xl font-medium transition-colors ${
+              activeTab === 'checklist'
+                ? 'bg-gold-500 text-black'
+                : 'bg-olive-700 text-cream hover:bg-olive-600'
+            }`}
+          >
+            Checklist {data.checklist.length ? `(${completedChecklistItems}/${data.checklist.length})` : ''}
+          </button>
+          <button
             onClick={() => setActiveTab('venue')}
-            className={`flex-1 px-4 py-3 rounded-xl font-medium transition-colors ${
+            className={`px-4 py-3 rounded-xl font-medium transition-colors ${
               activeTab === 'venue'
                 ? 'bg-gold-500 text-black'
                 : 'bg-olive-700 text-cream hover:bg-olive-600'
@@ -367,6 +464,58 @@ export default function VendorPortalPage() {
                 ))
               )}
             </div>
+          </motion.div>
+        )}
+
+        {/* Checklist Tab */}
+        {activeTab === 'checklist' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="rounded-2xl border border-olive-700 bg-black/50 p-6 shadow-elegant">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-gold-300">Vendor readiness</p>
+              <h2 className="mt-2 text-lg font-medium text-cream">Wedding-day checklist</h2>
+              <p className="mt-1 text-sm text-olive-400">Same control-center format as admin: quick status, clear actions, no guesswork.</p>
+            </div>
+
+            {data.checklist.length === 0 ? (
+              <div className="rounded-2xl border border-olive-700 bg-black/45 p-6 text-olive-400">No checklist items assigned yet.</div>
+            ) : (
+              data.checklist.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => toggleChecklistItem(item)}
+                  disabled={updatingItemId === item.id}
+                  className={`w-full rounded-2xl border p-4 text-left shadow-elegant transition ${
+                    item.completed_at
+                      ? 'border-green-500/40 bg-green-500/10'
+                      : 'border-olive-700 bg-black/45 hover:border-gold-500/50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm ${
+                      item.completed_at
+                        ? 'border-green-400 bg-green-500/20 text-green-300'
+                        : 'border-gold-500/50 text-gold-300'
+                    }`}>
+                      {item.completed_at ? '✓' : updatingItemId === item.id ? '…' : ''}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold text-cream">{item.label}</span>
+                      {item.details && <span className="mt-1 block text-sm text-olive-400">{item.details}</span>}
+                      {item.completed_at && (
+                        <span className="mt-2 block text-xs uppercase tracking-wide text-green-300">
+                          Completed {new Date(item.completed_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
           </motion.div>
         )}
 

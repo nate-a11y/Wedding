@@ -52,6 +52,25 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    const defaultChecklist = [
+      { label: 'Confirm arrival window', details: 'Review the timeline and arrival/load-in cues.', sort_order: 10 },
+      { label: 'Review venue logistics', details: 'Check parking, load-in, and venue map before arrival.', sort_order: 20 },
+      { label: 'Confirm day-of contact', details: 'Use the portal contact action if anything changes.', sort_order: 30 },
+      { label: 'Mark setup complete', details: 'Complete once your station/setup is wedding-ready.', sort_order: 40 },
+    ];
+
+    const { error: checklistError } = await supabase
+      .from('vendor_checklist_items')
+      .insert(defaultChecklist.map((item) => ({
+        ...item,
+        vendor_token_id: data.id,
+        vendor_id: vendor_id || null,
+      })));
+
+    if (checklistError) {
+      console.warn('Vendor checklist seed failed:', checklistError.message);
+    }
+
     // Get base URL from request
     const url = new URL(request.url);
     const baseUrl = `${url.protocol}//${url.host}`;

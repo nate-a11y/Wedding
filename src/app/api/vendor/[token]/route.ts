@@ -1,58 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { siteConfig } from '@/config/site';
-import {
-  getVendorTokenPreview,
-  getVendorTokenStorageValue,
-  hashVendorPortalToken,
-  isLikelyVendorPortalToken,
-} from '@/lib/vendor-token';
+import { validateVendorPortalToken, type VendorPortalTokenRow } from '@/lib/vendor-portal-access';
 
-type VendorPortalTokenRow = {
+type VendorChecklistItem = {
   id: string;
-  token?: string | null;
-  token_hash?: string | null;
-  token_preview?: string | null;
-  vendor_id: string | null;
-  vendor_name: string;
-  role: string;
-  expires_at: string;
-  last_accessed?: string | null;
-  last_used_at?: string | null;
-  access_count?: number | null;
-  revoked_at?: string | null;
+  label: string;
+  details: string | null;
+  completed_at: string | null;
+  sort_order: number;
 };
-
-async function findVendorToken(rawToken: string): Promise<{ tokenData: VendorPortalTokenRow | null; legacyPlaintext: boolean }> {
-  if (!supabase) return { tokenData: null, legacyPlaintext: false };
-
-  const tokenHash = hashVendorPortalToken(rawToken);
-
-  const { data: hashedToken, error: hashedError } = await supabase
-    .from('vendor_portal_tokens')
-    .select('*')
-    .eq('token_hash', tokenHash)
-    .maybeSingle();
-
-  if (hashedError) throw hashedError;
-  if (hashedToken) {
-    return { tokenData: hashedToken as VendorPortalTokenRow, legacyPlaintext: false };
-  }
-
-  // Legacy fallback for rows created before token_hash existed. On successful
-  // use, the row is upgraded below so plaintext is removed from the token column.
-  const { data: legacyToken, error: legacyError } = await supabase
-    .from('vendor_portal_tokens')
-    .select('*')
-    .eq('token', rawToken)
-    .maybeSingle();
-
-  if (legacyError) throw legacyError;
-  return {
-    tokenData: legacyToken as VendorPortalTokenRow | null,
-    legacyPlaintext: Boolean(legacyToken),
-  };
-}
 
 // GET /api/vendor/[token] - Validate token and return vendor portal data
 export async function GET(
@@ -69,62 +26,16 @@ export async function GET(
   try {
     const { token } = await params;
 
-    if (!isLikelyVendorPortalToken(token)) {
+
+    let tokenData: VendorPortalTokenRow;
+    try {
+      tokenData = await validateVendorPortalToken(token);
+    } catch (error) {
       return NextResponse.json(
-        { error: 'Invalid or expired access link' },
+        { error: error instanceof Error ? error.message : 'Invalid or expired access link' },
         { status: 401 }
       );
     }
-
-    const { tokenData, legacyPlaintext } = await findVendorToken(token);
-
-    if (!tokenData) {
-      return NextResponse.json(
-        { error: 'Invalid or expired access link' },
-        { status: 401 }
-      );
-    }
-
-    if (tokenData.revoked_at) {
-      return NextResponse.json(
-        { error: 'Access link has been revoked' },
-        { status: 401 }
-      );
-    }
-
-    // Check if token is expired
-    if (new Date(tokenData.expires_at) < new Date()) {
-      return NextResponse.json(
-        { error: 'Access link has expired' },
-        { status: 401 }
-      );
-    }
-
-    const now = new Date().toISOString();
-    const tokenHash = hashVendorPortalToken(token);
-    const accessCount = typeof tokenData.access_count === 'number' ? tokenData.access_count + 1 : 1;
-
-    // Update last-used metadata. Legacy plaintext rows are opportunistically
-    // upgraded so the database no longer stores the raw portal token.
-    const updatePayload: Record<string, string | number | null> = {
-      last_accessed: now,
-      last_used_at: now,
-      access_count: accessCount,
-    };
-
-    if (legacyPlaintext) {
-      updatePayload.token_hash = tokenHash;
-      updatePayload.token = getVendorTokenStorageValue(tokenHash);
-      updatePayload.token_preview = getVendorTokenPreview(token);
-      updatePayload.legacy_plaintext_migrated_at = now;
-    }
-
-    const { error: updateError } = await supabase
-      .from('vendor_portal_tokens')
-      .update(updatePayload)
-      .eq('id', tokenData.id);
-
-    if (updateError) throw updateError;
 
     // Fetch timeline events
     const { data: timeline, error: timelineError } = await supabase
@@ -163,6 +74,15 @@ export async function GET(
       );
     }
 
+    const { data: checklistData, error: checklistError } = await supabase
+      .from('vendor_checklist_items')
+      .select('id, label, details, completed_at, sort_order')
+      .eq('vendor_token_id', tokenData.id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (checklistError) throw checklistError;
+
     // Get venue info from site config
     const venue = siteConfig.wedding.venue.ceremony;
     const venueInfo = {
@@ -192,7 +112,10 @@ export async function GET(
       vendor: {
         name: tokenData.vendor_name,
         role: tokenData.role,
+        checkedInAt: tokenData.checked_in_at || null,
+        checkInNote: tokenData.check_in_note || null,
       },
+      checklist: (checklistData || []) as VendorChecklistItem[],
       timeline: filteredTimeline,
       venue: venueInfo,
       wedding: weddingInfo,

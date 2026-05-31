@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
-import webpush from 'web-push';
 import { requireAdminAuth } from '@/lib/admin-auth';
-
-// Configure web-push with VAPID keys
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(
-    'mailto:nate@nateandblake.wedding',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-}
+import { getAuditErrorDetails, logAdminAuditEvent } from '@/lib/admin-audit';
+import { sendLivePushNotification } from '@/lib/live-push';
 
 // GET /api/admin/live - Get all updates with subscriber count
 export async function GET() {
@@ -25,21 +14,30 @@ export async function GET() {
   }
 
   try {
-    const [updatesResult, subscribersResult] = await Promise.all([
+    const [updatesResult, deletedUpdatesResult, subscribersResult] = await Promise.all([
       supabase
         .from('live_updates')
         .select('*')
+        .is('deleted_at', null)
         .order('pinned', { ascending: false })
         .order('created_at', { ascending: false }),
+      supabase
+        .from('live_updates')
+        .select('*')
+        .not('deleted_at', 'is', null)
+        .order('deleted_at', { ascending: false })
+        .limit(10),
       supabase
         .from('push_subscriptions')
         .select('id', { count: 'exact' }),
     ]);
 
     if (updatesResult.error) throw updatesResult.error;
+    if (deletedUpdatesResult.error) throw deletedUpdatesResult.error;
 
     return NextResponse.json({
       updates: updatesResult.data || [],
+      deletedUpdates: deletedUpdatesResult.data || [],
       subscriberCount: subscribersResult.count || 0,
     });
   } catch (error) {
@@ -94,86 +92,73 @@ export async function POST(request: NextRequest) {
         posted_by,
         pinned,
         scheduled_for: scheduledFor?.toISOString() || null,
+        push_requested: Boolean(send_push),
+        push_status: send_push ? (scheduledFor && scheduledFor.getTime() > Date.now() ? 'scheduled' : 'pending') : null,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Send push notifications if enabled
+    // Send push notifications if enabled. Future-scheduled messages are picked up by the cron runner.
     const isFutureScheduled = scheduledFor ? scheduledFor.getTime() > Date.now() : false;
-    if (send_push && !isFutureScheduled && vapidPublicKey && vapidPrivateKey) {
-      await sendPushNotifications(message.trim(), type);
+    let pushResult = null;
+    let pushError: string | null = null;
+    let pushedAt: string | null = null;
+    if (send_push && !isFutureScheduled) {
+      pushResult = await sendLivePushNotification({ message: message.trim(), type });
+      pushError = pushResult.error || (!pushResult.configured ? 'Push is not configured' : null);
+      pushedAt = pushError ? null : new Date().toISOString();
+      await supabase
+        .from('live_updates')
+        .update({
+          push_sent_at: pushedAt,
+          push_status: pushError ? 'failed' : 'sent',
+          push_error: pushError,
+        })
+        .eq('id', update.id);
     }
+
+    await logAdminAuditEvent({
+      request,
+      action: scheduledFor ? 'schedule' : 'create',
+      entity: 'live_update',
+      entityId: update.id,
+      status: 'success',
+      details: {
+        type,
+        pinned,
+        send_push,
+        scheduled_for: scheduledFor?.toISOString(),
+        push_sent: pushResult?.sent,
+        push_failed: pushResult?.failed,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      update,
-      pushSkippedReason: send_push && isFutureScheduled ? 'scheduled_for_future' : null,
+      update: {
+        ...update,
+        push_requested: Boolean(send_push),
+        push_status: send_push ? (isFutureScheduled ? 'scheduled' : pushError ? 'failed' : 'sent') : null,
+        push_sent_at: pushedAt || update.push_sent_at,
+        push_error: pushError,
+      },
+      pushResult,
+      pushDeferredReason: send_push && isFutureScheduled ? 'scheduled_for_future' : null,
     });
   } catch (error) {
     console.error('Post live update error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'create',
+      entity: 'live_update',
+      status: 'failure',
+      details: getAuditErrorDetails(error),
+    });
     return NextResponse.json(
       { error: 'Failed to post update' },
       { status: 500 }
     );
-  }
-}
-
-// Helper to send push notifications to all subscribers
-async function sendPushNotifications(message: string, type: string) {
-  if (!supabase) return;
-
-  try {
-    const { data: subscriptions } = await supabase
-      .from('push_subscriptions')
-      .select('*');
-
-    if (!subscriptions || subscriptions.length === 0) return;
-
-    const icon = type === 'celebration' ? '🎉' : type === 'action' ? '📢' : 'ℹ️';
-    const payload = JSON.stringify({
-      title: `${icon} Wedding Update`,
-      body: message,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: 'wedding-update',
-      data: {
-        url: '/live',
-      },
-    });
-
-    const results = await Promise.allSettled(
-      subscriptions.map(async (sub) => {
-        try {
-          await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: {
-                p256dh: sub.keys_p256dh,
-                auth: sub.keys_auth,
-              },
-            },
-            payload
-          );
-        } catch (err: unknown) {
-          // If subscription is invalid, remove it
-          const error = err as { statusCode?: number };
-          if ((error.statusCode === 410 || error.statusCode === 404) && supabase) {
-            await supabase
-              .from('push_subscriptions')
-              .delete()
-              .eq('endpoint', sub.endpoint);
-          }
-          throw err;
-        }
-      })
-    );
-
-    const sent = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    console.log(`Push notifications: ${sent} sent, ${failed} failed`);
-  } catch (error) {
-    console.error('Push notification error:', error);
   }
 }
