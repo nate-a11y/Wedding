@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import {
   refreshAccessToken,
   getTodoTasks,
   fromMicrosoftTask,
 } from '@/lib/microsoft-graph';
 
-const WEBHOOK_SECRET = process.env.MICROSOFT_WEBHOOK_SECRET || 'weddingPlannerSecret';
+const WEBHOOK_SECRET = process.env.MICROSOFT_WEBHOOK_SECRET;
 
 interface MicrosoftAuth {
   id: string;
@@ -85,6 +85,11 @@ export async function POST(request: NextRequest) {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
+    }
+
+    if (!WEBHOOK_SECRET) {
+      console.error('MICROSOFT_WEBHOOK_SECRET is not configured');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
     }
 
     // Parse notification payload

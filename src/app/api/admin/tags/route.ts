@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // GET /api/admin/tags - List all tags with guest counts
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -42,6 +46,9 @@ export async function GET() {
 
 // POST /api/admin/tags - Create new tag (for managing custom tags)
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -96,6 +103,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/admin/tags - Delete a tag (removes from all guests)
 export async function DELETE(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

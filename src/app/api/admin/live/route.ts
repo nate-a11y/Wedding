@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import webpush from 'web-push';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // Configure web-push with VAPID keys
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -16,6 +17,9 @@ if (vapidPublicKey && vapidPrivateKey) {
 
 // GET /api/admin/live - Get all updates with subscriber count
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json({ updates: [], subscriberCount: 0 });
   }
@@ -49,6 +53,9 @@ export async function GET() {
 
 // POST /api/admin/live - Post new update
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

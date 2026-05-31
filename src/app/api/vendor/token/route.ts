@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { randomBytes } from 'crypto';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // POST /api/vendor/token - Generate a magic link token for a vendor
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -61,6 +65,9 @@ export async function POST(request: NextRequest) {
 
 // GET /api/vendor/token - List all active vendor tokens
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json({ tokens: [] });
   }
@@ -86,6 +93,9 @@ export async function GET() {
 
 // DELETE /api/vendor/token - Revoke a vendor token
 export async function DELETE(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

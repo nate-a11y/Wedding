@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 interface AdditionalGuest {
   name: string;
@@ -8,6 +9,9 @@ interface AdditionalGuest {
 }
 
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

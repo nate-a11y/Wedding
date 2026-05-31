@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 import {
   refreshAccessToken,
   getTodoTasks,
@@ -66,6 +67,9 @@ async function getValidAccessToken(): Promise<{ token: string; listId: string } 
  * Sync tasks between local database and Microsoft To Do
  */
 export async function POST() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -220,6 +224,9 @@ export async function POST() {
  * Check Microsoft connection status and renew webhook if needed
  */
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json({ connected: false, reason: 'db_not_configured' });
   }
@@ -288,6 +295,9 @@ export async function GET() {
  * Disconnect Microsoft integration
  */
 export async function DELETE() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -327,6 +337,9 @@ export async function DELETE() {
  * Setup or renew webhook subscription
  */
 export async function PUT() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

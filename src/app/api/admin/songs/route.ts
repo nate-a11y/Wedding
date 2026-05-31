@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // GET /api/admin/songs - All songs including pending
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json({ songs: [], stats: {} });
   }
@@ -40,6 +44,9 @@ export async function GET() {
 
 // POST /api/admin/songs - Migrate songs from RSVP song_request field
 export async function POST() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 // Separate passwords for guest site and admin (must be set via environment variables)
-const GUEST_PASSWORD = process.env.GUEST_PASSWORD || process.env.SITE_PASSWORD;
+const SITE_PASSWORD = process.env.SITE_PASSWORD || process.env.GUEST_PASSWORD; // GUEST_PASSWORD kept as legacy fallback
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export async function POST(request: Request) {
@@ -10,11 +10,11 @@ export async function POST(request: Request) {
     const { password, type } = await request.json();
     const isAdmin = type === 'admin';
 
-    const correctPassword = isAdmin ? ADMIN_PASSWORD : GUEST_PASSWORD;
+    const correctPassword = isAdmin ? ADMIN_PASSWORD : SITE_PASSWORD;
 
     // Ensure password is configured
     if (!correctPassword) {
-      console.error(`${isAdmin ? 'ADMIN' : 'GUEST'}_PASSWORD environment variable not set`);
+      console.error(`${isAdmin ? 'ADMIN_PASSWORD' : 'SITE_PASSWORD'} environment variable not set`);
       return NextResponse.json(
         { success: false, error: 'Server configuration error' },
         { status: 500 }

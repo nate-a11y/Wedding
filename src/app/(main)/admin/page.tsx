@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RichTextEditor } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
 
 interface Stats {
   rsvps: {
@@ -431,12 +431,13 @@ function QRCodeGrid() {
             </div>
 
             <div className="bg-charcoal p-3 rounded-lg flex justify-center mb-3">
-              <img
+              <Image
                 src={qrUrl}
                 alt={`QR Code for ${item.name}`}
                 width={150}
                 height={150}
                 className="rounded"
+                unoptimized
               />
             </div>
 
@@ -756,61 +757,7 @@ export default function AdminPage() {
     }
   };
 
-  // Refetch helper functions for real-time updates
-  const refetchBudget = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/budget');
-      const data = await response.json();
-      if (!data.error) {
-        setBudgetSettings(data.settings);
-        setBudgetCategories(data.categories || []);
-        setBudgetTotals(data.totals);
-      }
-    } catch (err) {
-      console.error('Failed to refetch budget:', err);
-    }
-  }, []);
-
-  const refetchExpenses = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/expenses');
-      const data = await response.json();
-      if (!data.error) {
-        setExpenses(data.expenses || []);
-        setExpenseTotals(data.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
-        setStandaloneExpenseTotals(data.standaloneTotals || { totalAmount: 0, totalPaid: 0, totalBalance: 0 });
-      }
-    } catch (err) {
-      console.error('Failed to refetch expenses:', err);
-    }
-  }, []);
-
-  const refetchVendors = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/vendors');
-      const data = await response.json();
-      if (!data.error) {
-        setVendors(data.vendors || []);
-        setVendorTotals(data.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
-      }
-    } catch (err) {
-      console.error('Failed to refetch vendors:', err);
-    }
-  }, []);
-
-  const refetchGifts = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/gifts');
-      const data = await response.json();
-      if (!data.error) {
-        setGifts(data.gifts || []);
-        setGiftTotals(data.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
-      }
-    } catch (err) {
-      console.error('Failed to refetch gifts:', err);
-    }
-  }, []);
-
+  // Refetch tasks after Microsoft sync
   const refetchTasks = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/tasks');
@@ -823,103 +770,6 @@ export default function AdminPage() {
       console.error('Failed to refetch tasks:', err);
     }
   }, []);
-
-  const refetchTimeline = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/timeline');
-      const data = await response.json();
-      if (!data.error) {
-        setTimelineEvents(data.events || []);
-      }
-    } catch (err) {
-      console.error('Failed to refetch timeline:', err);
-    }
-  }, []);
-
-  const refetchRsvps = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/rsvps');
-      const data = await response.json();
-      if (!data.error) {
-        setRsvps(data.rsvps || []);
-      }
-    } catch (err) {
-      console.error('Failed to refetch rsvps:', err);
-    }
-  }, []);
-
-  const refetchStats = useCallback(async () => {
-    try {
-      const response = await fetch('/api/admin/stats');
-      const data = await response.json();
-      if (!data.error) {
-        setStats(data);
-      }
-    } catch (err) {
-      console.error('Failed to refetch stats:', err);
-    }
-  }, []);
-
-  // Real-time subscriptions for planning tables
-  useEffect(() => {
-    if (!supabase) return;
-
-    // Subscribe to all planning-related tables
-    const channel = supabase
-      .channel('admin-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
-        refetchExpenses();
-        refetchBudget(); // Budget totals depend on expenses
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendors' }, () => {
-        refetchVendors();
-        refetchBudget(); // Budget totals depend on vendors
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_settings' }, () => {
-        refetchBudget();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_categories' }, () => {
-        refetchBudget();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gifts' }, () => {
-        refetchGifts();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        refetchTasks();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_events' }, () => {
-        refetchTimeline();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rsvps' }, () => {
-        refetchRsvps();
-        refetchStats();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guestbook' }, async () => {
-        try {
-          const response = await fetch('/api/admin/guestbook');
-          const data = await response.json();
-          if (!data.error) setGuestbook(data.entries || []);
-        } catch (err) {
-          console.error('Failed to refetch guestbook:', err);
-        }
-        refetchStats();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, async () => {
-        try {
-          const response = await fetch('/api/admin/photos');
-          const data = await response.json();
-          if (!data.error) setPhotos(data.photos || []);
-        } catch (err) {
-          console.error('Failed to refetch photos:', err);
-        }
-        refetchStats();
-      })
-      .subscribe();
-
-    return () => {
-      supabase?.removeChannel(channel);
-    };
-  }, [refetchBudget, refetchExpenses, refetchVendors, refetchGifts, refetchTasks, refetchTimeline, refetchRsvps, refetchStats]);
 
   // Get all unique email recipients from addresses and RSVPs with full data
   const availableRecipients = useMemo(() => {
@@ -2792,11 +2642,14 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {photos.map((photo) => (
                     <div key={photo.id} className="relative group">
-                      <div className={`aspect-square rounded-lg overflow-hidden ${!photo.is_visible ? 'opacity-50' : ''}`}>
-                        <img
+                      <div className={`relative aspect-square rounded-lg overflow-hidden ${!photo.is_visible ? 'opacity-50' : ''}`}>
+                        <Image
                           src={photo.url}
                           alt={`Photo by ${photo.guest_name}`}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                          className="object-cover"
+                          unoptimized
                         />
                       </div>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">

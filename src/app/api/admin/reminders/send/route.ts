@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/microsoft-graph';
 import { cookies } from 'next/headers';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // Email template for RSVP reminders
 function getReminderEmailHtml(name: string, daysRemaining: number): string {
@@ -69,6 +70,9 @@ function getReminderEmailHtml(name: string, daysRemaining: number): string {
 
 // POST /api/admin/reminders/send - Manually trigger reminder send
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

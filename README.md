@@ -69,6 +69,7 @@ cp .env.example .env.local
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Site Authentication
 SITE_PASSWORD=your_site_password
@@ -128,6 +129,7 @@ src/
 Set these in your Vercel dashboard:
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Server-only Supabase service role key for API routes; never expose this client-side
 - `SITE_PASSWORD` - Password for guest access
 - `RESEND_API_KEY` - API key from Resend for email notifications
 - `RESEND_WEBHOOK_SECRET` - Webhook secret for Resend email events

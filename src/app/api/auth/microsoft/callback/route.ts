@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens, getTodoLists, createTodoList, createWebhookSubscription } from '@/lib/microsoft-graph';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 /**
  * GET /api/auth/microsoft/callback
  * Handles OAuth callback from Microsoft
  */
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nateandblake.me';
 
   try {
@@ -69,26 +73,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Set up webhook for real-time sync from Microsoft
-    try {
-      const webhookUrl = `${baseUrl}/api/webhooks/microsoft`;
-      const subscription = await createWebhookSubscription(
-        tokens.access_token,
-        weddingList.id,
-        webhookUrl
-      );
+    // Set up webhook for real-time sync from Microsoft when configured.
+    // Manual sync still works without MICROSOFT_WEBHOOK_SECRET in Vercel.
+    if (process.env.MICROSOFT_WEBHOOK_SECRET) {
+      try {
+        const webhookUrl = `${baseUrl}/api/webhooks/microsoft`;
+        const subscription = await createWebhookSubscription(
+          tokens.access_token,
+          weddingList.id,
+          webhookUrl
+        );
 
-      // Store webhook subscription info
-      await supabase
-        .from('microsoft_auth')
-        .update({
-          webhook_subscription_id: subscription.id,
-          webhook_expires_at: subscription.expirationDateTime,
-        })
-        .eq('id', '00000000-0000-0000-0000-000000000001');
-    } catch (webhookError) {
-      // Don't fail the whole flow if webhook setup fails
-      console.error('Failed to set up webhook (sync will still work manually):', webhookError);
+        // Store webhook subscription info
+        await supabase
+          .from('microsoft_auth')
+          .update({
+            webhook_subscription_id: subscription.id,
+            webhook_expires_at: subscription.expirationDateTime,
+          })
+          .eq('id', '00000000-0000-0000-0000-000000000001');
+      } catch (webhookError) {
+        // Don't fail the whole flow if webhook setup fails
+        console.error('Failed to set up webhook (sync will still work manually):', webhookError);
+      }
     }
 
     // Redirect back to tasks tab with success

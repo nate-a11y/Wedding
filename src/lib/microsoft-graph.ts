@@ -252,6 +252,11 @@ export async function createWebhookSubscription(
   listId: string,
   webhookUrl: string
 ): Promise<{ id: string; expirationDateTime: string }> {
+  const webhookSecret = process.env.MICROSOFT_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error('MICROSOFT_WEBHOOK_SECRET is required to create Microsoft webhook subscriptions');
+  }
+
   // Subscriptions expire after max 4230 minutes (~3 days) for To Do
   const expirationDateTime = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -262,7 +267,7 @@ export async function createWebhookSubscription(
       notificationUrl: webhookUrl,
       resource: `/me/todo/lists/${listId}/tasks`,
       expirationDateTime,
-      clientState: process.env.MICROSOFT_WEBHOOK_SECRET || 'weddingPlannerSecret',
+      clientState: webhookSecret,
     }),
   });
 }

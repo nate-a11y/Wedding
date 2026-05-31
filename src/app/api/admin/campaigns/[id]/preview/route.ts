@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { sendEmail } from '@/lib/microsoft-graph';
 import { cookies } from 'next/headers';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 // POST /api/admin/campaigns/[id]/preview - Send preview to admin email
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

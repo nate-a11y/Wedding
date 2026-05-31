@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAuthUrl } from '@/lib/microsoft-graph';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 /**
  * GET /api/auth/microsoft
  * Initiates Microsoft OAuth flow - redirects to Microsoft login
  */
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   try {
     // Generate a random state for CSRF protection
     const state = Math.random().toString(36).substring(2, 15);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import crypto from 'crypto';
 
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;

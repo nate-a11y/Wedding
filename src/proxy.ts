@@ -1,59 +1,84 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/api/auth', '/login', '/api/webhooks', '/address', '/api/address'];
+const PUBLIC_EXACT_ROUTES = new Set([
+  '/login',
+  '/address',
+  '/api/auth',
+]);
+
+const PUBLIC_PREFIX_ROUTES = [
+  '/api/webhooks',
+  '/api/address',
+];
+
+function isPublicRoute(pathname: string): boolean {
+  if (PUBLIC_EXACT_ROUTES.has(pathname)) return true;
+  if (PUBLIC_PREFIX_ROUTES.some(route => pathname.startsWith(route))) return true;
+
+  // Vendor magic links are token-protected by the route itself. Token creation/listing stays admin-only.
+  if (pathname.startsWith('/vendor/')) return true;
+  if (pathname.startsWith('/api/vendor/') && pathname !== '/api/vendor/token') return true;
+
+  return false;
+}
+
+function isStaticAsset(pathname: string): boolean {
+  return (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/icons') ||
+    (pathname.includes('.') && !pathname.startsWith('/api'))
+  );
+}
+
+function isAdminRoute(pathname: string, isAdminSubdomain: boolean): boolean {
+  return (
+    isAdminSubdomain ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/api/admin') ||
+    pathname === '/api/vendor/token' ||
+    pathname.startsWith('/api/auth/microsoft')
+  );
+}
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
 
-  // Determine if this is an admin subdomain request
   const isAdminSubdomain = hostname.startsWith('admin.');
 
-  // Allow static files and Next.js internals
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/icons') ||
-    (pathname.includes('.') && !pathname.startsWith('/api'))
-  ) {
+  if (isStaticAsset(pathname)) {
     return NextResponse.next();
   }
 
-  // Allow public routes (login, auth API)
-  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+  if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
 
-  // Check if this is an admin route (subdomain or /admin path)
-  const isAdminRoute = isAdminSubdomain || pathname.startsWith('/admin');
-
-  // Use different cookies for guest vs admin
-  const cookieName = isAdminRoute ? 'wedding-admin-auth' : 'wedding-guest-auth';
+  const adminRoute = isAdminRoute(pathname, isAdminSubdomain);
+  const cookieName = adminRoute ? 'wedding-admin-auth' : 'wedding-guest-auth';
   const isAuthenticated = request.cookies.get(cookieName)?.value === 'authenticated';
 
   if (!isAuthenticated) {
-    // Redirect to login on the main domain
     const loginUrl = new URL('/login', 'https://nateandblake.me');
-    // Preserve where they were trying to go
-    if (isAdminRoute) {
+
+    if (adminRoute) {
       loginUrl.searchParams.set('redirect', '/admin');
     } else {
       loginUrl.searchParams.set('redirect', pathname);
     }
+
     return NextResponse.redirect(loginUrl);
   }
 
-  // Handle admin subdomain routing (after auth check passes)
   if (isAdminSubdomain) {
     if (pathname === '/' || pathname === '') {
       url.pathname = '/admin';
       return NextResponse.rewrite(url);
     }
 
-    // Rewrite non-admin paths to /admin prefix
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api')) {
       url.pathname = `/admin${pathname}`;
       return NextResponse.rewrite(url);
@@ -65,13 +90,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

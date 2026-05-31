@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -451,10 +452,11 @@ export default function PhotosPage() {
                         upload.source === 'camera' ? 'retro-photo' : ''
                       }`}
                     >
-                      <img
-                        src={upload.preview}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full aspect-square object-cover"
+                      <div
+                        role="img"
+                        aria-label={`Upload ${index + 1}`}
+                        className="w-full aspect-square bg-cover bg-center"
+                        style={{ backgroundImage: `url(${upload.preview})` }}
                       />
 
                       {/* Source badge */}
@@ -614,11 +616,13 @@ export default function PhotosPage() {
                   }`}
                   onClick={() => setSelectedPhoto(photo)}
                 >
-                  <img
+                  <Image
                     src={photo.url}
                     alt={`Photo by ${photo.guest_name}`}
-                    className="w-full h-full object-cover rounded-lg"
-                    loading="lazy"
+                    fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                    className="object-cover rounded-lg"
+                    unoptimized
                   />
                   {/* Disposable camera style timestamp - only for camera photos */}
                   {photo.source === 'camera' && (
@@ -666,10 +670,13 @@ export default function PhotosPage() {
                   </svg>
                 </button>
                 <div className={`rounded-lg overflow-hidden ${selectedPhoto.source === 'camera' ? 'retro-photo' : ''}`}>
-                  <img
+                  <Image
                     src={selectedPhoto.url}
                     alt={`Photo by ${selectedPhoto.guest_name}`}
-                    className="w-full h-full object-contain"
+                    width={1200}
+                    height={900}
+                    className="max-h-[80vh] w-full object-contain"
+                    unoptimized
                   />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-lg z-20">
@@ -721,10 +728,13 @@ export default function PhotosPage() {
                     <div className={`rounded-lg overflow-hidden ${
                       photos[slideshowIndex]?.source === 'camera' ? 'retro-photo ken-burns' : 'ken-burns'
                     }`}>
-                      <img
+                      <Image
                         src={photos[slideshowIndex].url}
                         alt={`Photo by ${photos[slideshowIndex].guest_name}`}
-                        className="max-w-full max-h-[80vh] object-contain"
+                        width={1200}
+                        height={900}
+                        className="max-h-[80vh] w-auto object-contain"
+                        unoptimized
                       />
                     </div>
                     {/* Photo info overlay */}

@@ -1,15 +1,10 @@
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import {
   refreshAccessToken,
   sendEmail as sendMicrosoftEmail,
 } from '@/lib/microsoft-graph';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-// Debug: Log if API key is present (not the actual key)
-if (typeof window === 'undefined') {
-  console.log('Resend API configured:', !!RESEND_API_KEY, RESEND_API_KEY ? `Key starts with: ${RESEND_API_KEY.substring(0, 6)}...` : 'No key');
-}
 
 /**
  * Get valid Microsoft access token for sending emails

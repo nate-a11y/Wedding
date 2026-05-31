@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { siteConfig } from '@/config/site';
 
 // GET /api/vendor/[token] - Validate token and return vendor portal data

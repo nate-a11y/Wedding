@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 import {
   refreshAccessToken,
   getSentEmails,
@@ -59,6 +60,9 @@ async function getMicrosoftToken(): Promise<string | null> {
  * Sync sent emails from Microsoft to the local tracker
  */
 export async function GET() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -173,6 +177,9 @@ function determineEmailType(subject: string): string {
  * Manually trigger a full sync
  */
 export async function POST() {
+  const authError = await requireAdminAuth();
+  if (authError) return authError;
+
   // Same as GET but could do more intensive sync
   return GET();
 }

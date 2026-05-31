@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -61,6 +61,18 @@ export default function GuestBookPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, [isRecording]);
+
   // Fetch existing entries
   useEffect(() => {
     async function fetchEntries() {
@@ -90,7 +102,7 @@ export default function GuestBookPage() {
         URL.revokeObjectURL(mediaPreviewUrl);
       }
     };
-  }, [mediaPreviewUrl]);
+  }, [mediaPreviewUrl, stopRecording]);
 
   const startRecording = async () => {
     try {
@@ -161,18 +173,6 @@ export default function GuestBookPage() {
     } catch (err) {
       console.error('Failed to start recording:', err);
       setError('Could not access camera/microphone. Please check your permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
     }
   };
 
