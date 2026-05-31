@@ -269,9 +269,40 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs' | 'qrcodes';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs' | 'operations' | 'qrcodes';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
 type CommunicationsSubTab = 'emails' | 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
+
+interface VendorPortalToken {
+  id: string;
+  vendor_id: string | null;
+  vendor_name: string;
+  role: string;
+  expires_at: string;
+  token_preview?: string | null;
+  last_accessed?: string | null;
+  last_used_at?: string | null;
+  access_count?: number | null;
+  revoked_at?: string | null;
+}
+
+interface AdminAuditEvent {
+  id: string;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  status: 'success' | 'failure';
+  details: Record<string, unknown> | null;
+  request_metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
+interface OperationsData {
+  status: 'ok' | 'degraded';
+  timestamp: string;
+  checks: Record<string, boolean>;
+  auditEvents: AdminAuditEvent[];
+}
 
 // Live Feed interfaces
 interface LiveUpdate {
@@ -388,7 +419,7 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'qrcodes'];
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'operations', 'qrcodes'];
 const VALID_PLANNING_SUBTABS = ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'];
 const VALID_COMMUNICATIONS_SUBTABS = ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'];
 
@@ -436,10 +467,12 @@ function AdminPageContent() {
   const [expenseTotals, setExpenseTotals] = useState<ExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
   const [standaloneExpenseTotals, setStandaloneExpenseTotals] = useState<StandaloneExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0 });
   const [vendorTotals, setVendorTotals] = useState<VendorTotals>({ totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
-  const [vendorPortalTokens, setVendorPortalTokens] = useState<Array<{ id: string; token: string; vendor_id: string | null; vendor_name: string; role: string; expires_at: string; last_accessed: string | null }>>([]);
+  const [vendorPortalTokens, setVendorPortalTokens] = useState<VendorPortalToken[]>([]);
   const [generatingVendorLink, setGeneratingVendorLink] = useState(false);
   const [newVendorPortalName, setNewVendorPortalName] = useState('');
   const [newVendorPortalRole, setNewVendorPortalRole] = useState('');
+  const [latestVendorPortalLink, setLatestVendorPortalLink] = useState<string | null>(null);
+  const [operationsData, setOperationsData] = useState<OperationsData | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editingBudget, setEditingBudget] = useState(false);
   const [newBudgetAmount, setNewBudgetAmount] = useState('');
@@ -879,7 +912,7 @@ function AdminPageContent() {
     }
 
     async function loadVendorTokens() {
-      const vendorTokensData = await fetchJson<{ tokens?: Array<{ id: string; token: string; vendor_id: string | null; vendor_name: string; role: string; expires_at: string; last_accessed: string | null }> }>('/api/vendor/token');
+      const vendorTokensData = await fetchJson<{ tokens?: VendorPortalToken[] }>('/api/vendor/token');
       setIfActive(() => setVendorPortalTokens(vendorTokensData.tokens || []));
     }
 
@@ -1013,6 +1046,9 @@ function AdminPageContent() {
             setSongRequests(data.songs || []);
             setSongStats(data.stats || { total: 0, approved: 0, pending: 0, rejected: 0, played: 0 });
           });
+        } else if (activeTab === 'operations') {
+          const data = await fetchJson<OperationsData>('/api/admin/operations');
+          setIfActive(() => setOperationsData(data));
         }
       } catch (err) {
         setIfActive(() => setError(err instanceof Error ? err.message : 'Failed to load data'));
@@ -1279,6 +1315,15 @@ function AdminPageContent() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+        </svg>
+      ),
+    },
+    {
+      id: 'operations',
+      label: 'Ops',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M12 3.75l7.5 3.75v5.25c0 4.14-3.12 7.73-7.5 8.63-4.38-.9-7.5-4.49-7.5-8.63V7.5L12 3.75z" />
         </svg>
       ),
     },
@@ -3331,9 +3376,8 @@ function AdminPageContent() {
                                   });
                                   const data = await response.json();
                                   if (data.success) {
-                                    // Copy link to clipboard
+                                    setLatestVendorPortalLink(data.link);
                                     await navigator.clipboard.writeText(data.link);
-                                    alert(`Link copied to clipboard!\n\n${data.link}\n\nExpires: ${new Date(data.expires_at).toLocaleDateString()}`);
                                     // Refresh tokens list
                                     const tokensRes = await fetch('/api/vendor/token');
                                     const tokensData = await tokensRes.json();
@@ -3350,42 +3394,71 @@ function AdminPageContent() {
                               }}
                               disabled={generatingVendorLink || !newVendorPortalName.trim() || !newVendorPortalRole.trim()}
                               className="px-4 py-2 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium disabled:opacity-50"
-                            >
-                              {generatingVendorLink ? 'Generating...' : 'Generate Link'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Active Links */}
-                        {vendorPortalTokens.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium text-cream">Active Links</h4>
-                            {vendorPortalTokens.map((token) => (
-                              <div
-                                key={token.id}
-                                className="flex items-center justify-between bg-olive-900/30 border border-olive-700 rounded-lg p-3"
                               >
+                                {generatingVendorLink ? 'Generating...' : 'Generate Link'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {latestVendorPortalLink && (
+                            <div className="mb-4 rounded-lg border border-gold-500/40 bg-gold-500/10 p-4">
+                              <div className="mb-2 flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="text-cream font-medium">{token.vendor_name}</p>
-                                  <p className="text-olive-400 text-xs">
-                                    {token.role} • Expires {new Date(token.expires_at).toLocaleDateString()}
-                                    {token.last_accessed && ` • Last accessed ${new Date(token.last_accessed).toLocaleDateString()}`}
-                                  </p>
+                                  <p className="text-sm font-semibold text-gold-300">New vendor link copied</p>
+                                  <p className="text-xs text-olive-300">This raw magic link is only shown once. Save or send it now.</p>
                                 </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => {
-                                      const link = `${window.location.origin}/vendor/${token.token}`;
-                                      navigator.clipboard.writeText(link);
-                                      alert('Link copied to clipboard!');
-                                    }}
-                                    className="px-2 py-1 text-xs bg-olive-700 text-cream hover:bg-olive-600 rounded"
-                                  >
-                                    Copy Link
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm('Revoke this access link? The vendor will no longer be able to access the portal.')) return;
+                                <button
+                                  type="button"
+                                  onClick={() => setLatestVendorPortalLink(null)}
+                                  className="rounded px-2 py-1 text-xs text-olive-300 hover:bg-black/30 hover:text-cream"
+                                >
+                                  Hide
+                                </button>
+                              </div>
+                              <div className="flex flex-col gap-2 sm:flex-row">
+                                <input
+                                  readOnly
+                                  value={latestVendorPortalLink}
+                                  className="min-w-0 flex-1 rounded-lg border border-olive-700 bg-black/40 px-3 py-2 font-mono text-xs text-cream"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await navigator.clipboard.writeText(latestVendorPortalLink);
+                                    alert('Vendor link copied to clipboard!');
+                                  }}
+                                  className="rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-black hover:bg-gold-400"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Active Links */}
+                          {vendorPortalTokens.length > 0 && (
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium text-cream">Active Links</h4>
+                              {vendorPortalTokens.map((token) => (
+                                <div
+                                  key={token.id}
+                                  className="flex flex-col gap-3 bg-olive-900/30 border border-olive-700 rounded-lg p-3 sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-cream font-medium">{token.vendor_name}</p>
+                                    <p className="text-olive-400 text-xs leading-relaxed">
+                                      {token.role} • Expires {new Date(token.expires_at).toLocaleDateString()}
+                                      {(token.last_used_at || token.last_accessed) && ` • Last used ${new Date(token.last_used_at || token.last_accessed || '').toLocaleDateString()}`}
+                                      {` • Accesses ${token.access_count || 0}`}
+                                    </p>
+                                    <p className="mt-1 text-xs text-olive-500">
+                                      Preview: {token.token_preview || 'hidden'} · Raw links are only shown once when created.
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm('Revoke this access link? The vendor will no longer be able to access the portal.')) return;
                                       try {
                                         await fetch('/api/vendor/token', {
                                           method: 'DELETE',
@@ -5419,6 +5492,117 @@ function AdminPageContent() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'operations' && (
+            <motion.div
+              key="operations"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-heading text-cream">Operations</h2>
+                  <p className="mt-1 text-sm text-olive-400">Launch readiness, integration health, and recent admin audit events.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={retryCurrentFetch}
+                  className="rounded-lg bg-olive-700 px-4 py-2 text-sm font-medium text-cream hover:bg-olive-600"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loading ? (
+                <AdminLoadingState label="Checking operations status..." />
+              ) : error ? (
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
+              ) : operationsData ? (
+                <>
+                  <div className={`rounded-2xl border p-5 ${
+                    operationsData.status === 'ok'
+                      ? 'border-green-500/50 bg-green-500/10'
+                      : 'border-gold-500/50 bg-gold-500/10'
+                  }`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-olive-300">System Status</p>
+                        <h3 className={`mt-1 font-heading text-3xl ${
+                          operationsData.status === 'ok' ? 'text-green-300' : 'text-gold-300'
+                        }`}>
+                          {operationsData.status === 'ok' ? 'Ready' : 'Needs Attention'}
+                        </h3>
+                      </div>
+                      <p className="text-sm text-olive-300">Last checked {formatDate(operationsData.timestamp)}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {Object.entries(operationsData.checks).map(([key, passed]) => (
+                      <div key={key} className="rounded-xl border border-olive-700 bg-black/40 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-cream">
+                              {key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase())}
+                            </p>
+                            <p className="mt-1 text-xs text-olive-400">{passed ? 'Configured' : 'Missing or failing'}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                            passed ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                          }`}>
+                            {passed ? 'OK' : 'Fix'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-olive-700 bg-black/40">
+                    <div className="border-b border-olive-800 p-4">
+                      <h3 className="font-heading text-xl text-cream">Recent Admin Activity</h3>
+                    </div>
+                    {operationsData.auditEvents.length === 0 ? (
+                      <p className="p-6 text-olive-400">No admin audit events yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-olive-900/50">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-medium text-olive-300">Action</th>
+                              <th className="px-4 py-3 text-left font-medium text-olive-300">Entity</th>
+                              <th className="px-4 py-3 text-left font-medium text-olive-300">Status</th>
+                              <th className="px-4 py-3 text-left font-medium text-olive-300">When</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {operationsData.auditEvents.map((event) => (
+                              <tr key={event.id} className="border-t border-olive-800">
+                                <td className="px-4 py-3 text-cream">{event.action.replace(/_/g, ' ')}</td>
+                                <td className="px-4 py-3 text-olive-300">
+                                  {event.entity}
+                                  {event.entity_id && <span className="block text-xs text-olive-500">{event.entity_id}</span>}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                    event.status === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {event.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-olive-400">{formatDate(event.created_at)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : null}
             </motion.div>
           )}
 

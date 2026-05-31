@@ -664,7 +664,7 @@ export default function LiveFeedPage() {
 
           <div className="sticky top-20 z-20 -mx-2 mb-6 rounded-2xl border border-olive-700 bg-charcoal/95 p-2 shadow-elegant backdrop-blur md:hidden">
             <div className="grid grid-cols-3 gap-2">
-              <Link href="/photos" className="rounded-xl bg-gold-500 px-3 py-3 text-center text-sm font-semibold text-black">
+              <Link href="/photos" className="rounded-xl bg-gold-500 px-3 py-3 text-center text-sm font-semibold !text-charcoal">
                 Photos
               </Link>
               <Link href="/guestbook" className="rounded-xl bg-olive-800 px-3 py-3 text-center text-sm font-semibold text-cream">

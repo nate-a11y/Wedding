@@ -95,6 +95,8 @@ export default function RSVPPage() {
   const [selectedHouseholdRsvp, setSelectedHouseholdRsvp] = useState<HouseholdRSVP | null>(null);
   const [editToken, setEditToken] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState<string | null>(null);
+  const [requestingEditLink, setRequestingEditLink] = useState(false);
+  const [editLinkRequestMessage, setEditLinkRequestMessage] = useState<string | null>(null);
 
   // Event invitation state
   const [invitedEvents, setInvitedEvents] = useState<string[]>([]);
@@ -268,6 +270,7 @@ export default function RSVPPage() {
       setExistingRsvp(null);
       setExistingAddress(null);
       setHouseholdRsvps([]);
+      setEditLinkRequestMessage(null);
       setFormState({
         status: 'error',
         message: result.message || 'Please use your private RSVP edit link to update this RSVP.',
@@ -305,6 +308,33 @@ export default function RSVPPage() {
       setFormState({ status: 'idle' });
     }
   }, []);
+
+  const requestEditLink = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    setRequestingEditLink(true);
+    setEditLinkRequestMessage(null);
+
+    try {
+      const response = await fetch('/api/rsvp/edit-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to send edit link.');
+      }
+
+      setEditLinkRequestMessage(data?.message || 'If an RSVP exists for that email, a private edit link is on the way.');
+    } catch (error) {
+      setEditLinkRequestMessage(error instanceof Error ? error.message : 'Failed to send edit link.');
+    } finally {
+      setRequestingEditLink(false);
+    }
+  };
 
   const performLookup = useCallback(async (payload: { email?: string; token?: string }) => {
     setFormState({ status: 'loading' });
@@ -838,7 +868,33 @@ export default function RSVPPage() {
                 </div>
                 <h2 className="font-heading text-2xl text-cream mb-2">Oops!</h2>
                 <p className="text-olive-300 mb-4">{formState.message}</p>
-                <Button variant="outline" onClick={() => setFormState({ status: 'idle' })}>
+                {lookupStatus === 'existing_rsvp_token_required' && (
+                  <div className="mb-4 rounded-lg border border-olive-700 bg-olive-900/20 p-4">
+                    <p className="mb-3 text-sm text-olive-300">
+                      Want us to send the private edit link to {email || 'your email'}?
+                    </p>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={requestEditLink}
+                      isLoading={requestingEditLink}
+                      disabled={!email.trim()}
+                    >
+                      Email me my private edit link
+                    </Button>
+                    {editLinkRequestMessage && (
+                      <p className="mb-0 mt-3 text-sm text-green-400">{editLinkRequestMessage}</p>
+                    )}
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFormState({ status: 'idle' });
+                    setEditLinkRequestMessage(null);
+                  }}
+                >
                   Try Again
                 </Button>
               </motion.div>

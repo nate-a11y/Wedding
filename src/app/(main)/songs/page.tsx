@@ -145,7 +145,8 @@ export default function SongsPage() {
       <div className="container-wedding py-12 relative z-10">
         <AnimatedHeader
           title="Song Requests"
-          subtitle="Vote for your favorites to help us build the perfect playlist!"
+          subtitle="Playlist Requests"
+          description="Vote for your favorites to help us build the perfect wedding playlist."
         />
 
         <div className="max-w-2xl mx-auto mt-8">

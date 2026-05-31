@@ -301,6 +301,81 @@ export async function sendRSVPConfirmation(data: RSVPEmailData): Promise<boolean
   return true;
 }
 
+
+interface RSVPEditLinkEmailData {
+  to: string;
+  name: string;
+  editUrl: string;
+  expiresAt: string;
+}
+
+export async function sendRSVPEditLink(data: RSVPEditLinkEmailData): Promise<boolean> {
+  if (!isEmailConfigured()) {
+    console.log('Email not configured, skipping RSVP edit link email');
+    return false;
+  }
+
+  const { to, name, editUrl, expiresAt } = data;
+  const subject = 'Your private RSVP edit link';
+  const expiresDate = new Date(expiresAt).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const fromAddress = 'Nate & Blake Say I Do <wedding@nateandblake.me>';
+
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #d4af37; font-size: 28px; margin: 0;">Nate & Blake</h1>
+        <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
+      </div>
+
+      <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
+        <h2 style="color: #faf9f6; margin-top: 0;">Hi ${name},</h2>
+        <p style="color: #a5b697; line-height: 1.6;">
+          Use the private link below to view or update your RSVP for Nate & Blake's wedding.
+        </p>
+        <p style="text-align: center; margin: 28px 0;">
+          <a href="${editUrl}" style="display: inline-block; background: #d4af37; color: #111111; text-decoration: none; padding: 14px 22px; border-radius: 10px; font-weight: bold;">
+            Open My RSVP
+          </a>
+        </p>
+        <p style="color: #a5b697; line-height: 1.6; font-size: 14px;">
+          This link expires ${expiresDate}. Please do not forward it — it gives access to your RSVP details.
+        </p>
+        <p style="color: #536537; line-height: 1.6; font-size: 12px; word-break: break-all;">
+          ${editUrl}
+        </p>
+      </div>
+    </div>
+  `;
+
+  const result = await sendEmail({
+    from: fromAddress,
+    to: [to],
+    subject,
+    html,
+  });
+
+  await logEmail({
+    resendId: result.id,
+    direction: 'outbound',
+    from: fromAddress,
+    to,
+    subject,
+    status: result.error ? 'failed' : 'sent',
+    emailType: 'rsvp_edit_link',
+  });
+
+  if (result.error) {
+    console.error('Failed to send RSVP edit link email:', result.error);
+    return false;
+  }
+
+  return true;
+}
+
 interface AddressEmailData {
   to: string;
   name: string;

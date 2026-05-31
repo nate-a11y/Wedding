@@ -271,7 +271,7 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
       )}
 
       <motion.p
-        className="font-accent text-3xl text-gold-500 mb-4 relative"
+        className="font-accent relative mx-auto mb-4 max-w-3xl px-4 text-2xl leading-[1.35] tracking-[0.03em] text-gold-500 sm:text-3xl"
         animate={{ opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
