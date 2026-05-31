@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendAddressConfirmation } from '@/lib/email';
+import { badRequest } from '@/lib/api-response';
+import { addressSubmissionSchema, parseJsonRequest } from '@/lib/validation';
 
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
 
@@ -42,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting based on IP
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`address:${ip}`, { windowMs: 60000, maxRequests: 5 });
+  const rateLimit = await checkRateLimit(`address:${ip}`, { windowMs: 60000, maxRequests: 5 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -52,58 +54,26 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await parseJsonRequest(request, addressSubmissionSchema);
+    if (!parsed.success) return parsed.response;
+
+    const body = parsed.data;
 
     // Verify Turnstile captcha if configured
     if (TURNSTILE_SECRET_KEY) {
       const turnstileToken = body.turnstileToken;
       if (!turnstileToken) {
-        return NextResponse.json(
-          { error: 'Captcha verification required' },
-          { status: 400 }
-        );
+        return badRequest('Captcha verification required');
       }
 
       const isValidCaptcha = await verifyTurnstile(turnstileToken, ip);
       if (!isValidCaptcha) {
-        return NextResponse.json(
-          { error: 'Captcha verification failed. Please try again.' },
-          { status: 400 }
-        );
+        return badRequest('Captcha verification failed. Please try again.');
       }
     }
 
-    // Validate required fields (state is optional for international addresses)
-    const country = body.country?.trim() || 'United States';
-    const isUSOrCanada = country === 'United States' || country === 'Canada';
-
-    // Base required fields
-    const requiredFields = ['name', 'email', 'phone', 'streetAddress', 'city', 'postalCode'];
-
-    // State is required for US and Canada
-    if (isUSOrCanada) {
-      requiredFields.push('state');
-    }
-
-    const missingFields = requiredFields.filter(field => !body[field]?.trim());
-
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    const email = body.email.trim().toLowerCase();
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid email address' },
-        { status: 400 }
-      );
-    }
+    const country = body.country;
+    const email = body.email;
 
     // Check if address already exists for this email
     const { data: existing } = await supabase
@@ -172,7 +142,7 @@ export async function POST(request: NextRequest) {
         street: body.streetAddress.trim(),
         street2: body.streetAddress2?.trim(),
         city: body.city.trim(),
-        state: body.state.trim(),
+        state: body.state || '',
         postalCode: body.postalCode.trim(),
         country: body.country?.trim() || 'United States',
       },

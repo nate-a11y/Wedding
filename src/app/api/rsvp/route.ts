@@ -2,23 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendRSVPConfirmation } from '@/lib/email';
+import { parseJsonRequest, rsvpJoinHouseholdSchema, rsvpSubmissionSchema } from '@/lib/validation';
 
 interface AdditionalGuest {
   name: string;
   mealChoice: string;
   isChild: boolean;
-}
-
-interface AddressData {
-  name: string;
-  email: string;
-  phone: string;
-  street_address: string;
-  street_address_2?: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -32,7 +21,7 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting based on IP
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`rsvp:${ip}`, { windowMs: 60000, maxRequests: 5 });
+  const rateLimit = await checkRateLimit(`rsvp:${ip}`, { windowMs: 60000, maxRequests: 5 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -42,17 +31,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await parseJsonRequest(request, rsvpSubmissionSchema);
+    if (!parsed.success) return parsed.response;
 
-    // Validate required fields
-    if (!body.name || !body.email || body.attending === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, email, and attending status' },
-        { status: 400 }
-      );
-    }
-
-    const email = body.email.trim().toLowerCase();
+    const body = parsed.data;
+    const email = body.email;
     const attending = body.attending === 'yes' || body.attending === true;
 
     // Check for existing RSVP
@@ -67,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process additional guests
-    const additionalGuests: AdditionalGuest[] = (body.additionalGuests || [])
+    const additionalGuests: AdditionalGuest[] = body.additionalGuests
       .filter((g: AdditionalGuest) => g.name && g.name.trim() !== '')
       .map((g: AdditionalGuest) => ({
         name: g.name.trim(),
@@ -134,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     // Handle address creation for new guests
     if (body.address && !body.existingAddressId) {
-      const addressData: AddressData = body.address;
+      const addressData = body.address;
 
       // Validate address fields
       if (addressData.street_address && addressData.city && addressData.state && addressData.postal_code) {
@@ -267,7 +250,7 @@ export async function PATCH(request: NextRequest) {
 
   // Rate limiting based on IP
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`rsvp:${ip}`, { windowMs: 60000, maxRequests: 5 });
+  const rateLimit = await checkRateLimit(`rsvp:${ip}`, { windowMs: 60000, maxRequests: 5 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -277,17 +260,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await parseJsonRequest(request, rsvpJoinHouseholdSchema);
+    if (!parsed.success) return parsed.response;
 
-    // Validate required fields
-    if (!body.householdRsvpId || !body.name) {
-      return NextResponse.json(
-        { error: 'Missing required fields: householdRsvpId and name' },
-        { status: 400 }
-      );
-    }
-
-    const email = body.email?.trim().toLowerCase();
+    const body = parsed.data;
+    const email = body.email;
 
     // Get the household RSVP
     const { data: householdRsvp, error: fetchError } = await supabase

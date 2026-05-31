@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { AUTH_COOKIE_NAMES, getAuthSessionSecret, verifyAuthSession } from '@/lib/auth-session';
 
 const PUBLIC_EXACT_ROUTES = new Set([
   '/login',
   '/address',
   '/api/auth',
+  '/api/health',
 ]);
 
 const PUBLIC_PREFIX_ROUTES = [
@@ -42,7 +44,7 @@ function isAdminRoute(pathname: string, isAdminSubdomain: boolean): boolean {
   );
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
@@ -58,11 +60,23 @@ export function proxy(request: NextRequest) {
   }
 
   const adminRoute = isAdminRoute(pathname, isAdminSubdomain);
-  const cookieName = adminRoute ? 'wedding-admin-auth' : 'wedding-guest-auth';
-  const isAuthenticated = request.cookies.get(cookieName)?.value === 'authenticated';
+  const sessionRole = adminRoute ? 'admin' : 'guest';
+  const cookieName = AUTH_COOKIE_NAMES[sessionRole];
+  const isAuthenticated = await verifyAuthSession(
+    request.cookies.get(cookieName)?.value,
+    sessionRole,
+    getAuthSessionSecret(sessionRole)
+  );
 
   if (!isAuthenticated) {
-    const loginUrl = new URL('/login', 'https://nateandblake.me');
+    if (pathname.startsWith('/api/admin')) {
+      return NextResponse.json(
+        { error: 'Admin authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const loginUrl = new URL('/login', request.url);
 
     if (adminRoute) {
       loginUrl.searchParams.set('redirect', '/admin');

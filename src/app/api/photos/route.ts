@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { badRequest } from '@/lib/api-response';
+import { parseFormData, photoUploadSchema } from '@/lib/validation';
 
 const BUCKET_NAME = 'wedding';
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 // GET - Fetch all visible photos
 export async function GET() {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting - 10 photos per minute
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`photos:${ip}`, { windowMs: 60000, maxRequests: 10 });
+  const rateLimit = await checkRateLimit(`photos:${ip}`, { windowMs: 60000, maxRequests: 10 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -77,35 +77,22 @@ export async function POST(request: NextRequest) {
   const db = supabase;
 
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const guestName = formData.get('guestName') as string | null;
-    const caption = formData.get('caption') as string | null;
-    const source = (formData.get('source') as string) || 'upload'; // 'camera' or 'upload'
-
-    // Validate required fields
-    if (!file || !guestName) {
-      return NextResponse.json(
-        { error: 'File and guest name are required' },
-        { status: 400 }
-      );
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return badRequest('Invalid form data');
     }
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Please upload a JPEG, PNG, or WebP image.' },
-        { status: 400 }
-      );
-    }
+    const parsed = parseFormData({
+      file: formData.get('file'),
+      guestName: formData.get('guestName'),
+      caption: formData.get('caption') ?? undefined,
+      source: formData.get('source') ?? undefined,
+    }, photoUploadSchema);
+    if (!parsed.success) return parsed.response;
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
-        { status: 400 }
-      );
-    }
+    const { file, guestName, caption, source } = parsed.data;
 
     // Generate unique file name
     const fileExt = file.name.split('.').pop() || 'jpg';

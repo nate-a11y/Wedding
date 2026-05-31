@@ -12,7 +12,8 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const rawRedirect = searchParams.get('redirect') || '/';
+  const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/';
 
   // Determine if this is admin login based on redirect
   const isAdminLogin = redirect.startsWith('/admin');
@@ -36,7 +37,7 @@ export function LoginForm() {
 
       if (data.success) {
         // For admin, redirect to admin subdomain if possible
-        if (isAdminLogin && typeof window !== 'undefined') {
+        if (isAdminLogin && typeof window !== 'undefined' && window.location.hostname.endsWith('nateandblake.me')) {
           window.location.href = 'https://admin.nateandblake.me';
         } else {
           router.push(redirect);

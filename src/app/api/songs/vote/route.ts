@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { parseJsonRequest, songVoteSchema } from '@/lib/validation';
 
 // POST /api/songs/vote - Cast vote for a song
 export async function POST(request: NextRequest) {
@@ -11,17 +12,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { song_id, voter_email } = body;
+    const parsed = await parseJsonRequest(request, songVoteSchema);
+    if (!parsed.success) return parsed.response;
 
-    if (!song_id || !voter_email) {
-      return NextResponse.json(
-        { error: 'Song ID and email are required' },
-        { status: 400 }
-      );
-    }
-
-    const email = voter_email.toLowerCase().trim();
+    const { song_id, voter_email } = parsed.data;
+    const email = voter_email;
 
     // Check if already voted
     const { data: existing } = await supabase
@@ -95,17 +90,11 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { song_id, voter_email } = body;
+    const parsed = await parseJsonRequest(request, songVoteSchema);
+    if (!parsed.success) return parsed.response;
 
-    if (!song_id || !voter_email) {
-      return NextResponse.json(
-        { error: 'Song ID and email are required' },
-        { status: 400 }
-      );
-    }
-
-    const email = voter_email.toLowerCase().trim();
+    const { song_id, voter_email } = parsed.data;
+    const email = voter_email;
 
     // Delete vote
     const { error: deleteError } = await supabase

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { parseJsonRequest, rsvpLookupSchema } from '@/lib/validation';
 
 interface AdditionalGuest {
   name: string;
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting based on IP
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`rsvp-lookup:${ip}`, { windowMs: 60000, maxRequests: 10 });
+  const rateLimit = await checkRateLimit(`rsvp-lookup:${ip}`, { windowMs: 60000, maxRequests: 10 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -106,25 +107,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await parseJsonRequest(request, rsvpLookupSchema);
+    if (!parsed.success) return parsed.response;
 
-    if (!body.email) {
-      return NextResponse.json(
-        { error: 'Email address is required' },
-        { status: 400 }
-      );
-    }
-
-    const email = body.email.trim().toLowerCase();
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid email address' },
-        { status: 400 }
-      );
-    }
+    const { email } = parsed.data;
 
     // Check for existing RSVP with this email
     const { data: existingRsvp, error: rsvpError } = await supabase

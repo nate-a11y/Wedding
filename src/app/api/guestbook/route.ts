@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendGuestbookThankYou } from '@/lib/email';
+import { parseJsonRequest, guestbookSubmissionSchema } from '@/lib/validation';
 
 // GET - Fetch all guest book entries
 export async function GET() {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   // Rate limiting
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  const rateLimit = checkRateLimit(`guestbook:${ip}`, { windowMs: 60000, maxRequests: 3 });
+  const rateLimit = await checkRateLimit(`guestbook:${ip}`, { windowMs: 60000, maxRequests: 3 });
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -57,52 +58,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const parsed = await parseJsonRequest(request, guestbookSubmissionSchema);
+    if (!parsed.success) return parsed.response;
 
-    // Validate required fields
-    if (!body.name || !body.email) {
-      return NextResponse.json(
-        { error: 'Name and email are required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate that either message or media is provided
-    if (!body.message && !body.media_url) {
-      return NextResponse.json(
-        { error: 'Please provide either a message or media' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Please enter a valid email address' },
-        { status: 400 }
-      );
-    }
-
-    // Validate message length if provided
-    if (body.message && body.message.length > 500) {
-      return NextResponse.json(
-        { error: 'Message must be 500 characters or less' },
-        { status: 400 }
-      );
-    }
-
-    // Validate media duration if provided
-    if (body.media_duration && (body.media_duration > 120 || body.media_duration < 0)) {
-      return NextResponse.json(
-        { error: 'Media duration must be between 0 and 120 seconds' },
-        { status: 400 }
-      );
-    }
+    const body = parsed.data;
 
     const entryData = {
       name: body.name.trim(),
-      email: body.email.trim().toLowerCase(),
+      email: body.email,
       message: body.message ? body.message.trim() : null,
       media_url: body.media_url || null,
       media_type: body.media_type || null,

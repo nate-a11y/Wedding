@@ -4,19 +4,21 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || (!supabaseServiceRoleKey && !supabaseAnonKey)) {
+const serverSupabaseKey = supabaseServiceRoleKey || (process.env.NODE_ENV !== 'production' ? supabaseAnonKey : undefined);
+
+if (!supabaseUrl || !serverSupabaseKey) {
   console.warn('Supabase server credentials not found. Database functionality will be disabled.');
 }
 
 /**
  * Server-only Supabase client.
  *
- * Prefer SUPABASE_SERVICE_ROLE_KEY on route handlers so database RLS can be
- * locked down to service_role while public writes go through validated APIs.
- * Falls back to anon key locally so build/dev still works without secrets.
+ * Production route handlers require SUPABASE_SERVICE_ROLE_KEY so database RLS
+ * can stay locked down to service_role while public writes go through
+ * validated APIs. Local dev can fall back to the anon key for builds/demos.
  */
-export const supabase = supabaseUrl && (supabaseServiceRoleKey || supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseServiceRoleKey || supabaseAnonKey!, {
+export const supabase = supabaseUrl && serverSupabaseKey
+  ? createClient(supabaseUrl, serverSupabaseKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,

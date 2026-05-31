@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
+import { validationErrorResponse } from '@/lib/api-response';
+import { parseJsonRequest, songListQuerySchema, songSubmissionSchema } from '@/lib/validation';
 
 // GET /api/songs - List approved songs with vote counts (public)
 export async function GET(request: NextRequest) {
@@ -9,7 +11,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
-    const voter_email = searchParams.get('voter_email');
+    const parsedQuery = songListQuerySchema.safeParse({
+      voter_email: searchParams.get('voter_email') ?? undefined,
+    });
+    if (!parsedQuery.success) {
+      return validationErrorResponse(parsedQuery.error);
+    }
+
+    const { voter_email } = parsedQuery.data;
 
     // Get all approved songs
     const { data: songs, error } = await supabase
@@ -53,15 +62,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
-    const { title, artist, submitted_by_email, submitted_by_name } = body;
+    const parsed = await parseJsonRequest(request, songSubmissionSchema);
+    if (!parsed.success) return parsed.response;
 
-    if (!title || typeof title !== 'string' || title.trim() === '') {
-      return NextResponse.json(
-        { error: 'Song title is required' },
-        { status: 400 }
-      );
-    }
+    const { title, artist, submitted_by_email, submitted_by_name } = parsed.data;
 
     // Insert song request (status: pending for moderation)
     const { data: song, error } = await supabase
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
       .insert({
         title: title.trim(),
         artist: artist?.trim() || null,
-        submitted_by_email: submitted_by_email?.toLowerCase() || null,
+        submitted_by_email: submitted_by_email || null,
         submitted_by_name: submitted_by_name?.trim() || null,
         source: 'direct',
         status: 'pending',
