@@ -6,12 +6,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
+import { compressImage, formatFileSize, needsCompression } from '@/lib/image-utils';
 
 interface Photo {
   id: string;
   guest_name: string;
   caption: string | null;
   url: string;
+  display_url?: string;
+  thumbnail_url?: string;
+  full_url?: string;
   created_at: string;
   source?: 'camera' | 'upload';
 }
@@ -26,6 +30,12 @@ interface PendingUpload {
 }
 
 const UPLOAD_LIMIT = 100;
+const MAX_CLIENT_IMAGE_BYTES = 40 * 1024 * 1024;
+const MAX_SERVER_IMAGE_BYTES = 15 * 1024 * 1024;
+
+function looksLikeImageFile(file: File): boolean {
+  return file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -151,20 +161,38 @@ export default function PhotosPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [slideshowActive, stopSlideshow, nextSlide, prevSlide]);
 
+  const addPendingFiles = (files: File[], source: 'camera' | 'upload') => {
+    const validFiles = files.filter((file) => {
+      if (!looksLikeImageFile(file)) {
+        setError('Please choose image files only.');
+        return false;
+      }
+
+      if (file.size > MAX_CLIENT_IMAGE_BYTES) {
+        setError(`One photo is too large. Please choose images smaller than ${formatFileSize(MAX_CLIENT_IMAGE_BYTES)}.`);
+        return false;
+      }
+
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    const newUploads: PendingUpload[] = validFiles.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      source,
+      caption: '',
+      status: 'pending',
+    }));
+    setPendingUploads((prev) => [...prev, ...newUploads]);
+    setError(null);
+  };
+
   // Handle camera capture (single file)
   const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const newUpload: PendingUpload = {
-        file,
-        preview: URL.createObjectURL(file),
-        source: 'camera',
-        caption: '',
-        status: 'pending',
-      };
-      setPendingUploads((prev) => [...prev, newUpload]);
-      setError(null);
-    }
+    if (file) addPendingFiles([file], 'camera');
     // Reset input
     if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
@@ -172,17 +200,7 @@ export default function PhotosPage() {
   // Handle file upload (multiple files)
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      const newUploads: PendingUpload[] = Array.from(files).map((file) => ({
-        file,
-        preview: URL.createObjectURL(file),
-        source: 'upload' as const,
-        caption: '',
-        status: 'pending' as const,
-      }));
-      setPendingUploads((prev) => [...prev, ...newUploads]);
-      setError(null);
-    }
+    if (files && files.length > 0) addPendingFiles(Array.from(files), 'upload');
     // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -234,8 +252,25 @@ export default function PhotosPage() {
       });
 
       try {
+        let fileToUpload = upload.file;
+
+        if (needsCompression(upload.file)) {
+          try {
+            const compressed = await compressImage(upload.file, { maxWidth: 2048, maxHeight: 2048, quality: 0.82 });
+            if (compressed.size < upload.file.size) {
+              fileToUpload = new File([compressed], upload.file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+            }
+          } catch (compressionError) {
+            console.warn('Client-side compression failed; uploading original for server processing:', compressionError);
+          }
+        }
+
+        if (fileToUpload.size > MAX_SERVER_IMAGE_BYTES) {
+          throw new Error(`Photo is still too large after compression (${formatFileSize(fileToUpload.size)}). Please choose a smaller image.`);
+        }
+
         const formData = new FormData();
-        formData.append('file', upload.file);
+        formData.append('file', fileToUpload);
         formData.append('guestName', guestName.trim());
         formData.append('source', upload.source);
 
@@ -617,7 +652,7 @@ export default function PhotosPage() {
                   onClick={() => setSelectedPhoto(photo)}
                 >
                   <Image
-                    src={photo.url}
+                    src={photo.thumbnail_url || photo.display_url || photo.url}
                     alt={`Photo by ${photo.guest_name}`}
                     fill
                     sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
@@ -671,7 +706,7 @@ export default function PhotosPage() {
                 </button>
                 <div className={`rounded-lg overflow-hidden ${selectedPhoto.source === 'camera' ? 'retro-photo' : ''}`}>
                   <Image
-                    src={selectedPhoto.url}
+                    src={selectedPhoto.full_url || selectedPhoto.display_url || selectedPhoto.url}
                     alt={`Photo by ${selectedPhoto.guest_name}`}
                     width={1200}
                     height={900}
@@ -729,7 +764,7 @@ export default function PhotosPage() {
                       photos[slideshowIndex]?.source === 'camera' ? 'retro-photo ken-burns' : 'ken-burns'
                     }`}>
                       <Image
-                        src={photos[slideshowIndex].url}
+                        src={photos[slideshowIndex].full_url || photos[slideshowIndex].display_url || photos[slideshowIndex].url}
                         alt={`Photo by ${photos[slideshowIndex].guest_name}`}
                         width={1200}
                         height={900}

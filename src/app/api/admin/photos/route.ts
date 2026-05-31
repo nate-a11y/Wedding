@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { getAuditErrorDetails, logAdminAuditEvent } from '@/lib/admin-audit';
 
 const BUCKET_NAME = 'wedding';
 
@@ -57,19 +58,41 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  let id: string | undefined;
+  let isVisible: boolean | undefined;
+
   try {
-    const { id, is_visible } = await request.json();
+    const body = await request.json();
+    id = body.id;
+    isVisible = body.is_visible;
 
     const { error } = await supabase
       .from('photos')
-      .update({ is_visible })
+      .update({ is_visible: isVisible })
       .eq('id', id);
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'update_visibility',
+      entity: 'photo',
+      entityId: id,
+      status: 'success',
+      details: { is_visible: isVisible },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin photo update error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'update_visibility',
+      entity: 'photo',
+      entityId: id,
+      status: 'failure',
+      details: { is_visible: isVisible, ...getAuditErrorDetails(error) },
+    });
     return NextResponse.json(
       { error: 'Failed to update photo' },
       { status: 500 }
@@ -89,11 +112,18 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
+  let id: string | undefined;
+  let filePath: string | undefined;
+
   try {
-    const { id, file_path } = await request.json();
+    const body = await request.json();
+    id = body.id;
+    filePath = body.file_path;
 
     // Delete from storage
-    await supabase.storage.from(BUCKET_NAME).remove([file_path]);
+    if (filePath) {
+      await supabase.storage.from(BUCKET_NAME).remove([filePath]);
+    }
 
     // Delete from database
     const { error } = await supabase
@@ -103,9 +133,26 @@ export async function DELETE(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'photo',
+      entityId: id,
+      status: 'success',
+      details: { file_path: filePath },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin photo delete error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'photo',
+      entityId: id,
+      status: 'failure',
+      details: { file_path: filePath, ...getAuditErrorDetails(error) },
+    });
     return NextResponse.json(
       { error: 'Failed to delete photo' },
       { status: 500 }

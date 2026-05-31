@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { parseJsonRequest, rsvpLookupSchema } from '@/lib/validation';
+import { badRequest } from '@/lib/api-response';
+import {
+  buildRsvpEditUrl,
+  CORE_RSVP_EVENTS,
+  getInvitedRsvpEvents,
+  getRsvpEditTokenContext,
+  maskEmail,
+  normalizeRsvpEditToken,
+} from '@/lib/rsvp-token';
 
 interface AdditionalGuest {
   name: string;
@@ -43,33 +51,6 @@ interface HouseholdRSVP {
   additional_guests: AdditionalGuest[];
 }
 
-// Core wedding events - all guests are invited to these
-const CORE_EVENTS = ['ceremony', 'cocktail', 'reception', 'sendoff'];
-
-// Helper to get invited events for an email
-async function getInvitedEvents(email: string): Promise<string[]> {
-  if (!supabase) return CORE_EVENTS;
-
-  // Start with core events (everyone is invited)
-  const invitedEvents = [...CORE_EVENTS];
-
-  // Check for restricted event invitations
-  const { data: eventInvites } = await supabase
-    .from('guest_events')
-    .select('event_slug')
-    .eq('email', email.toLowerCase());
-
-  if (eventInvites) {
-    for (const invite of eventInvites) {
-      if (!invitedEvents.includes(invite.event_slug)) {
-        invitedEvents.push(invite.event_slug);
-      }
-    }
-  }
-
-  return invitedEvents;
-}
-
 // Helper to get existing event responses for an RSVP
 async function getEventResponses(rsvpId: string): Promise<Record<string, boolean>> {
   if (!supabase) return {};
@@ -84,6 +65,25 @@ async function getEventResponses(rsvpId: string): Promise<Record<string, boolean
     result[resp.event_slug] = resp.attending;
   }
   return result;
+}
+
+function parseLookupPayload(payload: unknown): { email?: string; token?: string } | null {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const { email, token } = payload as { email?: unknown; token?: unknown };
+  const normalizedToken = normalizeRsvpEditToken(token);
+  if (normalizedToken) {
+    return { token: normalizedToken };
+  }
+
+  if (typeof email !== 'string') return null;
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return null;
+  }
+
+  return { email: normalizedEmail };
 }
 
 export async function POST(request: NextRequest) {
@@ -107,33 +107,85 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const parsed = await parseJsonRequest(request, rsvpLookupSchema);
-    if (!parsed.success) return parsed.response;
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return badRequest('Invalid JSON payload');
+    }
 
-    const { email } = parsed.data;
+    const parsed = parseLookupPayload(payload);
+    if (!parsed) {
+      return badRequest('Provide a valid email address or RSVP edit token.');
+    }
+
+    const tokenContext = parsed.token
+      ? await getRsvpEditTokenContext(supabase, parsed.token)
+      : null;
+
+    if (parsed.token && !tokenContext) {
+      return NextResponse.json(
+        { error: 'This RSVP edit link is invalid or expired.' },
+        { status: 404 }
+      );
+    }
+
+    const email = tokenContext?.email || parsed.email;
+    if (!email) {
+      return badRequest('Provide a valid email address or RSVP edit token.');
+    }
+
+    const hasToken = Boolean(tokenContext && parsed.token);
 
     // Check for existing RSVP with this email
-    const { data: existingRsvp, error: rsvpError } = await supabase
-      .from('rsvps')
-      .select('id, name, email, attending, meal_choice, dietary_restrictions, additional_guests, song_request, message')
-      .eq('email', email)
-      .single();
+    let existingRsvp: RSVPRecord | null = null;
+    if (tokenContext?.rsvpId) {
+      const { data, error: rsvpError } = await supabase
+        .from('rsvps')
+        .select('id, name, email, attending, meal_choice, dietary_restrictions, additional_guests, song_request, message')
+        .eq('id', tokenContext.rsvpId)
+        .single();
 
-    if (rsvpError && rsvpError.code !== 'PGRST116') {
-      console.error('RSVP lookup error:', rsvpError);
+      if (rsvpError && rsvpError.code !== 'PGRST116') {
+        console.error('RSVP token lookup error:', rsvpError);
+      }
+      existingRsvp = (data as RSVPRecord | null) || null;
+    } else {
+      const { data, error: rsvpError } = await supabase
+        .from('rsvps')
+        .select('id, name, email, attending, meal_choice, dietary_restrictions, additional_guests, song_request, message')
+        .eq('email', email)
+        .single();
+
+      if (rsvpError && rsvpError.code !== 'PGRST116') {
+        console.error('RSVP lookup error:', rsvpError);
+      }
+      existingRsvp = (data as RSVPRecord | null) || null;
     }
 
     // Get invited events for this guest
-    const invitedEvents = await getInvitedEvents(email);
+    const invitedEvents = hasToken ? await getInvitedRsvpEvents(supabase, email) : [...CORE_RSVP_EVENTS];
 
-    // If guest has existing RSVP, return it for editing
+    // If guest has existing RSVP, only tokenized links can return editable data.
     if (existingRsvp) {
+      if (!hasToken || (tokenContext?.rsvpId && tokenContext.rsvpId !== existingRsvp.id)) {
+        return NextResponse.json({
+          status: 'existing_rsvp_token_required',
+          hasExistingRsvp: true,
+          maskedEmail: maskEmail(email),
+          invitedEvents,
+          message: 'We found an RSVP for that email. Please use your private RSVP edit link to view or change it.',
+        });
+      }
+
       const eventResponses = await getEventResponses(existingRsvp.id);
       return NextResponse.json({
         status: 'existing_rsvp',
-        rsvp: existingRsvp as RSVPRecord,
+        rsvp: existingRsvp,
         invitedEvents,
         eventResponses,
+        editToken: parsed.token,
+        editUrl: parsed.token ? buildRsvpEditUrl(request.nextUrl.origin, parsed.token) : undefined,
         message: `Welcome back, ${existingRsvp.name}! You can update your RSVP below.`,
       });
     }
@@ -152,6 +204,16 @@ export async function POST(request: NextRequest) {
     // If guest has address record, check for household RSVPs
     if (addressRecord) {
       const address = addressRecord as AddressRecord;
+
+      if (!hasToken) {
+        return NextResponse.json({
+          status: 'address_found',
+          hasAddress: true,
+          maskedEmail: maskEmail(email),
+          invitedEvents,
+          message: 'We have this email on the invitation list. Please complete your RSVP below.',
+        });
+      }
 
       // Look for other addresses at the same physical location (household detection)
       // Normalize comparison by trimming and lowercasing
@@ -209,6 +271,8 @@ export async function POST(request: NextRequest) {
               },
               householdRsvps: householdRsvps as HouseholdRSVP[],
               invitedEvents,
+              editToken: parsed.token,
+              editUrl: parsed.token ? buildRsvpEditUrl(request.nextUrl.origin, parsed.token) : undefined,
               message: `Hi ${address.name}! We see someone from your household has already RSVPed.`,
             });
           }
@@ -230,6 +294,8 @@ export async function POST(request: NextRequest) {
           country: address.country,
         },
         invitedEvents,
+        editToken: parsed.token,
+        editUrl: parsed.token ? buildRsvpEditUrl(request.nextUrl.origin, parsed.token) : undefined,
         message: `Welcome, ${address.name}! We have your address on file. Just complete your RSVP below.`,
       });
     }
@@ -238,6 +304,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       status: 'new_guest',
       invitedEvents,
+      editToken: parsed.token,
+      editUrl: parsed.token ? buildRsvpEditUrl(request.nextUrl.origin, parsed.token) : undefined,
       message: 'Welcome! Please provide your information to RSVP.',
     });
   } catch (error) {

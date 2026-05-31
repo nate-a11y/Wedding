@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { getAuditErrorDetails, logAdminAuditEvent } from '@/lib/admin-audit';
 
 export async function GET() {
   const authError = await requireAdminAuth();
@@ -43,8 +44,10 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
+  let id: string | undefined;
+
   try {
-    const { id } = await request.json();
+    ({ id } = await request.json());
 
     const { error } = await supabase
       .from('guestbook')
@@ -53,9 +56,25 @@ export async function DELETE(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'guestbook_entry',
+      entityId: id,
+      status: 'success',
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Admin guestbook delete error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'guestbook_entry',
+      entityId: id,
+      status: 'failure',
+      details: getAuditErrorDetails(error),
+    });
     return NextResponse.json(
       { error: 'Failed to delete entry' },
       { status: 500 }

@@ -36,6 +36,7 @@ const WEDDING_START = new Date('2027-10-31T00:00:00-05:00');
 const WEDDING_END = new Date('2027-11-01T06:00:00-05:00');
 const VENUE_ADDRESS = 'The Callaway Jewel, 4910 County Rd 105, Fulton, MO 65251';
 const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(VENUE_ADDRESS)}`;
+const LIVE_URL = 'https://nateandblake.me/live';
 
 const hubActions: HubAction[] = [
   {
@@ -571,14 +572,18 @@ export default function LiveFeedPage() {
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
 
+      const guestEmail = window.localStorage.getItem('weddingGuestEmail') || undefined;
       const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: subscription.toJSON() }),
+        body: JSON.stringify({ subscription: subscription.toJSON(), guest_email: guestEmail }),
       });
 
       if (response.ok) {
         setIsSubscribed(true);
+      } else {
+        const data = await response.json().catch(() => null);
+        alert(data?.error || 'Failed to enable notifications. Please try again.');
       }
     } catch (error) {
       console.error('Failed to subscribe:', error);
@@ -633,14 +638,26 @@ export default function LiveFeedPage() {
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-gold-400">Quick Details</p>
                 <p className="mb-1 font-heading text-2xl text-cream">Oct. 31, 2027</p>
                 <p className="mb-3 text-sm text-olive-300">Ceremony at 4:00 PM CT</p>
-                <a
-                  href={MAPS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-gold-500 px-5 py-3 font-semibold text-black transition-colors hover:bg-gold-400"
-                >
-                  Open Venue Map
-                </a>
+                <div className="grid gap-2">
+                  <a
+                    href={MAPS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open venue map in a new tab"
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gold-500 px-5 py-3 font-bold text-charcoal shadow-elegant ring-1 ring-gold-300/60 transition-colors hover:bg-gold-400"
+                    style={{ color: '#111111' }}
+                  >
+                    <span>Open Venue Map</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(LIVE_URL)}
+                    className="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-olive-700 bg-black/30 px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-gold-500/70 hover:text-gold-300"
+                  >
+                    Copy QR link: /live
+                  </button>
+                </div>
               </div>
             </div>
           </motion.section>

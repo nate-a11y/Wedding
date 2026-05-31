@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
-import { randomBytes } from 'crypto';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import {
+  createVendorPortalToken,
+  getVendorTokenPreview,
+  getVendorTokenStorageValue,
+  hashVendorPortalToken,
+} from '@/lib/vendor-token';
 
 // POST /api/vendor/token - Generate a magic link token for a vendor
 export async function POST(request: NextRequest) {
@@ -25,21 +30,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate secure token
-    const token = randomBytes(32).toString('hex');
+    // Generate a high-entropy token. Only the hash is stored; the raw token is
+    // returned once so the admin can copy/share the magic link at creation time.
+    const token = createVendorPortalToken();
+    const tokenHash = hashVendorPortalToken(token);
     const expiresAt = new Date(Date.now() + expires_hours * 60 * 60 * 1000);
 
-    // Store token in database
     const { data, error } = await supabase
       .from('vendor_portal_tokens')
       .insert({
-        token,
+        token: getVendorTokenStorageValue(tokenHash),
+        token_hash: tokenHash,
+        token_preview: getVendorTokenPreview(token),
         vendor_id: vendor_id || null,
         vendor_name,
         role,
         expires_at: expiresAt.toISOString(),
       })
-      .select()
+      .select('id, vendor_id, vendor_name, role, expires_at, token_preview, last_accessed, last_used_at, access_count, revoked_at, created_at')
       .single();
 
     if (error) throw error;
@@ -50,9 +58,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      token: data.token,
-      link: `${baseUrl}/vendor/${data.token}`,
+      token,
+      link: `${baseUrl}/vendor/${token}`,
       expires_at: data.expires_at,
+      token_record: data,
     });
   } catch (error) {
     console.error('Generate vendor token error:', error);
@@ -63,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/vendor/token - List all active vendor tokens
+// GET /api/vendor/token - List all active vendor tokens without exposing raw tokens
 export async function GET() {
   const authError = await requireAdminAuth();
   if (authError) return authError;
@@ -75,8 +84,9 @@ export async function GET() {
   try {
     const { data: tokens, error } = await supabase
       .from('vendor_portal_tokens')
-      .select('id, token, vendor_id, vendor_name, role, expires_at, last_accessed, created_at')
+      .select('id, vendor_id, vendor_name, role, expires_at, token_preview, last_accessed, last_used_at, access_count, revoked_at, revoked_by, revoked_reason, created_at')
       .gte('expires_at', new Date().toISOString())
+      .is('revoked_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -104,7 +114,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const { token_id } = await request.json();
+    const { token_id, reason } = await request.json();
 
     if (!token_id) {
       return NextResponse.json(
@@ -115,8 +125,13 @@ export async function DELETE(request: NextRequest) {
 
     const { error } = await supabase
       .from('vendor_portal_tokens')
-      .delete()
-      .eq('id', token_id);
+      .update({
+        revoked_at: new Date().toISOString(),
+        revoked_by: 'admin',
+        revoked_reason: reason || 'manual_revoke',
+      })
+      .eq('id', token_id)
+      .is('revoked_at', null);
 
     if (error) throw error;
 

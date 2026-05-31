@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
 import type { MealChoice, FormState } from '@/types';
@@ -67,7 +67,7 @@ interface ExistingRSVP {
 }
 
 type WizardStep = 'email' | 'household-choice' | 'info' | 'rsvp' | 'success';
-type LookupStatus = 'existing_rsvp' | 'household_found' | 'address_found' | 'new_guest';
+type LookupStatus = 'existing_rsvp' | 'existing_rsvp_token_required' | 'household_found' | 'address_found' | 'new_guest';
 
 // Event display names and order
 const EVENT_INFO: Record<string, { name: string; date: string; order: number }> = {
@@ -93,6 +93,8 @@ export default function RSVPPage() {
   const [existingAddress, setExistingAddress] = useState<AddressData | null>(null);
   const [householdRsvps, setHouseholdRsvps] = useState<HouseholdRSVP[]>([]);
   const [selectedHouseholdRsvp, setSelectedHouseholdRsvp] = useState<HouseholdRSVP | null>(null);
+  const [editToken, setEditToken] = useState<string | null>(null);
+  const [editUrl, setEditUrl] = useState<string | null>(null);
 
   // Event invitation state
   const [invitedEvents, setInvitedEvents] = useState<string[]>([]);
@@ -203,95 +205,155 @@ export default function RSVPPage() {
     }
   };
 
-  // Email lookup
-  const handleEmailLookup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const applyLookupResult = useCallback((result: {
+    status: LookupStatus;
+    message?: string;
+    invitedEvents?: string[];
+    eventResponses?: Record<string, boolean>;
+    rsvp?: ExistingRSVP;
+    address?: AddressData;
+    householdRsvps?: HouseholdRSVP[];
+    editToken?: string;
+    editUrl?: string;
+  }) => {
+    setLookupStatus(result.status);
+    setWelcomeMessage(result.message || '');
+
+    if (result.editToken) {
+      setEditToken(result.editToken);
+    }
+    if (result.editUrl) {
+      setEditUrl(result.editUrl);
+    }
+
+    // Set invited events from lookup
+    if (result.invitedEvents) {
+      setInvitedEvents(result.invitedEvents);
+      // Initialize event responses - default all to true if attending
+      const initialResponses: Record<string, boolean> = {};
+      for (const evt of result.invitedEvents) {
+        initialResponses[evt] = result.eventResponses?.[evt] ?? true;
+      }
+      setEventResponses(result.eventResponses || initialResponses);
+    }
+
+    if (result.status === 'existing_rsvp' && result.rsvp) {
+      // Pre-fill form with existing RSVP data
+      const rsvp = result.rsvp;
+      setExistingRsvp(rsvp);
+      setEmail(rsvp.email);
+      setFormData({
+        name: rsvp.name,
+        phone: '',
+        attending: rsvp.attending ? 'yes' : 'no',
+        mealChoice: (rsvp.meal_choice as MealChoice) || '',
+        dietaryRestrictions: rsvp.dietary_restrictions || '',
+        songRequest: rsvp.song_request || '',
+        message: rsvp.message || '',
+      });
+      // Convert additional guests with proper IDs
+      const guests = (rsvp.additional_guests || []).map((g, i) => ({
+        id: `existing-${i}`,
+        name: g.name,
+        mealChoice: (g.mealChoice as MealChoice) || '',
+        isChild: g.isChild,
+      }));
+      setAdditionalGuests(guests);
+      // Set event responses from existing data
+      if (result.eventResponses) {
+        setEventResponses(result.eventResponses);
+      }
+      setStep('rsvp');
+    } else if (result.status === 'existing_rsvp_token_required') {
+      setExistingRsvp(null);
+      setExistingAddress(null);
+      setHouseholdRsvps([]);
+      setFormState({
+        status: 'error',
+        message: result.message || 'Please use your private RSVP edit link to update this RSVP.',
+      });
+    } else if (result.status === 'household_found') {
+      // Show household choice
+      setExistingAddress(result.address || null);
+      setHouseholdRsvps(result.householdRsvps || []);
+      setFormData(prev => ({
+        ...prev,
+        name: result.address?.name || prev.name,
+        phone: result.address?.phone || prev.phone,
+      }));
+      setStep('household-choice');
+    } else if (result.status === 'address_found') {
+      // Token lookups can pre-fill address details; email-only lookups intentionally cannot.
+      setExistingRsvp(null);
+      setExistingAddress(result.address || null);
+      setFormData(prev => ({
+        ...prev,
+        name: result.address?.name || prev.name,
+        phone: result.address?.phone || prev.phone,
+      }));
+      setStep('rsvp');
+    } else {
+      // New guest - collect info and address
+      setExistingRsvp(null);
+      setExistingAddress(null);
+      setHouseholdRsvps([]);
+      setAdditionalGuests([]);
+      setStep('info');
+    }
+
+    if (result.status !== 'existing_rsvp_token_required') {
+      setFormState({ status: 'idle' });
+    }
+  }, []);
+
+  const performLookup = useCallback(async (payload: { email?: string; token?: string }) => {
     setFormState({ status: 'loading' });
 
     try {
       const response = await fetch('/api/rsvp/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to look up email');
+        throw new Error(result.error || 'Failed to look up RSVP');
       }
 
-      setLookupStatus(result.status);
-      setWelcomeMessage(result.message || '');
-
-      // Set invited events from lookup
-      if (result.invitedEvents) {
-        setInvitedEvents(result.invitedEvents);
-        // Initialize event responses - default all to true if attending
-        const initialResponses: Record<string, boolean> = {};
-        for (const evt of result.invitedEvents) {
-          initialResponses[evt] = result.eventResponses?.[evt] ?? true;
-        }
-        setEventResponses(result.eventResponses || initialResponses);
-      }
-
-      if (result.status === 'existing_rsvp') {
-        // Pre-fill form with existing RSVP data
-        const rsvp = result.rsvp as ExistingRSVP;
-        setExistingRsvp(rsvp);
-        setFormData({
-          name: rsvp.name,
-          phone: '',
-          attending: rsvp.attending ? 'yes' : 'no',
-          mealChoice: (rsvp.meal_choice as MealChoice) || '',
-          dietaryRestrictions: rsvp.dietary_restrictions || '',
-          songRequest: rsvp.song_request || '',
-          message: rsvp.message || '',
-        });
-        // Convert additional guests with proper IDs
-        const guests = (rsvp.additional_guests || []).map((g, i) => ({
-          id: `existing-${i}`,
-          name: g.name,
-          mealChoice: (g.mealChoice as MealChoice) || '',
-          isChild: g.isChild,
-        }));
-        setAdditionalGuests(guests);
-        // Set event responses from existing data
-        if (result.eventResponses) {
-          setEventResponses(result.eventResponses);
-        }
-        setStep('rsvp');
-      } else if (result.status === 'household_found') {
-        // Show household choice
-        setExistingAddress(result.address);
-        setHouseholdRsvps(result.householdRsvps || []);
-        setFormData(prev => ({
-          ...prev,
-          name: result.address?.name || '',
-          phone: result.address?.phone || '',
-        }));
-        setStep('household-choice');
-      } else if (result.status === 'address_found') {
-        // Pre-fill name from address, skip address collection
-        setExistingAddress(result.address);
-        setFormData(prev => ({
-          ...prev,
-          name: result.address?.name || '',
-          phone: result.address?.phone || '',
-        }));
-        setStep('rsvp');
-      } else {
-        // New guest - collect info and address
-        setStep('info');
-      }
-
-      setFormState({ status: 'idle' });
+      applyLookupResult(result);
     } catch (error) {
       setFormState({
         status: 'error',
         message: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
       });
     }
+  }, [applyLookupResult]);
+
+  // Token lookup from private edit links
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || params.get('t');
+    if (!token) return;
+
+    setEditToken(token);
+    void performLookup({ token });
+  }, [performLookup]);
+
+  // Email lookup
+  const handleEmailLookup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditToken(null);
+    setEditUrl(null);
+    setExistingRsvp(null);
+    setExistingAddress(null);
+    setHouseholdRsvps([]);
+    setSelectedHouseholdRsvp(null);
+    setAdditionalGuests([]);
+    await performLookup({ email: email.trim().toLowerCase() });
   };
 
   // Handle household choice
@@ -308,6 +370,7 @@ export default function RSVPPage() {
           name: formData.name || existingAddress?.name,
           email: email.trim().toLowerCase(),
           existingAddressId: existingAddress?.id,
+          editToken,
         }),
       });
 
@@ -440,6 +503,10 @@ export default function RSVPPage() {
         additionalGuests: additionalGuests.filter(g => g.name.trim() !== ''),
       };
 
+      if (editToken) {
+        payload.editToken = editToken;
+      }
+
       // Include address for new guests
       if (lookupStatus === 'new_guest' && addressData.street_address) {
         payload.address = {
@@ -479,6 +546,9 @@ export default function RSVPPage() {
         status: 'success',
         message: result.message || 'Thank you for your RSVP!',
       });
+      if (result.editUrl) {
+        setEditUrl(result.editUrl);
+      }
       setShowCelebration(true);
       setStep('success');
     } catch (error) {
@@ -687,6 +757,20 @@ export default function RSVPPage() {
                   </div>
                   <h2 className="font-heading text-2xl text-cream mb-2">Thank You!</h2>
                   <p className="text-olive-300">{formState.message}</p>
+                  {editUrl && (
+                    <div className="mt-6 rounded-lg border border-gold-500/30 bg-gold-500/10 p-4 text-left">
+                      <p className="text-sm font-medium text-gold-400 mb-2">Save your private edit link</p>
+                      <p className="text-xs text-olive-300 mb-3">
+                        Use this link if you need to view or update your RSVP later.
+                      </p>
+                      <input
+                        readOnly
+                        value={editUrl}
+                        className="w-full rounded-md border border-olive-600 bg-charcoal px-3 py-2 text-sm text-cream"
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Push Notification Signup - Only show if attending */}

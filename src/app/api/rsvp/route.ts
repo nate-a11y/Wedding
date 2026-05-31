@@ -2,12 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendRSVPConfirmation } from '@/lib/email';
-import { parseJsonRequest, rsvpJoinHouseholdSchema, rsvpSubmissionSchema } from '@/lib/validation';
+import { rsvpJoinHouseholdSchema, rsvpSubmissionSchema } from '@/lib/validation';
+import { badRequest, validationErrorResponse } from '@/lib/api-response';
+import {
+  attachRsvpEditTokenToRsvp,
+  createRsvpEditToken,
+  getInvitedRsvpEvents,
+  getRsvpEditTokenContext,
+  normalizeRsvpEditToken,
+} from '@/lib/rsvp-token';
 
 interface AdditionalGuest {
   name: string;
   mealChoice: string;
   isChild: boolean;
+}
+
+function getRawEditToken(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || !('editToken' in payload)) {
+    return null;
+  }
+
+  return normalizeRsvpEditToken((payload as { editToken?: unknown }).editToken);
 }
 
 export async function POST(request: NextRequest) {
@@ -31,12 +47,52 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const parsed = await parseJsonRequest(request, rsvpSubmissionSchema);
-    if (!parsed.success) return parsed.response;
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return badRequest('Invalid JSON payload');
+    }
+
+    const parsed = rsvpSubmissionSchema.safeParse(payload);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
 
     const body = parsed.data;
     const email = body.email;
     const attending = body.attending === 'yes' || body.attending === true;
+    const rawEditToken = getRawEditToken(payload);
+    const tokenContext = rawEditToken
+      ? await getRsvpEditTokenContext(supabase, rawEditToken)
+      : null;
+
+    if (rawEditToken && !tokenContext) {
+      return NextResponse.json(
+        { error: 'This RSVP edit link is invalid or expired.' },
+        { status: 403 }
+      );
+    }
+
+    if (tokenContext && tokenContext.email !== email) {
+      return NextResponse.json(
+        { error: 'This RSVP edit link does not match the submitted email.' },
+        { status: 403 }
+      );
+    }
+
+    if (body.eventResponses && typeof body.eventResponses === 'object') {
+      const invitedEvents = await getInvitedRsvpEvents(supabase, email);
+      const uninvitedResponses = Object.entries(body.eventResponses)
+        .filter(([, value]) => typeof value === 'boolean')
+        .map(([eventSlug]) => eventSlug)
+        .filter((eventSlug) => !invitedEvents.includes(eventSlug));
+
+      if (uninvitedResponses.length > 0) {
+        return NextResponse.json(
+          { error: 'One or more event responses are not available for this invitation.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Check for existing RSVP
     const { data: existing, error: checkError } = await supabase
@@ -47,6 +103,13 @@ export async function POST(request: NextRequest) {
 
     if (checkError && checkError.code !== 'PGRST116') {
       console.error('Duplicate check error:', checkError);
+    }
+
+    if (existing && (!tokenContext || (tokenContext.rsvpId && tokenContext.rsvpId !== existing.id))) {
+      return NextResponse.json(
+        { error: 'Please use your private RSVP edit link to update an existing RSVP.' },
+        { status: 409 }
+      );
     }
 
     // Process additional guests
@@ -115,6 +178,10 @@ export async function POST(request: NextRequest) {
       rsvpId = data.id;
     }
 
+    if (tokenContext && !tokenContext.rsvpId) {
+      await attachRsvpEditTokenToRsvp(supabase, tokenContext.id, rsvpId);
+    }
+
     // Handle address creation for new guests
     if (body.address && !body.existingAddressId) {
       const addressData = body.address;
@@ -174,8 +241,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save event responses if provided
-    if (body.eventResponses && typeof body.eventResponses === 'object') {
+    // Save event responses if provided; clear old event attendance on declines.
+    if (!attending) {
+      await supabase
+        .from('rsvp_event_responses')
+        .delete()
+        .eq('rsvp_id', rsvpId);
+    } else if (body.eventResponses && typeof body.eventResponses === 'object') {
       // Delete existing responses for this RSVP
       await supabase
         .from('rsvp_event_responses')
@@ -216,6 +288,11 @@ export async function POST(request: NextRequest) {
 
     const guestCount = 1 + additionalGuests.length;
     const guestText = guestCount === 1 ? '' : ` (party of ${guestCount})`;
+    const editToken = await createRsvpEditToken(supabase, {
+      rsvpId,
+      email,
+      origin: request.nextUrl.origin,
+    });
 
     return NextResponse.json({
       success: true,
@@ -228,6 +305,8 @@ export async function POST(request: NextRequest) {
           : "We're sorry you can't make it, but thank you for letting us know.",
       id: rsvpId,
       isUpdate,
+      editUrl: editToken?.editUrl,
+      editTokenExpiresAt: editToken?.expiresAt,
     });
   } catch (error) {
     console.error('RSVP error:', error);
@@ -260,11 +339,36 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const parsed = await parseJsonRequest(request, rsvpJoinHouseholdSchema);
-    if (!parsed.success) return parsed.response;
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return badRequest('Invalid JSON payload');
+    }
+
+    const parsed = rsvpJoinHouseholdSchema.safeParse(payload);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
 
     const body = parsed.data;
     const email = body.email;
+    const rawEditToken = getRawEditToken(payload);
+    const tokenContext = rawEditToken
+      ? await getRsvpEditTokenContext(supabase, rawEditToken)
+      : null;
+
+    if (!tokenContext || (email && tokenContext.email !== email)) {
+      return NextResponse.json(
+        { error: 'Please use your private RSVP edit link to update a household RSVP.' },
+        { status: 403 }
+      );
+    }
+
+    if (tokenContext.rsvpId && tokenContext.rsvpId !== body.householdRsvpId) {
+      return NextResponse.json(
+        { error: 'This RSVP edit link cannot update that household RSVP.' },
+        { status: 403 }
+      );
+    }
 
     // Get the household RSVP
     const { data: householdRsvp, error: fetchError } = await supabase

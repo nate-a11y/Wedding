@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { getAuditErrorDetails, logAdminAuditEvent } from '@/lib/admin-audit';
 
 // Get all vendors
 export async function GET() {
@@ -72,6 +73,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let vendorName: string | undefined;
+
   try {
     const body = await request.json();
     const {
@@ -92,6 +95,7 @@ export async function POST(request: NextRequest) {
       notes,
       status,
     } = body;
+    vendorName = name;
 
     const { data, error } = await supabase
       .from('vendors')
@@ -121,9 +125,29 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'create',
+      entity: 'vendor',
+      entityId: data.id,
+      status: 'success',
+      details: {
+        name: data.name,
+        status: data.status,
+        category_id: data.category_id,
+      },
+    });
+
     return NextResponse.json({ vendor: data });
   } catch (error) {
     console.error('Vendor create error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'create',
+      entity: 'vendor',
+      status: 'failure',
+      details: { name: vendorName, ...getAuditErrorDetails(error) },
+    });
     return NextResponse.json(
       { error: 'Failed to create vendor' },
       { status: 500 }
@@ -143,9 +167,12 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  let id: string | undefined;
+  let updates: Record<string, unknown> = {};
+
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    ({ id, ...updates } = body);
 
     const { data, error } = await supabase
       .from('vendors')
@@ -159,9 +186,32 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'update',
+      entity: 'vendor',
+      entityId: id,
+      status: 'success',
+      details: {
+        updated_fields: Object.keys(updates),
+        status: data.status,
+      },
+    });
+
     return NextResponse.json({ vendor: data });
   } catch (error) {
     console.error('Vendor update error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'update',
+      entity: 'vendor',
+      entityId: id,
+      status: 'failure',
+      details: {
+        updated_fields: Object.keys(updates),
+        ...getAuditErrorDetails(error),
+      },
+    });
     return NextResponse.json(
       { error: 'Failed to update vendor' },
       { status: 500 }
@@ -181,8 +231,10 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
+  let id: string | undefined;
+
   try {
-    const { id } = await request.json();
+    ({ id } = await request.json());
 
     const { error } = await supabase
       .from('vendors')
@@ -191,9 +243,25 @@ export async function DELETE(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'vendor',
+      entityId: id,
+      status: 'success',
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Vendor delete error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'delete',
+      entity: 'vendor',
+      entityId: id,
+      status: 'failure',
+      details: getAuditErrorDetails(error),
+    });
     return NextResponse.json(
       { error: 'Failed to delete vendor' },
       { status: 500 }

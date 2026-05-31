@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { getAuditErrorDetails, logAdminAuditEvent } from '@/lib/admin-audit';
 
 // GET /api/admin/songs - All songs including pending
 export async function GET() {
@@ -43,7 +44,7 @@ export async function GET() {
 }
 
 // POST /api/admin/songs - Migrate songs from RSVP song_request field
-export async function POST() {
+export async function POST(request: NextRequest) {
   const authError = await requireAdminAuth();
   if (authError) return authError;
 
@@ -111,6 +112,14 @@ export async function POST() {
       if (insertError) throw insertError;
     }
 
+    await logAdminAuditEvent({
+      request,
+      action: 'migrate_from_rsvps',
+      entity: 'song_request',
+      status: 'success',
+      details: { migrated: songsToInsert.length },
+    });
+
     return NextResponse.json({
       success: true,
       migrated: songsToInsert.length,
@@ -118,6 +127,13 @@ export async function POST() {
     });
   } catch (error) {
     console.error('Migrate songs error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'migrate_from_rsvps',
+      entity: 'song_request',
+      status: 'failure',
+      details: getAuditErrorDetails(error),
+    });
     return NextResponse.json(
       { error: 'Failed to migrate songs' },
       { status: 500 }

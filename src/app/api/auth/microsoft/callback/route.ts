@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { exchangeCodeForTokens, getTodoLists, createTodoList, createWebhookSubscription } from '@/lib/microsoft-graph';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+
+const MICROSOFT_OAUTH_STATE_COOKIE = 'microsoft_oauth_state';
+
+function isValidOAuthState(returnedState: string | null, cookieState: string | undefined): boolean {
+  if (!returnedState || !cookieState) return false;
+
+  const returned = Buffer.from(returnedState);
+  const stored = Buffer.from(cookieState);
+  return returned.length === stored.length && timingSafeEqual(returned, stored);
+}
+
+function redirectWithClearedState(path: string, baseUrl: string): NextResponse {
+  const response = NextResponse.redirect(new URL(path, baseUrl));
+  response.cookies.set({
+    name: MICROSOFT_OAUTH_STATE_COOKIE,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth/microsoft',
+    maxAge: 0,
+  });
+  return response;
+}
 
 /**
  * GET /api/auth/microsoft/callback
@@ -16,26 +41,30 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
+    const state = searchParams.get('state');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const cookieState = request.cookies.get(MICROSOFT_OAUTH_STATE_COOKIE)?.value;
+
+    if (!isValidOAuthState(state, cookieState)) {
+      console.error('Microsoft OAuth state validation failed');
+      return redirectWithClearedState('/admin?tab=tasks&error=invalid_state', baseUrl);
+    }
 
     if (error) {
       console.error('Microsoft OAuth error:', error, errorDescription);
-      return NextResponse.redirect(
-        new URL(`/admin?tab=tasks&error=${encodeURIComponent(error)}`, baseUrl)
+      return redirectWithClearedState(
+        `/admin?tab=tasks&error=${encodeURIComponent(error)}`,
+        baseUrl
       );
     }
 
     if (!code) {
-      return NextResponse.redirect(
-        new URL('/admin?tab=tasks&error=no_code', baseUrl)
-      );
+      return redirectWithClearedState('/admin?tab=tasks&error=no_code', baseUrl);
     }
 
     if (!isSupabaseConfigured() || !supabase) {
-      return NextResponse.redirect(
-        new URL('/admin?tab=tasks&error=db_not_configured', baseUrl)
-      );
+      return redirectWithClearedState('/admin?tab=tasks&error=db_not_configured', baseUrl);
     }
 
     // Exchange code for tokens
@@ -68,9 +97,7 @@ export async function GET(request: NextRequest) {
 
     if (dbError) {
       console.error('Failed to store Microsoft tokens:', dbError);
-      return NextResponse.redirect(
-        new URL('/admin?tab=tasks&error=db_save_failed', baseUrl)
-      );
+      return redirectWithClearedState('/admin?tab=tasks&error=db_save_failed', baseUrl);
     }
 
     // Set up webhook for real-time sync from Microsoft when configured.
@@ -99,13 +126,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect back to tasks tab with success
-    return NextResponse.redirect(
-      new URL('/admin?tab=tasks&microsoft=connected', baseUrl)
-    );
+    return redirectWithClearedState('/admin?tab=tasks&microsoft=connected', baseUrl);
   } catch (error) {
     console.error('Microsoft callback error:', error);
-    return NextResponse.redirect(
-      new URL(`/admin?tab=tasks&error=callback_failed`, baseUrl)
-    );
+    return redirectWithClearedState(`/admin?tab=tasks&error=callback_failed`, baseUrl);
   }
 }

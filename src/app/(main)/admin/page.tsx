@@ -1,9 +1,18 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AdminErrorState, AdminLoadingState } from '@/components/admin/AdminLoadState';
+import { AdminOverviewSummary } from '@/components/admin/AdminOverviewSummary';
 import { RichTextEditor } from '@/components/ui';
+import { useAdminRetry } from '@/hooks/admin/useAdminRetry';
+
+const QRCodeGrid = dynamic(() => import('@/components/admin/AdminQRCodeGrid'), {
+  ssr: false,
+  loading: () => <AdminLoadingState label="Loading QR code tools..." />,
+});
 
 interface Stats {
   rsvps: {
@@ -379,116 +388,6 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-// QR Code Grid Component
-function QRCodeGrid() {
-  const [copiedPath, setCopiedPath] = useState<string | null>(null);
-
-  const qrLinks = [
-    { name: 'RSVP', path: '/rsvp', description: 'For guests to RSVP' },
-    { name: 'Address Collection', path: '/address', description: 'Collect mailing addresses' },
-    { name: 'Photo Booth', path: '/photos', description: 'Upload & view photos' },
-    { name: 'Song Requests', path: '/songs', description: 'Request songs for the playlist' },
-    { name: 'Guest Book', path: '/guestbook', description: 'Leave messages for the couple' },
-    { name: 'Live Feed', path: '/live', description: 'View live updates' },
-    { name: 'Livestream', path: '/livestream', description: 'Watch the ceremony live' },
-    { name: 'Events', path: '/events', description: 'View event schedule' },
-    { name: 'Travel Info', path: '/travel', description: 'Accommodations & directions' },
-    { name: 'Dress Code', path: '/dress-code', description: 'What to wear' },
-    { name: 'Registry', path: '/registry', description: 'Gift registry' },
-    { name: 'FAQ', path: '/faq', description: 'Frequently asked questions' },
-  ];
-
-  // Get the main domain URL (strip admin. subdomain if present)
-  const getMainSiteUrl = () => {
-    if (typeof window === 'undefined') return '';
-    const hostname = window.location.hostname.replace(/^admin\./, '');
-    const protocol = window.location.protocol;
-    const port = window.location.port;
-    if (port && port !== '80' && port !== '443') {
-      return `${protocol}//${hostname}:${port}`;
-    }
-    return `${protocol}//${hostname}`;
-  };
-
-  const handleCopy = (path: string, url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedPath(path);
-    setTimeout(() => setCopiedPath(null), 2000);
-  };
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {qrLinks.map((item) => {
-        const fullUrl = `${getMainSiteUrl()}${item.path}`;
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fullUrl)}&bgcolor=1a1a1a&color=d4af37`;
-        const isCopied = copiedPath === item.path;
-
-        return (
-          <div key={item.path} className="bg-black/50 border border-olive-700 rounded-lg p-4">
-            <div className="text-center mb-3">
-              <h3 className="font-heading text-lg text-cream">{item.name}</h3>
-              <p className="text-olive-500 text-xs">{item.description}</p>
-            </div>
-
-            <div className="bg-charcoal p-3 rounded-lg flex justify-center mb-3">
-              <Image
-                src={qrUrl}
-                alt={`QR Code for ${item.name}`}
-                width={150}
-                height={150}
-                className="rounded"
-                unoptimized
-              />
-            </div>
-
-            <div className="bg-olive-900/50 rounded p-2 mb-3">
-              <p className="text-olive-300 text-xs break-all font-mono text-center">{fullUrl}</p>
-            </div>
-
-            <div className="flex gap-2">
-              <a
-                href={qrUrl}
-                download={`qr-${item.path.replace('/', '')}.png`}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gold-500 rounded hover:bg-gold-400 transition-colors text-sm font-medium"
-                style={{ color: '#000000' }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </a>
-              <button
-                onClick={() => handleCopy(item.path, fullUrl)}
-                className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded transition-colors text-sm font-medium ${
-                  isCopied
-                    ? 'bg-green-600 text-white'
-                    : 'bg-olive-700 text-cream hover:bg-olive-600'
-                }`}
-              >
-                {isCopied ? (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy URL
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'qrcodes'];
 
 export default function AdminPage() {
@@ -523,6 +422,7 @@ export default function AdminPage() {
   const [newAddressEvent, setNewAddressEvent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { retryKey, retry: retryCurrentFetch } = useAdminRetry();
 
   // Bulk email state
   const [showComposeEmail, setShowComposeEmail] = useState(false);
@@ -686,8 +586,12 @@ export default function AdminPage() {
     }
   }, [communicationsSubTab, activeTab]);
 
-  // Check Microsoft To Do connection status
+  // Check Microsoft To Do connection status only when the tasks panel is visible.
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasMicrosoftCallback = params.has('microsoft') || params.has('error');
+    const shouldLoadMicrosoftStatus = activeTab === 'planning' && planningSubTab === 'tasks';
+
     async function checkMicrosoftStatus() {
       try {
         const response = await fetch('/api/admin/tasks/sync');
@@ -698,10 +602,12 @@ export default function AdminPage() {
         setMicrosoftConnected(false);
       }
     }
-    checkMicrosoftStatus();
+
+    if (shouldLoadMicrosoftStatus || hasMicrosoftCallback) {
+      checkMicrosoftStatus();
+    }
 
     // Check URL params for Microsoft callback status
-    const params = new URLSearchParams(window.location.search);
     if (params.get('microsoft') === 'connected') {
       setSyncMessage('Microsoft To Do connected successfully!');
       setMicrosoftConnected(true);
@@ -718,7 +624,7 @@ export default function AdminPage() {
       window.history.replaceState({}, '', newUrl);
       setTimeout(() => setSyncMessage(null), 5000);
     }
-  }, []);
+  }, [activeTab, planningSubTab]);
 
   // Sync tasks with Microsoft To Do
   const syncWithMicrosoft = async () => {
@@ -926,58 +832,106 @@ export default function AdminPage() {
     }
   };
 
-  // Fetch stats
+  // Fetch data based on the visible admin tab/sub-tab.
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const response = await fetch('/api/admin/stats');
-        const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        setStats(data);
-      } catch (err) {
-        console.error('Failed to fetch stats:', err);
-      }
-    }
-    fetchStats();
-  }, []);
+    let cancelled = false;
 
-  // Fetch data based on active tab
-  useEffect(() => {
+    async function fetchJson<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<T> {
+      const response = await fetch(url, init);
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || `Failed to load ${url}`);
+      }
+      return data;
+    }
+
+    const setIfActive = (update: () => void) => {
+      if (!cancelled) update();
+    };
+
+    async function loadBudget() {
+      const budgetData = await fetchJson<{ settings: BudgetSettings; categories?: BudgetCategory[]; totals: BudgetTotals }>('/api/admin/budget');
+      setIfActive(() => {
+        setBudgetSettings(budgetData.settings);
+        setBudgetCategories(budgetData.categories || []);
+        setBudgetTotals(budgetData.totals);
+      });
+    }
+
+    async function loadExpenses() {
+      const expensesData = await fetchJson<{ expenses?: Expense[]; totals?: ExpenseTotals; standaloneTotals?: StandaloneExpenseTotals }>('/api/admin/expenses');
+      setIfActive(() => {
+        setExpenses(expensesData.expenses || []);
+        setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
+        if (expensesData.standaloneTotals) {
+          setStandaloneExpenseTotals(expensesData.standaloneTotals);
+        }
+      });
+    }
+
+    async function loadVendors() {
+      const vendorsData = await fetchJson<{ vendors?: Vendor[]; totals?: VendorTotals }>('/api/admin/vendors');
+      setIfActive(() => {
+        setVendors(vendorsData.vendors || []);
+        setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
+      });
+    }
+
+    async function loadVendorTokens() {
+      const vendorTokensData = await fetchJson<{ tokens?: Array<{ id: string; token: string; vendor_id: string | null; vendor_name: string; role: string; expires_at: string; last_accessed: string | null }> }>('/api/vendor/token');
+      setIfActive(() => setVendorPortalTokens(vendorTokensData.tokens || []));
+    }
+
+    async function loadGifts() {
+      const giftsData = await fetchJson<{ gifts?: Gift[]; totals?: GiftTotals }>('/api/admin/gifts');
+      setIfActive(() => {
+        setGifts(giftsData.gifts || []);
+        setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
+      });
+    }
+
+    async function loadTasks() {
+      const tasksData = await fetchJson<{ tasks?: Task[]; stats?: TaskStats }>('/api/admin/tasks');
+      setIfActive(() => {
+        setTasks(tasksData.tasks || []);
+        setTaskStats(tasksData.stats || { total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
+      });
+    }
+
+    async function loadTimeline() {
+      const timelineData = await fetchJson<{ events?: TimelineEvent[] }>('/api/admin/timeline');
+      setIfActive(() => setTimelineEvents(timelineData.events || []));
+    }
+
     async function fetchData() {
       setLoading(true);
       setError(null);
 
       try {
-        if (activeTab === 'rsvps') {
-          const response = await fetch('/api/admin/rsvps');
-          const data = await response.json();
-          if (data.error) throw new Error(data.error);
-          setRsvps(data.rsvps);
+        if (activeTab === 'overview') {
+          const statsRequest = fetchJson<Stats>('/api/admin/stats').then((statsData) => {
+            setIfActive(() => setStats(statsData));
+          });
+          await Promise.all([statsRequest, loadExpenses(), loadVendors(), loadGifts(), loadTasks(), loadTimeline()]);
+        } else if (activeTab === 'rsvps') {
+          const data = await fetchJson<{ rsvps: RSVP[] }>('/api/admin/rsvps');
+          setIfActive(() => setRsvps(data.rsvps));
         } else if (activeTab === 'guestbook') {
-          const response = await fetch('/api/admin/guestbook');
-          const data = await response.json();
-          if (data.error) throw new Error(data.error);
-          setGuestbook(data.entries);
+          const data = await fetchJson<{ entries: GuestbookEntry[] }>('/api/admin/guestbook');
+          setIfActive(() => setGuestbook(data.entries));
         } else if (activeTab === 'photos') {
-          const response = await fetch('/api/admin/photos');
-          const data = await response.json();
-          if (data.error) throw new Error(data.error);
-          setPhotos(data.photos);
+          const data = await fetchJson<{ photos: Photo[] }>('/api/admin/photos');
+          setIfActive(() => setPhotos(data.photos));
         } else if (activeTab === 'addresses') {
-          const [addressesRes, tagsRes, eventsRes] = await Promise.all([
-            fetch('/api/admin/addresses'),
-            fetch('/api/admin/guests/tags'),
-            fetch('/api/admin/event-invitations'),
-          ]);
           const [addressesData, tagsData, eventsData] = await Promise.all([
-            addressesRes.json(),
-            tagsRes.json(),
-            eventsRes.json(),
+            fetchJson<{ addresses: GuestAddress[] }>('/api/admin/addresses'),
+            fetchJson<{ guestTags?: Record<string, string[]> }>('/api/admin/guests/tags'),
+            fetchJson<{ invitations?: EventInvitation[] }>('/api/admin/event-invitations'),
           ]);
-          if (addressesData.error) throw new Error(addressesData.error);
-          setAddresses(addressesData.addresses);
-          if (!tagsData.error) setAddressTags(tagsData.guestTags || {});
-          if (!eventsData.error) {
+          setIfActive(() => {
+            setAddresses(addressesData.addresses);
+            setAddressTags(tagsData.guestTags || {});
+
             // Convert invitations array to map of email -> event_slugs
             const eventsMap: Record<string, string[]> = {};
             for (const inv of eventsData.invitations || []) {
@@ -988,176 +942,90 @@ export default function AdminPage() {
               }
             }
             setAddressEvents(eventsMap);
-          }
+          });
         } else if (activeTab === 'planning') {
-          // Fetch all planning data in parallel
-          const [budgetRes, expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes, vendorTokensRes] = await Promise.all([
-            fetch('/api/admin/budget'),
-            fetch('/api/admin/expenses'),
-            fetch('/api/admin/vendors'),
-            fetch('/api/admin/gifts'),
-            fetch('/api/admin/tasks'),
-            fetch('/api/admin/timeline'),
-            fetch('/api/vendor/token'),
-          ]);
-          const [budgetData, expensesData, vendorsData, giftsData, tasksData, timelineData, vendorTokensData] = await Promise.all([
-            budgetRes.json(),
-            expensesRes.json(),
-            vendorsRes.json(),
-            giftsRes.json(),
-            tasksRes.json(),
-            timelineRes.json(),
-            vendorTokensRes.json(),
-          ]);
-          if (!budgetData.error) {
-            setBudgetSettings(budgetData.settings);
-            setBudgetCategories(budgetData.categories || []);
-            setBudgetTotals(budgetData.totals);
-          }
-          if (!expensesData.error) {
-            setExpenses(expensesData.expenses || []);
-            setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
-          }
-          if (!vendorsData.error) {
-            setVendors(vendorsData.vendors || []);
-            setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
-          }
-          if (!vendorTokensData.error) {
-            setVendorPortalTokens(vendorTokensData.tokens || []);
-          }
-          if (!giftsData.error) {
-            setGifts(giftsData.gifts || []);
-            setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
-          }
-          if (!tasksData.error) {
-            setTasks(tasksData.tasks || []);
-            setTaskStats(tasksData.stats || { total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
-          }
-          if (!timelineData.error) {
-            setTimelineEvents(timelineData.events || []);
+          if (planningSubTab === 'budget') {
+            await loadBudget();
+          } else if (planningSubTab === 'expenses') {
+            await Promise.all([loadBudget(), loadExpenses(), loadVendors()]);
+          } else if (planningSubTab === 'vendors') {
+            await Promise.all([loadBudget(), loadVendors(), loadVendorTokens()]);
+          } else if (planningSubTab === 'gifts') {
+            await Promise.all([loadBudget(), loadGifts()]);
+          } else if (planningSubTab === 'tasks') {
+            await Promise.all([loadBudget(), loadTasks()]);
+          } else if (planningSubTab === 'timeline') {
+            await loadTimeline();
           }
         } else if (activeTab === 'communications') {
-          // Fetch all communications data in parallel (including emails data)
-          const [tagsRes, guestTagsRes, invitationsRes, campaignsRes, reminderRes, sendsRes, emailsRes, addressesRes, rsvpsRes] = await Promise.all([
-            fetch('/api/admin/tags'),
-            fetch('/api/admin/guests/tags'),
-            fetch('/api/admin/event-invitations'),
-            fetch('/api/admin/campaigns'),
-            fetch('/api/admin/reminders/status'),
-            fetch('/api/admin/email-sends'),
-            fetch('/api/admin/emails'),
-            fetch('/api/admin/addresses'),
-            fetch('/api/admin/rsvps'),
-          ]);
-          const [tagsData, guestTagsData, invitationsData, campaignsData, reminderData, sendsData, emailsData, addressesData, rsvpsData] = await Promise.all([
-            tagsRes.json(),
-            guestTagsRes.json(),
-            invitationsRes.json(),
-            campaignsRes.json(),
-            reminderRes.json(),
-            sendsRes.json(),
-            emailsRes.json(),
-            addressesRes.json(),
-            rsvpsRes.json(),
-          ]);
-          if (!tagsData.error) {
-            setTags(tagsData.tags || []);
-          }
-          if (!guestTagsData.error) {
-            setGuestTags(guestTagsData.guestTags || {});
-          }
-          if (!invitationsData.error) {
-            setEventInvitations(invitationsData.invitations || []);
-            setEventCounts(invitationsData.eventCounts || {});
-          }
-          if (!campaignsData.error) {
-            setCampaigns(campaignsData.campaigns || []);
-          }
-          if (!reminderData.error) {
-            setReminderStatus(reminderData);
-          }
-          if (!sendsData.error) {
-            setEmailSendHistory(sendsData.sends || []);
-          }
-          if (!emailsData.error) {
-            setEmails(emailsData.emails || []);
-          }
-          if (!addressesData.error) {
-            setAddresses(addressesData.addresses || []);
-          }
-          if (!rsvpsData.error) {
-            setRsvps(rsvpsData.rsvps || []);
+          if (communicationsSubTab === 'emails') {
+            const [emailsData, addressesData, rsvpsData] = await Promise.all([
+              fetchJson<{ emails?: Email[] }>('/api/admin/emails'),
+              fetchJson<{ addresses?: GuestAddress[] }>('/api/admin/addresses'),
+              fetchJson<{ rsvps?: RSVP[] }>('/api/admin/rsvps'),
+            ]);
+            setIfActive(() => {
+              setEmails(emailsData.emails || []);
+              setAddresses(addressesData.addresses || []);
+              setRsvps(rsvpsData.rsvps || []);
+            });
+          } else if (communicationsSubTab === 'tags') {
+            const [tagsData, guestTagsData] = await Promise.all([
+              fetchJson<{ tags?: TagCount[] }>('/api/admin/tags'),
+              fetchJson<{ guestTags?: Record<string, string[]> }>('/api/admin/guests/tags'),
+            ]);
+            setIfActive(() => {
+              setTags(tagsData.tags || []);
+              setGuestTags(guestTagsData.guestTags || {});
+            });
+          } else if (communicationsSubTab === 'event-invitations') {
+            const invitationsData = await fetchJson<{ invitations?: EventInvitation[]; eventCounts?: Record<string, number> }>('/api/admin/event-invitations');
+            setIfActive(() => {
+              setEventInvitations(invitationsData.invitations || []);
+              setEventCounts(invitationsData.eventCounts || {});
+            });
+          } else if (communicationsSubTab === 'campaigns') {
+            const [campaignsData, tagsData] = await Promise.all([
+              fetchJson<{ campaigns?: Campaign[] }>('/api/admin/campaigns'),
+              fetchJson<{ tags?: TagCount[] }>('/api/admin/tags'),
+            ]);
+            setIfActive(() => {
+              setCampaigns(campaignsData.campaigns || []);
+              setTags(tagsData.tags || []);
+            });
+          } else if (communicationsSubTab === 'reminders') {
+            const reminderData = await fetchJson<ReminderStatus>('/api/admin/reminders/status');
+            setIfActive(() => setReminderStatus(reminderData));
+          } else if (communicationsSubTab === 'send-history') {
+            const sendsData = await fetchJson<{ sends?: EmailSend[] }>('/api/admin/email-sends');
+            setIfActive(() => setEmailSendHistory(sendsData.sends || []));
           }
         } else if (activeTab === 'live') {
-          // Fetch live feed data
-          const response = await fetch('/api/admin/live');
-          const data = await response.json();
-          if (!data.error) {
+          const data = await fetchJson<{ updates?: LiveUpdate[]; subscriberCount?: number }>('/api/admin/live');
+          setIfActive(() => {
             setLiveUpdates(data.updates || []);
             setLiveSubscriberCount(data.subscriberCount || 0);
-          }
+          });
         } else if (activeTab === 'songs') {
-          // Fetch song requests data
-          const response = await fetch('/api/admin/songs');
-          const data = await response.json();
-          if (!data.error) {
+          const data = await fetchJson<{ songs?: SongRequest[]; stats?: SongStats }>('/api/admin/songs');
+          setIfActive(() => {
             setSongRequests(data.songs || []);
             setSongStats(data.stats || { total: 0, approved: 0, pending: 0, rejected: 0, played: 0 });
-          }
+          });
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        setIfActive(() => setError(err instanceof Error ? err.message : 'Failed to load data'));
       } finally {
-        setLoading(false);
+        setIfActive(() => setLoading(false));
       }
     }
 
-    if (activeTab === 'overview') {
-      // Fetch planning data for dashboard summaries
-      async function fetchPlanningForDashboard() {
-        try {
-          const [expensesRes, vendorsRes, giftsRes, tasksRes, timelineRes] = await Promise.all([
-            fetch('/api/admin/expenses'),
-            fetch('/api/admin/vendors'),
-            fetch('/api/admin/gifts'),
-            fetch('/api/admin/tasks'),
-            fetch('/api/admin/timeline'),
-          ]);
-          const [expensesData, vendorsData, giftsData, tasksData, timelineData] = await Promise.all([
-            expensesRes.json(),
-            vendorsRes.json(),
-            giftsRes.json(),
-            tasksRes.json(),
-            timelineRes.json(),
-          ]);
-          if (!expensesData.error) {
-            setExpenses(expensesData.expenses || []);
-            setExpenseTotals(expensesData.totals || { totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
-          }
-          if (!vendorsData.error) {
-            setVendors(vendorsData.vendors || []);
-            setVendorTotals(vendorsData.totals || { totalContracted: 0, totalPaid: 0, totalBalance: 0, countBooked: 0, countPaid: 0, countResearching: 0 });
-          }
-          if (!giftsData.error) {
-            setGifts(giftsData.gifts || []);
-            setGiftTotals(giftsData.totals || { totalCash: 0, totalGifts: 0, thankYouPending: 0 });
-          }
-          if (!tasksData.error) {
-            setTasks(tasksData.tasks || []);
-          }
-          if (!timelineData.error) {
-            setTimelineEvents(timelineData.events || []);
-          }
-        } catch (err) {
-          console.error('Failed to fetch planning data for dashboard:', err);
-        }
-        setLoading(false);
-      }
-      fetchPlanningForDashboard();
-    } else {
-      fetchData();
-    }
-  }, [activeTab]);
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, planningSubTab, communicationsSubTab, retryKey]);
 
   const togglePhotoVisibility = async (photo: Photo) => {
     try {
@@ -1993,129 +1861,21 @@ export default function AdminPage() {
         {/* Content */}
         <AnimatePresence mode="wait">
           {activeTab === 'overview' && (
-            <motion.div
-              key="overview"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
-            >
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-gold-500 mb-2">
-                  {stats?.rsvps.totalGuests || 0}
-                </div>
-                <div className="text-olive-300">Total Guests</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  {stats?.rsvps.attending || 0} RSVPs + {stats?.rsvps.additionalGuests || stats?.rsvps.plusOnes || 0} guests
-                </div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-green-500 mb-2">
-                  {stats?.rsvps.attending || 0}
-                </div>
-                <div className="text-olive-300">Attending</div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-red-400 mb-2">
-                  {stats?.rsvps.notAttending || 0}
-                </div>
-                <div className="text-olive-300">Not Attending</div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-cream mb-2">
-                  {stats?.rsvps.total || 0}
-                </div>
-                <div className="text-olive-300">Total RSVPs</div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-purple-400 mb-2">
-                  {stats?.guestbook || 0}
-                </div>
-                <div className="text-olive-300">Guestbook Entries</div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-blue-400 mb-2">
-                  {stats?.photos || 0}
-                </div>
-                <div className="text-olive-300">Photos Uploaded</div>
-              </div>
-
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-teal-400 mb-2">
-                  {stats?.addresses?.total || 0}
-                </div>
-                <div className="text-olive-300">Addresses Collected</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  {stats?.addresses?.linked || 0} linked to RSVPs
-                </div>
-              </div>
-
-              {/* Budget Summary - Standalone Expenses + Vendors (no double-counting) */}
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-gold-500 mb-2">
-                  {formatCurrency(standaloneExpenseTotals.totalAmount + vendorTotals.totalContracted)}
-                </div>
-                <div className="text-olive-300">Total Committed</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  <span className="text-green-400">{formatCurrency(standaloneExpenseTotals.totalPaid + vendorTotals.totalPaid)} paid</span>
-                  {(standaloneExpenseTotals.totalBalance + vendorTotals.totalBalance) > 0 && (
-                    <span className="text-yellow-400"> · {formatCurrency(standaloneExpenseTotals.totalBalance + vendorTotals.totalBalance)} due</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Vendors Summary */}
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-orange-400 mb-2">
-                  {vendors.length}
-                </div>
-                <div className="text-olive-300">Vendors</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  <span className="text-green-400">{vendorTotals.countPaid + vendorTotals.countBooked} booked</span>
-                  {vendorTotals.totalBalance > 0 && (
-                    <span className="text-yellow-400"> · {formatCurrency(vendorTotals.totalBalance)} due</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Timeline Summary */}
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-indigo-400 mb-2">
-                  {timelineEvents.length}
-                </div>
-                <div className="text-olive-300">Timeline Events</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  {timelineEvents.filter(e => e.is_milestone).length} key moments
-                </div>
-              </div>
-
-              {/* Tasks Summary */}
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-cyan-400 mb-2">
-                  {tasks.filter(t => t.completed).length}/{tasks.length}
-                </div>
-                <div className="text-olive-300">Tasks Complete</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  {tasks.filter(t => !t.completed).length} pending
-                </div>
-              </div>
-
-              {/* Gifts Summary */}
-              <div className="bg-black/50 border border-olive-700 rounded-lg p-6 text-center">
-                <div className="text-4xl font-heading text-pink-400 mb-2">
-                  {formatCurrency(giftTotals.totalCash)}
-                </div>
-                <div className="text-olive-300">Gifts Received</div>
-                <div className="text-olive-400 text-sm mt-1">
-                  {giftTotals.totalGifts} gifts · {giftTotals.thankYouPending} thank yous pending
-                </div>
-              </div>
-            </motion.div>
+            <AdminOverviewSummary
+              stats={stats}
+              standaloneExpenseTotals={standaloneExpenseTotals}
+              vendorTotals={vendorTotals}
+              vendorsCount={vendors.length}
+              timelineEventCount={timelineEvents.length}
+              milestoneCount={timelineEvents.filter((event) => event.is_milestone).length}
+              completedTaskCount={tasks.filter((task) => task.completed).length}
+              totalTaskCount={tasks.length}
+              giftTotals={giftTotals}
+              isLoading={loading}
+              error={error}
+              onRetry={retryCurrentFetch}
+              formatCurrency={formatCurrency}
+            />
           )}
 
           {activeTab === 'rsvps' && (
@@ -2126,11 +1886,9 @@ export default function AdminPage() {
               exit={{ opacity: 0, y: -20 }}
             >
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
+                <AdminLoadingState />
               ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : rsvps.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No RSVPs yet</div>
               ) : (
@@ -2262,11 +2020,9 @@ export default function AdminPage() {
               exit={{ opacity: 0, y: -20 }}
             >
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
+                <AdminLoadingState />
               ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : addresses.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No addresses collected yet</div>
               ) : (
@@ -2565,11 +2321,9 @@ export default function AdminPage() {
               className="space-y-4"
             >
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
+                <AdminLoadingState />
               ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : guestbook.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No guestbook entries yet</div>
               ) : (
@@ -2631,11 +2385,9 @@ export default function AdminPage() {
               exit={{ opacity: 0, y: -20 }}
             >
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
+                <AdminLoadingState />
               ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : photos.length === 0 ? (
                 <div className="text-center py-12 text-olive-400">No photos uploaded yet</div>
               ) : (
@@ -2716,11 +2468,9 @@ export default function AdminPage() {
               </div>
 
               {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                </div>
+                <AdminLoadingState />
               ) : error ? (
-                <div className="text-center py-12 text-red-400">{error}</div>
+                <AdminErrorState message={error} onRetry={retryCurrentFetch} />
               ) : (
                 <>
                   {/* Budget Sub-tab */}
@@ -4475,8 +4225,11 @@ export default function AdminPage() {
                 ))}
               </div>
 
+              {loading && <AdminLoadingState label="Loading communications data..." />}
+              {error && <AdminErrorState message={error} onRetry={retryCurrentFetch} />}
+
               {/* Emails Sub-tab */}
-              {communicationsSubTab === 'emails' && (
+              {!loading && !error && communicationsSubTab === 'emails' && (
                 <div className="space-y-6">
                   {/* Compose Email Button */}
                   <div className="mb-6">
@@ -4641,9 +4394,7 @@ export default function AdminPage() {
 
                   {/* Email History */}
                   {loading ? (
-                    <div className="text-center py-12">
-                      <div className="inline-block w-8 h-8 border-2 border-olive-500 border-t-gold-500 rounded-full animate-spin" />
-                    </div>
+                    <AdminLoadingState label="Loading email history..." />
                   ) : (
                     <>
                       <h3 className="text-lg font-heading text-olive-300 mb-4">Email History</h3>
@@ -4702,7 +4453,7 @@ export default function AdminPage() {
               )}
 
               {/* Tags Sub-tab */}
-              {communicationsSubTab === 'tags' && (
+              {!loading && !error && communicationsSubTab === 'tags' && (
                 <div className="space-y-6">
                   <div className="bg-charcoal-light rounded-lg p-6">
                     <h3 className="text-lg font-medium text-cream mb-4">Guest Tags</h3>
@@ -4754,7 +4505,7 @@ export default function AdminPage() {
               )}
 
               {/* Event Invitations Sub-tab */}
-              {communicationsSubTab === 'event-invitations' && (
+              {!loading && !error && communicationsSubTab === 'event-invitations' && (
                 <div className="space-y-6">
                   <div className="bg-charcoal-light rounded-lg p-6">
                     <h3 className="text-lg font-medium text-cream mb-4">Event Invitations</h3>
@@ -4811,7 +4562,7 @@ export default function AdminPage() {
               )}
 
               {/* Email Campaigns Sub-tab */}
-              {communicationsSubTab === 'campaigns' && (
+              {!loading && !error && communicationsSubTab === 'campaigns' && (
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-medium text-cream">Email Campaigns</h3>
@@ -5036,7 +4787,7 @@ export default function AdminPage() {
               )}
 
               {/* RSVP Reminders Sub-tab */}
-              {communicationsSubTab === 'reminders' && (
+              {!loading && !error && communicationsSubTab === 'reminders' && (
                 <div className="space-y-6">
                   <div className="bg-charcoal-light rounded-lg p-6">
                     <h3 className="text-lg font-medium text-cream mb-4">RSVP Reminder System</h3>
@@ -5136,7 +4887,7 @@ export default function AdminPage() {
               )}
 
               {/* Send History Sub-tab */}
-              {communicationsSubTab === 'send-history' && (
+              {!loading && !error && communicationsSubTab === 'send-history' && (
                 <div className="space-y-6">
                   <div className="bg-charcoal-light rounded-lg p-6">
                     <h3 className="text-lg font-medium text-cream mb-4">Email Send History</h3>

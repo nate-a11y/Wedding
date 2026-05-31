@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
 
 interface GuestBookEntry {
   id: string;
@@ -18,6 +17,30 @@ interface GuestBookEntry {
 }
 
 type MessageType = 'text' | 'video' | 'audio';
+
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function looksLikeVideoFile(file: File): boolean {
+  return file.type.startsWith('video/') || /\.(webm|mp4|mov)$/i.test(file.name);
+}
+
+function looksLikeAudioFile(file: File): boolean {
+  return file.type.startsWith('audio/') || /\.(webm|mp3|m4a|aac|wav)$/i.test(file.name);
+}
+
+function preferredRecorderMime(type: MessageType): string | undefined {
+  if (typeof MediaRecorder === 'undefined') return undefined;
+  const candidates = type === 'video'
+    ? ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
+    : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate));
+}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -120,11 +143,11 @@ export default function GuestBookPage() {
         videoRef.current.play();
       }
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: messageType === 'video'
-          ? 'video/webm;codecs=vp8,opus'
-          : 'audio/webm;codecs=opus'
-      });
+      const recorderMimeType = preferredRecorderMime(messageType);
+      const mediaRecorder = new MediaRecorder(
+        stream,
+        recorderMimeType ? { mimeType: recorderMimeType } : undefined
+      );
 
       chunksRef.current = [];
 
@@ -136,7 +159,7 @@ export default function GuestBookPage() {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, {
-          type: messageType === 'video' ? 'video/webm' : 'audio/webm'
+          type: mediaRecorder.mimeType || (messageType === 'video' ? 'video/webm' : 'audio/webm')
         });
         setRecordedBlob(blob);
 
@@ -180,12 +203,18 @@ export default function GuestBookPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file type
-    const isVideo = file.type.startsWith('video/');
-    const isAudio = file.type.startsWith('audio/');
+    // Check file type and size before previewing
+    const isVideo = looksLikeVideoFile(file);
+    const isAudio = looksLikeAudioFile(file);
 
     if (!isVideo && !isAudio) {
       setError('Please upload a valid video or audio file.');
+      return;
+    }
+
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_AUDIO_BYTES;
+    if (file.size > maxBytes) {
+      setError(`${isVideo ? 'Video' : 'Audio'} must be ${formatFileSize(maxBytes)} or smaller.`);
       return;
     }
 
@@ -231,35 +260,32 @@ export default function GuestBookPage() {
     setSuccess(false);
     setIsSubmitting(true);
 
+    let uploadedMediaPath: string | null = null;
+
     try {
-      let mediaUrl: string | null = null;
-
-      // Upload media if present
+      // Upload media through the server so storage writes are validated and private to the API.
       if (recordedBlob && messageType !== 'text') {
-        if (!supabase) {
-          throw new Error('Storage is not configured. Please try submitting a text message instead.');
+        const maxBytes = messageType === 'video' ? MAX_VIDEO_BYTES : MAX_AUDIO_BYTES;
+        if (recordedBlob.size > maxBytes) {
+          throw new Error(`${messageType === 'video' ? 'Video' : 'Audio'} must be ${formatFileSize(maxBytes)} or smaller.`);
         }
 
-        const fileName = `${Date.now()}-${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}.${messageType === 'video' ? 'webm' : 'webm'}`;
-        const filePath = `${messageType}/${fileName}`;
+        const mediaFormData = new FormData();
+        mediaFormData.append('file', recordedBlob);
+        mediaFormData.append('media_type', messageType);
+        mediaFormData.append('media_duration', String(recordingTime));
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('guestbook-media')
-          .upload(filePath, recordedBlob, {
-            contentType: messageType === 'video' ? 'video/webm' : 'audio/webm',
-            upsert: false
-          });
+        const mediaResponse = await fetch('/api/guestbook/media', {
+          method: 'POST',
+          body: mediaFormData,
+        });
+        const mediaData = await mediaResponse.json();
 
-        if (uploadError) {
-          throw new Error('Failed to upload media: ' + uploadError.message);
+        if (!mediaResponse.ok) {
+          throw new Error(mediaData.error || 'Failed to upload media');
         }
 
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('guestbook-media')
-          .getPublicUrl(uploadData.path);
-
-        mediaUrl = publicUrl;
+        uploadedMediaPath = mediaData.media?.path || null;
       }
 
       // Submit guestbook entry
@@ -269,9 +295,9 @@ export default function GuestBookPage() {
         body: JSON.stringify({
           ...formData,
           message: messageType === 'text' ? formData.message : null,
-          media_url: mediaUrl,
-          media_type: messageType !== 'text' ? messageType : null,
-          media_duration: recordingTime > 0 ? recordingTime : null,
+          media_path: uploadedMediaPath,
+          media_type: uploadedMediaPath && messageType !== 'text' ? messageType : null,
+          media_duration: uploadedMediaPath && recordingTime > 0 ? recordingTime : null,
         }),
       });
 
@@ -293,6 +319,15 @@ export default function GuestBookPage() {
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
+      if (uploadedMediaPath) {
+        fetch('/api/guestbook/media', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: uploadedMediaPath, media_type: messageType }),
+        }).catch((cleanupError) => {
+          console.error('Failed to clean up uploaded guestbook media:', cleanupError);
+        });
+      }
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setIsSubmitting(false);

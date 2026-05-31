@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { getAuthUrl } from '@/lib/microsoft-graph';
 import { requireAdminAuth } from '@/lib/admin-auth';
+
+const MICROSOFT_OAUTH_STATE_COOKIE = 'microsoft_oauth_state';
+const MICROSOFT_OAUTH_STATE_MAX_AGE_SECONDS = 10 * 60;
 
 /**
  * GET /api/auth/microsoft
@@ -11,13 +15,23 @@ export async function GET() {
   if (authError) return authError;
 
   try {
-    // Generate a random state for CSRF protection
-    const state = Math.random().toString(36).substring(2, 15);
-
+    // Generate an unguessable state for CSRF protection and bind it to the
+    // browser with an httpOnly cookie for callback validation.
+    const state = randomBytes(32).toString('base64url');
     const authUrl = getAuthUrl(state);
 
-    // Redirect to Microsoft login
-    return NextResponse.redirect(authUrl);
+    const response = NextResponse.redirect(authUrl);
+    response.cookies.set({
+      name: MICROSOFT_OAUTH_STATE_COOKIE,
+      value: state,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/auth/microsoft',
+      maxAge: MICROSOFT_OAUTH_STATE_MAX_AGE_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     console.error('Microsoft auth error:', error);
     return NextResponse.redirect(

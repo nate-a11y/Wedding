@@ -175,6 +175,7 @@ export const siteConfig = {
       children: [
         { name: 'Photo Booth', href: '/photos' },
         { name: 'Guest Book', href: '/guestbook' },
+        { name: 'Song Requests', href: '/songs' },
         { name: 'FAQ', href: '/faq' },
       ],
     },
