@@ -389,24 +389,12 @@ function downloadCSV(data: string, filename: string) {
 }
 
 const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'qrcodes'];
+const VALID_PLANNING_SUBTABS = ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'];
+const VALID_COMMUNICATIONS_SUBTABS = ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'];
 
 export default function AdminPage() {
-  // Initialize tabs from URL params, fallback to localStorage
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    // Check URL params first
-    if (typeof window !== 'undefined') {
-      const urlTab = new URLSearchParams(window.location.search).get('tab');
-      if (urlTab && VALID_TABS.includes(urlTab)) {
-        return urlTab as Tab;
-      }
-      // Fallback to localStorage
-      const saved = localStorage.getItem('admin_active_tab');
-      if (saved && VALID_TABS.includes(saved)) {
-        return saved as Tab;
-      }
-    }
-    return 'overview';
-  });
+  // Keep first render deterministic for hydration; URL/localStorage restoration happens after mount.
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [rsvps, setRsvps] = useState<RSVP[]>([]);
@@ -435,21 +423,7 @@ export default function AdminPage() {
   const [textToInsert, setTextToInsert] = useState<string | null>(null);
 
   // Couple Dashboard / Planning state (with URL and localStorage persistence)
-  const [planningSubTab, setPlanningSubTab] = useState<PlanningSubTab>(() => {
-    if (typeof window !== 'undefined') {
-      // Check URL params first
-      const urlSubtab = new URLSearchParams(window.location.search).get('subtab');
-      if (urlSubtab && ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'].includes(urlSubtab)) {
-        return urlSubtab as PlanningSubTab;
-      }
-      // Fallback to localStorage
-      const saved = localStorage.getItem('admin_planning_subtab');
-      if (saved && ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'].includes(saved)) {
-        return saved as PlanningSubTab;
-      }
-    }
-    return 'budget';
-  });
+  const [planningSubTab, setPlanningSubTab] = useState<PlanningSubTab>('budget');
   const [budgetSettings, setBudgetSettings] = useState<BudgetSettings>({ total_budget: 0, currency: 'USD' });
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [budgetTotals, setBudgetTotals] = useState<BudgetTotals>({ budget: 0, estimated: 0, spent: 0, paid: 0, remaining: 0 });
@@ -492,21 +466,7 @@ export default function AdminPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Communications state (with URL and localStorage persistence)
-  const [communicationsSubTab, setCommunicationsSubTab] = useState<CommunicationsSubTab>(() => {
-    if (typeof window !== 'undefined') {
-      // Check URL params first
-      const urlSubtab = new URLSearchParams(window.location.search).get('subtab');
-      if (urlSubtab && ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'].includes(urlSubtab)) {
-        return urlSubtab as CommunicationsSubTab;
-      }
-      // Fall back to localStorage
-      const saved = localStorage.getItem('admin_communications_subtab');
-      if (saved && ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'].includes(saved)) {
-        return saved as CommunicationsSubTab;
-      }
-    }
-    return 'emails';
-  });
+  const [communicationsSubTab, setCommunicationsSubTab] = useState<CommunicationsSubTab>('emails');
   const [tags, setTags] = useState<TagCount[]>([]);
   const [guestTags, setGuestTags] = useState<Record<string, string[]>>({});
   const [eventInvitations, setEventInvitations] = useState<EventInvitation[]>([]);
@@ -548,6 +508,47 @@ export default function AdminPage() {
     { label: 'Send-off time', message: 'Send-off time — grab a sparkler!', type: 'celebration' as const },
     { label: 'Thank you', message: 'Thank you for celebrating with us! 🎃', type: 'celebration' as const },
   ];
+
+
+  // Restore tab state from URL/localStorage only after hydration to avoid React #418 hydration mismatches.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get('tab');
+    const savedTab = localStorage.getItem('admin_active_tab');
+    const nextTab = urlTab && VALID_TABS.includes(urlTab)
+      ? urlTab
+      : savedTab && VALID_TABS.includes(savedTab)
+        ? savedTab
+        : null;
+
+    if (nextTab) {
+      setActiveTab(nextTab as Tab);
+    }
+
+    const urlSubtab = params.get('subtab');
+
+    if ((nextTab || activeTab) === 'planning') {
+      const saved = localStorage.getItem('admin_planning_subtab');
+      const nextSubtab = urlSubtab && VALID_PLANNING_SUBTABS.includes(urlSubtab)
+        ? urlSubtab
+        : saved && VALID_PLANNING_SUBTABS.includes(saved)
+          ? saved
+          : null;
+      if (nextSubtab) setPlanningSubTab(nextSubtab as PlanningSubTab);
+    }
+
+    if ((nextTab || activeTab) === 'communications') {
+      const saved = localStorage.getItem('admin_communications_subtab');
+      const nextSubtab = urlSubtab && VALID_COMMUNICATIONS_SUBTABS.includes(urlSubtab)
+        ? urlSubtab
+        : saved && VALID_COMMUNICATIONS_SUBTABS.includes(saved)
+          ? saved
+          : null;
+      if (nextSubtab) setCommunicationsSubTab(nextSubtab as CommunicationsSubTab);
+    }
+    // Run once on mount; intentionally ignore state deps to keep this a hydration restoration step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Persist tab state to localStorage and URL
   useEffect(() => {
