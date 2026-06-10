@@ -125,6 +125,15 @@ export function buildPhotoStoragePaths(id: string) {
   };
 }
 
+export function buildGalleryStoragePaths(id: string) {
+  return {
+    originalPath: `gallery/original/${id}.jpg`,
+    displayPath: `gallery/display/${id}.jpg`,
+    thumbnailPath: `gallery/thumbnails/${id}.jpg`,
+    fileName: `${id}.jpg`,
+  };
+}
+
 export function buildGuestbookMediaPath(mediaType: GuestbookMediaType, mimeType: string, id = crypto.randomUUID()) {
   const date = new Date().toISOString().slice(0, 10);
   const extension = getGuestbookMediaExtension(mimeType);
@@ -147,8 +156,11 @@ export function validateDurationSeconds(value: unknown): number | null {
   return rounded;
 }
 
-export async function createPhotoVariants(input: Buffer, id = crypto.randomUUID()): Promise<PhotoVariants> {
-  const paths = buildPhotoStoragePaths(id);
+export async function createPhotoVariants(
+  input: Buffer,
+  id = crypto.randomUUID(),
+  paths = buildPhotoStoragePaths(id)
+): Promise<PhotoVariants> {
   const base = sharp(input, { failOn: 'none' }).rotate();
   const metadata = await base.metadata();
 

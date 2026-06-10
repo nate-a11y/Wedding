@@ -14,6 +14,16 @@ const QRCodeGrid = dynamic(() => import('@/components/admin/AdminQRCodeGrid'), {
   loading: () => <AdminLoadingState label="Loading QR code tools..." />,
 });
 
+const GalleryManager = dynamic(() => import('@/components/admin/GalleryManager'), {
+  ssr: false,
+  loading: () => <AdminLoadingState label="Loading gallery manager..." />,
+});
+
+const LivestreamControls = dynamic(() => import('@/components/admin/LivestreamControls'), {
+  ssr: false,
+  loading: () => <AdminLoadingState label="Loading livestream controls..." />,
+});
+
 interface Stats {
   rsvps: {
     total: number;
@@ -312,7 +322,7 @@ interface VendorTotals {
   countResearching: number;
 }
 
-type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'planning' | 'communications' | 'live' | 'songs' | 'operations' | 'qrcodes';
+type Tab = 'overview' | 'rsvps' | 'addresses' | 'guestbook' | 'photos' | 'gallery' | 'planning' | 'communications' | 'live' | 'songs' | 'operations' | 'qrcodes';
 type PlanningSubTab = 'budget' | 'expenses' | 'vendors' | 'gifts' | 'tasks' | 'timeline';
 type CommunicationsSubTab = 'emails' | 'tags' | 'event-invitations' | 'campaigns' | 'reminders' | 'send-history';
 
@@ -470,7 +480,7 @@ function downloadCSV(data: string, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
-const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'planning', 'communications', 'live', 'songs', 'operations', 'qrcodes'];
+const VALID_TABS = ['overview', 'rsvps', 'addresses', 'guestbook', 'photos', 'gallery', 'planning', 'communications', 'live', 'songs', 'operations', 'qrcodes'];
 const VALID_PLANNING_SUBTABS = ['budget', 'expenses', 'vendors', 'gifts', 'tasks', 'timeline'];
 const VALID_COMMUNICATIONS_SUBTABS = ['emails', 'tags', 'event-invitations', 'campaigns', 'reminders', 'send-history'];
 
@@ -518,6 +528,10 @@ function AdminPageContent() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [giftTotals, setGiftTotals] = useState<GiftTotals>({ totalCash: 0, totalGifts: 0, thankYouPending: 0 });
+  const [giftThankYouFilter, setGiftThankYouFilter] = useState<'all' | 'pending' | 'sent'>('all');
+  const filteredGifts = giftThankYouFilter === 'all'
+    ? gifts
+    : gifts.filter((gift) => (giftThankYouFilter === 'sent' ? gift.thank_you_sent : !gift.thank_you_sent));
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskStats, setTaskStats] = useState<TaskStats>({ total: 0, completed: 0, pending: 0, overdue: 0, upcoming: 0 });
   const [expenseTotals, setExpenseTotals] = useState<ExpenseTotals>({ totalAmount: 0, totalPaid: 0, totalBalance: 0, countPending: 0, countPartial: 0, countPaid: 0 });
@@ -1664,6 +1678,15 @@ function AdminPageContent() {
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'gallery',
+      label: 'Gallery',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A1.5 1.5 0 0021.75 19.5V4.5A1.5 1.5 0 0020.25 3H3.75A1.5 1.5 0 002.25 4.5v15A1.5 1.5 0 003.75 21zM10.5 8.25h.008v.008H10.5V8.25z" />
         </svg>
       ),
     },
@@ -3028,6 +3051,17 @@ function AdminPageContent() {
             </motion.div>
           )}
 
+          {activeTab === 'gallery' && (
+            <motion.div
+              key="gallery"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <GalleryManager />
+            </motion.div>
+          )}
+
           {activeTab === 'planning' && (
             <motion.div
               key="planning"
@@ -4039,11 +4073,45 @@ function AdminPageContent() {
                         <div className="bg-black/50 border border-olive-700 rounded-lg p-4 text-center">
                           <div className="text-2xl font-heading text-yellow-400">{giftTotals.thankYouPending}</div>
                           <div className="text-olive-400 text-sm">Thank Yous Pending</div>
+                          {giftTotals.totalGifts > 0 && (
+                            <div className="mt-2">
+                              <div className="h-1.5 w-full overflow-hidden rounded-full bg-olive-900">
+                                <div
+                                  className="h-full rounded-full bg-green-500 transition-all"
+                                  style={{ width: `${Math.round(((giftTotals.totalGifts - giftTotals.thankYouPending) / giftTotals.totalGifts) * 100)}%` }}
+                                />
+                              </div>
+                              <p className="mt-1 text-xs text-olive-500">
+                                {giftTotals.totalGifts - giftTotals.thankYouPending} of {giftTotals.totalGifts} sent
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-heading text-gold-400">Gift Registry</h3>
+                      <div className="flex flex-wrap justify-between items-center gap-3">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-heading text-gold-400">Gift Registry</h3>
+                          <div className="flex gap-1.5">
+                            {([
+                              { value: 'all', label: 'All' },
+                              { value: 'pending', label: 'Needs thank-you' },
+                              { value: 'sent', label: 'Sent' },
+                            ] as const).map((option) => (
+                              <button
+                                key={option.value}
+                                onClick={() => setGiftThankYouFilter(option.value)}
+                                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                                  giftThankYouFilter === option.value
+                                    ? 'bg-gold-500 text-black'
+                                    : 'bg-black/40 border border-olive-700 text-olive-300 hover:bg-olive-800'
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <button
                           onClick={() => setShowAddGift(!showAddGift)}
                           className="flex items-center gap-2 px-3 py-1.5 bg-gold-500 text-black rounded-lg hover:bg-gold-400 transition-colors text-sm font-medium"
@@ -4128,7 +4196,14 @@ function AdminPageContent() {
                               </tr>
                             </thead>
                             <tbody>
-                              {gifts.map((gift) => {
+                              {filteredGifts.length === 0 && (
+                                <tr>
+                                  <td colSpan={7} className="p-6 text-center text-olive-400">
+                                    No gifts match this filter
+                                  </td>
+                                </tr>
+                              )}
+                              {filteredGifts.map((gift) => {
                                 if (editingGiftId === gift.id) {
                                   // Edit mode row
                                   return (
@@ -4235,6 +4310,14 @@ function AdminPageContent() {
                                       >
                                         {gift.thank_you_sent ? 'Sent' : 'Mark Sent'}
                                       </button>
+                                      {!gift.thank_you_sent && gift.received_date && (
+                                        <p className="mt-1 text-xs text-olive-500">
+                                          {(() => {
+                                            const days = Math.max(0, Math.floor((Date.now() - new Date(gift.received_date).getTime()) / 86400000));
+                                            return days === 0 ? 'received today' : `waiting ${days} day${days === 1 ? '' : 's'}`;
+                                          })()}
+                                        </p>
+                                      )}
                                     </td>
                                     <td className="p-3">
                                       <div className="flex items-center gap-2">
@@ -5603,6 +5686,8 @@ function AdminPageContent() {
                   </div>
                 </div>
               </div>
+
+              <LivestreamControls />
 
               {liveActionMessage && (
                 <div className={`rounded-xl border px-4 py-3 text-sm ${

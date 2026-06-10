@@ -18,10 +18,12 @@ A modern, elegant wedding website for Nate Bullock and Blake Moore's wedding on 
 - Our Story timeline
 - Event details and schedule
 - Travel & accommodations information
-- Photo gallery
+- Photo gallery with admin-curated photos and lightbox viewer
 - RSVP form with Supabase integration
 - FAQ section
-- Registry page (coming soon)
+- Registry page with retailer links and honeymoon fund
+- Livestream page with admin go-live controls and push notifications
+- Per-event add-to-calendar (Google, Apple, Outlook)
 - Fully responsive design
 - Elegant animations and transitions
 - WCAG accessible
