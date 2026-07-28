@@ -90,7 +90,7 @@ export async function proxy(request: NextRequest) {
   if (isAdminSubdomain) {
     if (pathname === '/' || pathname === '') {
       url.pathname = '/admin';
-      return NextResponse.rewrite(url);
+      return NextResponse.redirect(url);
     }
 
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api')) {
