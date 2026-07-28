@@ -23,6 +23,8 @@ create index if not exists idx_gallery_photos_visible_order
   on public.gallery_photos (is_visible, sort_order, created_at);
 
 alter table public.gallery_photos enable row level security;
+revoke all on table public.gallery_photos from anon, authenticated;
+grant all on table public.gallery_photos to service_role;
 
 create table if not exists public.livestream_settings (
   id uuid primary key default gen_random_uuid(),
@@ -36,3 +38,5 @@ create table if not exists public.livestream_settings (
 );
 
 alter table public.livestream_settings enable row level security;
+revoke all on table public.livestream_settings from anon, authenticated;
+grant all on table public.livestream_settings to service_role;
