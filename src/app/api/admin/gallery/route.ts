@@ -268,9 +268,25 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    await logAdminAuditEvent({
+      request,
+      action: 'update',
+      entity: 'gallery_photo',
+      entityId: id,
+      status: 'success',
+      details: { fields: Object.keys(updates) },
+    });
+
     return NextResponse.json({ photo: serializeGalleryPhoto(data as GalleryPhotoRecord) });
   } catch (error) {
     console.error('Gallery update error:', error);
+    await logAdminAuditEvent({
+      request,
+      action: 'update',
+      entity: 'gallery_photo',
+      status: 'failure',
+      details: getAuditErrorDetails(error),
+    });
     return NextResponse.json({ error: 'Failed to update photo' }, { status: 500 });
   }
 }
