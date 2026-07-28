@@ -29,7 +29,6 @@ export function Header() {
   // Check if on admin subdomain (required for SSR hydration safety)
   useEffect(() => {
     const isAdmin = window.location.hostname.startsWith('admin.');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isAdmin) setIsAdminSubdomain(true);
   }, []);
 

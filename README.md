@@ -7,7 +7,7 @@ A modern, elegant wedding website for Nate Bullock and Blake Moore's wedding on 
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
-- **Database**: Supabase (for RSVP management)
+- **Database**: Supabase (guest, admin, vendor, and wedding-day operations)
 - **Animations**: Framer Motion
 - **Deployment**: Vercel
 
@@ -20,8 +20,12 @@ A modern, elegant wedding website for Nate Bullock and Blake Moore's wedding on 
 - Travel & accommodations information
 - Photo gallery
 - RSVP form with Supabase integration
+- Guestbook and song requests
+- Wedding-day live hub, announcements, livestream, and web push
+- Admin planning and operations controls
+- Vendor magic-link portals
 - FAQ section
-- Registry page (coming soon)
+- Registry page
 - Fully responsive design
 - Elegant animations and transitions
 - WCAG accessible
@@ -43,8 +47,8 @@ A modern, elegant wedding website for Nate Bullock and Blake Moore's wedding on 
 
 ### Prerequisites
 
-- Node.js 18+
-- npm, yarn, or pnpm
+- Node.js 22, 23, or 24
+- npm
 
 ### Installation
 
@@ -56,7 +60,7 @@ cd Wedding
 
 2. Install dependencies:
 ```bash
-npm install
+npm ci
 ```
 
 3. Set up environment variables:
@@ -165,6 +169,10 @@ supabase db push
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run typecheck` - Run strict TypeScript checks
+- `npm test` - Run the smoke Playwright suite
+- `npm run audit` - Audit production dependencies
+- `npm run verify` - Run the complete local verification gate
 
 ## License
 

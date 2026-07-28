@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
@@ -15,20 +15,8 @@ export function QRCodeGenerator({
   title = 'Scan to Share Photos',
   size = 200,
 }: QRCodeGeneratorProps) {
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    // Generate QR code using a simple algorithm
-    // For production, you might want to use a proper QR library
-    generateQRCode(url, size);
-  }, [url, size]);
-
-  const generateQRCode = async (text: string, qrSize: number) => {
-    // Use Google Charts API for QR code generation (simple approach)
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(text)}&bgcolor=1a1a1a&color=d4af37`;
-    setQrDataUrl(qrUrl);
-  };
+  const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&bgcolor=1a1a1a&color=d4af37`;
 
   const downloadQR = () => {
     if (!qrDataUrl) return;
