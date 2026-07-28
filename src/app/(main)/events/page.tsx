@@ -2,56 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
+import { weddingSchedule, getGoogleCalendarUrl, downloadIcs } from '@/lib/calendar';
 
-// Calendar event details
-const calendarEvent = {
-  title: 'Nate & Blake\'s Wedding',
-  date: '20271031',
-  dateEnd: '20271101', // Next day for all-day event
-  location: 'The Callaway Jewel, 4910 County Rd 105, Fulton, MO 65251',
-  description: 'Join us as we celebrate our wedding! Visit nateandblake.me for details.',
-};
-
-// Generate Google Calendar URL
-const getGoogleCalendarUrl = () => {
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: calendarEvent.title,
-    dates: `${calendarEvent.date}/${calendarEvent.dateEnd}`,
-    location: calendarEvent.location,
-    details: calendarEvent.description,
-  });
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
-};
-
-// Generate ICS file content for Apple/Outlook
-const generateICSContent = () => {
-  return `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Nate & Blake Wedding//EN
-BEGIN:VEVENT
-DTSTART;VALUE=DATE:${calendarEvent.date}
-DTEND;VALUE=DATE:${calendarEvent.dateEnd}
-SUMMARY:${calendarEvent.title}
-LOCATION:${calendarEvent.location}
-DESCRIPTION:${calendarEvent.description}
-END:VEVENT
-END:VCALENDAR`;
-};
-
-// Download ICS file
-const downloadICS = () => {
-  const icsContent = generateICSContent();
-  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'nate-blake-wedding.ics';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+const calendarEventsByName = new Map(weddingSchedule.map((event) => [event.name, event]));
 
 const events = [
   {
@@ -140,26 +93,18 @@ export default function EventsPage() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-3 -mt-8 mb-16"
         >
-          <a
-            href={getGoogleCalendarUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zM19.5 9h-15V4.5h15V9z"/>
-            </svg>
-            Add to Google Calendar
-          </a>
           <button
-            onClick={downloadICS}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-olive-800 hover:bg-olive-700 text-cream rounded-lg transition-colors text-sm"
+            onClick={() => downloadIcs(weddingSchedule, 'nate-blake-wedding-schedule.ics')}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-black font-medium rounded-lg transition-colors text-sm"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Add to Apple/Outlook
+            Add Full Schedule to Calendar
           </button>
+          <p className="text-olive-400 text-xs sm:ml-2">
+            Downloads every event below — works with Apple, Google, and Outlook
+          </p>
         </motion.div>
 
         {/* Events */}
@@ -220,6 +165,38 @@ export default function EventsPage() {
                       )}
                     </div>
                   </div>
+                  {(() => {
+                    const calendarEvent = calendarEventsByName.get(event.name);
+                    if (!calendarEvent) return null;
+                    return (
+                      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-olive-800/60 pt-4">
+                        <span className="text-xs uppercase tracking-wider text-olive-500">Add to calendar:</span>
+                        <a
+                          href={getGoogleCalendarUrl(calendarEvent)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-olive-700 px-3 py-1.5 text-xs text-olive-200 transition-colors hover:border-gold-500/60 hover:text-gold-300"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm-9 15h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zm4.5 0h-3v-7.5h3V18zM19.5 9h-15V4.5h15V9z"/>
+                          </svg>
+                          Google
+                        </a>
+                        <button
+                          onClick={() => downloadIcs(
+                            [calendarEvent],
+                            `nate-blake-${event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.ics`
+                          )}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-olive-700 px-3 py-1.5 text-xs text-olive-200 transition-colors hover:border-gold-500/60 hover:text-gold-300"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Apple / Outlook
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </motion.div>

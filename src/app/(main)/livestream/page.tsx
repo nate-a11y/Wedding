@@ -5,51 +5,74 @@ import { motion } from 'framer-motion';
 import { siteConfig } from '@/config/site';
 import { PageEffects } from '@/components/ui';
 
-// Configuration
-const LIVESTREAM_CONFIG = {
-  // YouTube Live video ID
-  youtubeVideoId: 'F64VhoE56Ww',
-  // Wedding day: October 31, 2027 at 3:30 PM Central Time
-  // Stream goes live automatically at this time
-  goLiveDate: new Date('2027-10-31T15:30:00-05:00'), // CDT (Central Daylight Time)
-  // Stream ends and shows recording after this time (end of reception ~11 PM)
+// Fallback used while loading or if the livestream API is unreachable.
+const LIVESTREAM_FALLBACK = {
+  videoId: 'F64VhoE56Ww',
+  goLiveDate: new Date('2027-10-31T15:30:00-05:00'),
   streamEndDate: new Date('2027-10-31T23:00:00-05:00'),
 };
 
-function useStreamStatus() {
-  const [status, setStatus] = useState<'upcoming' | 'live' | 'ended'>('upcoming');
+type StreamStatus = 'upcoming' | 'live' | 'ended';
+
+interface LivestreamState {
+  status: StreamStatus;
+  videoId: string | null;
+}
+
+function computeFallbackStatus(): StreamStatus {
+  const now = new Date();
+  if (now >= LIVESTREAM_FALLBACK.streamEndDate) return 'ended';
+  if (now >= LIVESTREAM_FALLBACK.goLiveDate) return 'live';
+  return 'upcoming';
+}
+
+// Poll the livestream API so admin go-live actions reach the page within a
+// minute without a refresh.
+function useLivestreamState(): LivestreamState {
+  const [state, setState] = useState<LivestreamState>({
+    status: 'upcoming',
+    videoId: LIVESTREAM_FALLBACK.videoId,
+  });
 
   useEffect(() => {
-    const checkStatus = () => {
-      const now = new Date();
-      const { goLiveDate, streamEndDate } = LIVESTREAM_CONFIG;
+    let cancelled = false;
 
-      if (now >= streamEndDate) {
-        setStatus('ended');
-      } else if (now >= goLiveDate) {
-        setStatus('live');
-      } else {
-        setStatus('upcoming');
+    const fetchState = async () => {
+      try {
+        const res = await fetch('/api/livestream', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Livestream API returned ${res.status}`);
+        const data = await res.json();
+        if (!cancelled && (data.status === 'upcoming' || data.status === 'live' || data.status === 'ended')) {
+          setState({
+            status: data.status,
+            videoId: typeof data.videoId === 'string' && data.videoId ? data.videoId : null,
+          });
+          return;
+        }
+      } catch {
+        // Fall back to the local schedule so the page still works offline.
+      }
+      if (!cancelled) {
+        setState((prev) => ({ ...prev, status: computeFallbackStatus() }));
       }
     };
 
-    // Check immediately
-    checkStatus();
+    fetchState();
+    const interval = setInterval(fetchState, 60000);
 
-    // Check every minute
-    const interval = setInterval(checkStatus, 60000);
-
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
-  return status;
+  return state;
 }
 
 export default function LivestreamPage() {
   const weddingDate = siteConfig.wedding.displayDate;
-  const { youtubeVideoId } = LIVESTREAM_CONFIG;
-  const hasVideoId = youtubeVideoId && youtubeVideoId.length > 0;
-  const streamStatus = useStreamStatus();
+  const { status: streamStatus, videoId: youtubeVideoId } = useLivestreamState();
+  const hasVideoId = Boolean(youtubeVideoId && youtubeVideoId.length > 0);
 
   // Show the video player if live or ended (for recording)
   const showPlayer = streamStatus === 'live' || streamStatus === 'ended';
