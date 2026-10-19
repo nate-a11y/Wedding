@@ -91,6 +91,7 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   await page.route('**/api/welcome/audio', route => { audioRequests++; return route.fulfill({ status: 503, body: '{}' }); });
   await page.goto('/welcome');
   await expect(page.getByRole('heading', { name: 'A little hello, just for you' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A little hello, just for you' })).toHaveCSS('color', 'rgb(55, 66, 37)');
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   expect(audioRequests).toBe(0);
   await expect(page.locator('video')).toHaveAttribute('preload', 'none');

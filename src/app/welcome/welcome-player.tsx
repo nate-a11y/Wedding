@@ -93,7 +93,7 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
           Your browser does not support video playback.
         </video>
         {phase !== 'film' && phase !== 'continue' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#faf9f6]/95 p-4 sm:p-8">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#faf9f6] p-4 sm:p-8">
             <p className="font-[family-name:var(--font-heading)] text-2xl leading-snug sm:text-4xl">{firstName ? `${firstName}, we’re so glad you’re here.` : 'We’re so glad you’re here.'}</p>
             {(phase === 'ready' || phase === 'loading') && <button type="button" className={buttonClass} disabled={phase === 'loading'} onClick={play}>{phase === 'loading' ? 'Preparing your greeting…' : 'Play our welcome film'}</button>}
             {phase === 'audio-ready' && <button type="button" className={buttonClass} onClick={playGreeting}>Play your greeting</button>}
