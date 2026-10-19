@@ -103,18 +103,11 @@ export const siteConfig = {
         photo: '/images/party/bill-moore.svg',
       },
       {
-        name: 'Jamie Moore',
+        name: 'Kim Shaut',
         role: 'Groomswoman',
-        relation: 'Mother',
-        bio: "Blake's mother, celebrating her son's special day with love and pride.",
-        photo: '/images/party/jamie-moore.svg',
-      },
-      {
-        name: 'Brittany Stufflebean',
-        role: 'Groomswoman',
-        relation: 'Sister',
-        bio: "Blake's sister, thrilled to be part of this beautiful celebration.",
-        photo: '/images/party/brittany-stufflebean.svg',
+        relation: 'Friend',
+        bio: 'A good friend who has been there through thick and thin.',
+        photo: '/images/party/female-placeholder.svg',
       },
     ],
     // Special roles
