@@ -114,9 +114,9 @@ export const siteConfig = {
     special: [
       {
         name: 'Honey',
-        role: 'Flower Girl',
+        role: 'Honorary Flower Girl',
         relation: 'The Goodest Girl',
-        bio: 'A very special pup who will lead the way down the aisle.',
+        bio: "She won't be there in person, but our goodest girl is still a special part of our day.",
         photo: '/20250119_000105.jpg',
         isHuman: false,
       },

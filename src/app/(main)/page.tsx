@@ -61,28 +61,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Flower Girl Section */}
+      {/* Honorary Flower Girl Section */}
       <section className="section-padding bg-black">
         <div className="container-wedding text-center max-w-2xl mx-auto">
-          <p className="font-accent text-2xl text-gold-500 mb-4">Special Guest</p>
+          <p className="font-accent text-2xl text-gold-500 mb-4">Our Goodest Girl</p>
           <h2 className="font-heading text-2xl md:text-3xl text-cream mb-6">
-            Meet Our Flower Girl
+            Meet Our Honorary Flower Girl
           </h2>
           <AnimatedGoldLine />
           <div className="bg-olive-900/50 border border-olive-700 rounded-lg p-8">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gold-500">
               <Image
                 src="/20250119_000105.jpg"
-                alt="Honey - Our Flower Girl"
+                alt="Honey - Our Honorary Flower Girl"
                 width={128}
                 height={128}
                 className="w-full h-full object-cover"
               />
             </div>
             <h3 className="font-heading text-2xl text-cream mb-2">Honey</h3>
-            <p className="text-gold-400 uppercase tracking-wider text-sm mb-4">Flower Girl</p>
+            <p className="text-gold-400 uppercase tracking-wider text-sm mb-4">Honorary Flower Girl</p>
             <p className="text-olive-300">
-              The goodest girl and most important member of the wedding party.
+              She won&apos;t be there in person, but our goodest girl is still a special part of our day.
             </p>
           </div>
         </div>
