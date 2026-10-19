@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { isEmailConfigured, sendEmail, sendBatchEmails } from '@/lib/email-provider';
+import { getWelcomeVideoUrl } from '@/lib/welcome-video';
 
 export { isEmailConfigured } from '@/lib/email-provider';
 
@@ -302,6 +303,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
   }
 
   const { to, name, address, isUpdate } = data;
+  const welcomeVideoUrl = getWelcomeVideoUrl(name);
   const subject = isUpdate
     ? "Your address has been updated!"
     : "You're on our list! 🎃";
@@ -330,7 +332,12 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
       </div>
 
       <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://www.nateandblake.me/Save%20the%20Date.png" alt="Save the Date - Nate & Blake - October 31, 2027" width="300" style="width: 300px; max-width: 100%; height: auto; border-radius: 8px;" />
+        <a href="${welcomeVideoUrl}" style="display: block; text-decoration: none;" aria-label="Watch your welcome video from Nate and Blake">
+          <img src="https://www.nateandblake.me/welcome/welcome-v4-poster.jpg" alt="Play your welcome from Nate &amp; Blake — 45 seconds" width="520" style="display: block; width: 100%; max-width: 520px; height: auto; border: 0; border-radius: 8px; margin: 0 auto;" />
+        </a>
+        <p style="margin: 18px 0 0;">
+          <a href="${welcomeVideoUrl}" style="display: inline-block; background: #536537; color: #faf9f6; border: 1px solid #d4af37; border-radius: 6px; padding: 14px 22px; font-size: 18px; text-decoration: none;">Watch your welcome video &rarr;</a>
+        </p>
       </div>
 
       <div style="background: #252920; border: 1px solid #536537; border-radius: 8px; padding: 30px; margin-bottom: 20px;">
@@ -343,7 +350,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
         <div style="margin-top: 20px;">
           <h3 style="color: #d4af37; margin-top: 0;">What's next?</h3>
           <p style="color: #a5b697; line-height: 1.6;">
-            Official save the dates will be mailed around Halloween 2026, with formal invitations (including RSVP details) following in April 2027. In the meantime, enjoy this sneak peek!
+            Official save the dates will be mailed around Halloween 2026, with formal invitations (including RSVP details) following in April 2027. In the meantime, we made a little welcome for you — tap the video above to watch!
           </p>
         </div>
         ` : ''}

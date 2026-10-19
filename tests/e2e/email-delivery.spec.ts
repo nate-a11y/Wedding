@@ -94,9 +94,11 @@ test('logged website sends record Resend IDs and preserve failure status', async
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-service-key';
     process.env.RESEND_API_KEY = 'test-only-resend-key';
     let rejected = false;
+    const sentBodies: Record<string, unknown>[] = [];
     globalThis.fetch = async (input, init) => {
       const url = String(input);
       if (url === 'https://api.resend.com/emails') {
+        sentBodies.push(JSON.parse(String(init?.body)));
         return rejected ? Response.json({ message: 'Rejected' }, { status: 422 }) : Response.json({ id: 'logged-resend-id' });
       }
       expect(url).toBe('https://database.example.test/rest/v1/emails');
@@ -108,6 +110,13 @@ test('logged website sends record Resend IDs and preserve failure status', async
     expect(logs[0]).toMatchObject({ resend_id: 'logged-resend-id', direction: 'outbound', to_address: 'guest@example.test', status: 'sent', email_type: 'campaign', related_id: 'campaign-id' });
     expect(await sendAddressConfirmation({ to: 'guest@example.test', name: 'Test Guest', isUpdate: false, address: { street: 'Test only', city: 'Test City', state: 'MO', postalCode: '00000', country: 'United States' } })).toBe(true);
     expect(logs[1]).toMatchObject({ resend_id: 'logged-resend-id', status: 'sent', email_type: 'address_confirmation' });
+    const confirmationHtml = String(sentBodies[1].html);
+    expect(confirmationHtml).toContain('https://www.nateandblake.me/welcome');
+    expect(confirmationHtml).toContain('/welcome/welcome-v4-poster.jpg');
+    expect(confirmationHtml).toContain('Watch your welcome video');
+    expect(confirmationHtml).not.toContain('Save%20the%20Date.png');
+    expect(confirmationHtml).not.toContain('<video');
+    expect(confirmationHtml).toContain('Your Address on File');
     rejected = true;
     expect(await sendLoggedEmail({ to: ['guest@example.test'], subject: 'Reminder', html: '<p>Test</p>', emailType: 'rsvp_reminder' })).toMatchObject({ error: 'Rejected' });
     expect(logs[2]).toMatchObject({ resend_id: null, status: 'failed', email_type: 'rsvp_reminder' });

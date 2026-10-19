@@ -6,6 +6,8 @@ const PUBLIC_EXACT_ROUTES = new Set([
   '/login',
   '/address',
   '/privacy',
+  '/welcome',
+  '/api/welcome/audio',
   '/api/auth',
   '/api/health',
 ]);
