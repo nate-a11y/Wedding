@@ -113,6 +113,8 @@ test('logged website sends record Resend IDs and preserve failure status', async
     const confirmationHtml = String(sentBodies[1].html);
     expect(confirmationHtml).toContain('https://www.nateandblake.me/welcome');
     expect(confirmationHtml).toContain('/welcome/welcome-v4-poster.jpg');
+    expect(confirmationHtml).toContain('/welcome/nate-and-blake-wordmark.png');
+    expect(confirmationHtml).toContain('alt="Nate &amp; Blake"');
     expect(confirmationHtml).toContain('Watch your welcome video');
     expect(confirmationHtml).not.toContain('Save%20the%20Date.png');
     expect(confirmationHtml).not.toContain('<video');

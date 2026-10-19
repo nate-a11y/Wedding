@@ -327,8 +327,10 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
   const html = `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 40px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #d4af37; font-size: 28px; margin: 0;">Nate & Blake</h1>
-        <p style="color: #a5b697; margin: 5px 0;">October 31, 2027</p>
+        <h1 style="margin: 0; line-height: 1;">
+          <img src="https://www.nateandblake.me/welcome/nate-and-blake-wordmark.png" alt="Nate &amp; Blake" width="340" style="display: block; width: 340px; max-width: 100%; height: auto; border: 0; margin: 0 auto;" />
+        </h1>
+        <p style="color: #a5b697; margin: 12px 0 0;">October 31, 2027</p>
       </div>
 
       <div style="text-align: center; margin-bottom: 30px;">
