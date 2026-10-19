@@ -10,6 +10,7 @@ interface AuthSessionPayload {
   role: AuthSessionRole;
   exp: number;
   nonce: string;
+  email?: string;
 }
 
 const encoder = new TextEncoder();
@@ -84,13 +85,15 @@ export function secureStringEquals(left: string, right: string): boolean {
 export async function createAuthSession(
   role: AuthSessionRole,
   secret: string,
-  maxAgeSeconds: number
+  maxAgeSeconds: number,
+  email?: string
 ): Promise<string> {
   const payload: AuthSessionPayload = {
     version: 1,
     role,
     exp: Math.floor(Date.now() / 1000) + maxAgeSeconds,
     nonce: crypto.randomUUID(),
+    ...(email ? { email: email.trim().toLowerCase() } : {}),
   };
   const encodedPayload = base64UrlEncodeText(JSON.stringify(payload));
   const signature = await signPayload(encodedPayload, secret);
@@ -102,13 +105,21 @@ export async function verifyAuthSession(
   role: AuthSessionRole,
   secret: string | undefined
 ): Promise<boolean> {
-  if (!value || !secret) return false;
+  return Boolean(await readAuthSession(value, role, secret));
+}
+
+export async function readAuthSession(
+  value: string | undefined,
+  role: AuthSessionRole,
+  secret: string | undefined
+): Promise<AuthSessionPayload | null> {
+  if (!value || !secret || value.length > 2048) return null;
 
   const [payload, signature, ...extra] = value.split('.');
-  if (!payload || !signature || extra.length > 0) return false;
+  if (!payload || !signature || extra.length > 0) return null;
 
   const expectedSignature = await signPayload(payload, secret);
-  if (!constantTimeEqual(signature, expectedSignature)) return false;
+  if (!constantTimeEqual(signature, expectedSignature)) return null;
 
   try {
     const parsed = JSON.parse(base64UrlDecodeText(payload)) as Partial<AuthSessionPayload>;
@@ -117,8 +128,8 @@ export async function verifyAuthSession(
       parsed.role === role &&
       typeof parsed.exp === 'number' &&
       parsed.exp > Math.floor(Date.now() / 1000)
-    );
+    ) ? parsed as AuthSessionPayload : null;
   } catch {
-    return false;
+    return null;
   }
 }

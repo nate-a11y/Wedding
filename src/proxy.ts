@@ -63,7 +63,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const adminRoute = isAdminRoute(pathname, isAdminSubdomain);
-  const sessionRole = adminRoute ? 'admin' : 'guest';
+  // Public browsing no longer requires the shared guest password.
+  if (!adminRoute) return NextResponse.next();
+
+  const sessionRole = 'admin';
   const cookieName = AUTH_COOKIE_NAMES[sessionRole];
   const isAuthenticated = await verifyAuthSession(
     request.cookies.get(cookieName)?.value,

@@ -209,3 +209,12 @@ Made with love for Nate & Blake's wedding 10.31.27
 The live welcome film and address-confirmation thumbnail use the engagement-day kissing photo, replacing the withdrawn hand-heart water photo. Public media URLs remain stable; `?v=engagement-kiss-20261019` refreshes browser/email image caches for new sends. The 45-second timing, original audio, captions, script wordmark, and full-opening personalized handoff are unchanged. Do not restore the withdrawn photo in active assets.
 
 Admin-only address listings include `welcome_video_url`, generated server-side for the guest’s first name. This lets approved manual resends reuse personalized links without exporting the production signing secret; it does not send emails or update guest records.
+
+
+### Public browsing and private invitations
+
+- General pages, photos, and guestbook browsing are public. Admin and Microsoft/vendor-token operations still require admin authentication. `/login` is now guest email sign-in unless `redirect=/admin` is supplied.
+- `My Invitations` (`/guest/sign-in`) emails a single-use, 15-minute link only to an email already in wedding addresses, RSVPs, or event invitations. Clicking **Open my invitations** consumes it; merely opening/scanning the email link does not. A signed HttpOnly cookie remembers the verified email for 30 days. Unknown emails receive the same generic response; requesting access never creates an invitation.
+- `guest_events` remains the admin-managed source of truth. Private event cards and their calendar files are returned only for the verified cookie's email; public calendar exports contain only wedding-day events. Existing RSVP edit links continue to work.
+- Existing `rsvp_edit_tokens` stores hashed sign-in tokens distinguished by `created_by=guest_sign_in`; no schema migration or new auth provider is needed. Keep `AUTH_SESSION_SECRET` (or existing guest signing fallback) configured even though guest password login is disabled.
+- Cloudflare Turnstile is required server-side for address, photo upload, guestbook/media, song requests/votes, RSVP submission/edit-link, and guest sign-in email requests. Missing keys fail closed. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` must remain configured. Each mutation gets a fresh token bound to its form action and hostname; existing rate limits remain, with additional sign-in IP/email throttles. Browsing does not require a challenge.

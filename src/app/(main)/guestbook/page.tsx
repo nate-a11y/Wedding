@@ -1,5 +1,7 @@
 'use client';
 
+import { useBotCheck } from '@/hooks/useBotCheck';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -58,6 +60,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function GuestBookPage() {
+  const { protectedFetch, botCheck } = useBotCheck('guestbook');
   const [entries, setEntries] = useState<GuestBookEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -275,7 +278,7 @@ export default function GuestBookPage() {
         mediaFormData.append('media_type', messageType);
         mediaFormData.append('media_duration', String(recordingTime));
 
-        const mediaResponse = await fetch('/api/guestbook/media', {
+        const mediaResponse = await protectedFetch('/api/guestbook/media', {
           method: 'POST',
           body: mediaFormData,
         });
@@ -289,7 +292,7 @@ export default function GuestBookPage() {
       }
 
       // Submit guestbook entry
-      const response = await fetch('/api/guestbook', {
+      const response = await protectedFetch('/api/guestbook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,7 +323,7 @@ export default function GuestBookPage() {
       setTimeout(() => setSuccess(false), 5000);
     } catch (err) {
       if (uploadedMediaPath) {
-        fetch('/api/guestbook/media', {
+        protectedFetch('/api/guestbook/media', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: uploadedMediaPath, media_type: messageType }),
@@ -343,6 +346,7 @@ export default function GuestBookPage() {
 
   return (
     <div className="section-padding bg-charcoal relative overflow-hidden">
+      {botCheck}
       {/* Animated background effects */}
       <PageEffects variant="subtle" showRings={false} />
 

@@ -9,21 +9,6 @@ import { FULL_NAME_ERROR, FULL_NAME_PATTERN } from '@/lib/name-validation';
 import { PageEffects, AnimatedHeader } from '@/components/ui/PageEffects';
 import type { FormState } from '@/types';
 
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: string | HTMLElement, options: {
-        sitekey: string;
-        callback: (token: string) => void;
-        'error-callback'?: () => void;
-        'expired-callback'?: () => void;
-        theme?: 'light' | 'dark' | 'auto';
-      }) => string;
-      reset: (widgetId: string) => void;
-      remove: (widgetId: string) => void;
-    };
-  }
-}
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -83,6 +68,7 @@ export default function AddressPage() {
       if (window.turnstile && turnstileRef.current && !turnstileWidgetId.current) {
         turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
           sitekey: turnstileSiteKey,
+          action: 'address',
           callback: (token: string) => setTurnstileToken(token),
           'expired-callback': () => setTurnstileToken(null),
           'error-callback': () => setTurnstileToken(null),

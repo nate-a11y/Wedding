@@ -1,3 +1,4 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
@@ -17,6 +18,8 @@ function getClientIp(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'rsvp');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'RSVP system is not configured' },

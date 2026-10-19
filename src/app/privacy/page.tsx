@@ -6,6 +6,8 @@ export default function PrivacyPage() {
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="font-heading text-3xl text-gold-400">Privacy &amp; terms</h1>
         <p>We use the information you submit to organize Nate &amp; Blake’s wedding, manage RSVPs, and send wedding communications and invitations. Please submit only information you are authorized to share.</p>
+        <h2 className="text-xl">Public pages and private invitations</h2>
+        <p>Wedding pages, published photos, and guestbook messages are public. Email addresses and mailing addresses are not published. Invitation-only event details require a private email sign-in link. We use Cloudflare Turnstile to help protect public submission forms from spam.</p>
         <h2 className="text-xl">Address validation</h2>
         <p>As you type into a US street-address field, your partial address search is sent to Google Places for suggestions. Choosing a suggestion fills editable address fields. You can also enter an address manually. Suggestions are not proof of postal deliverability; we still validate the completed US address before saving.</p>
         <p>When available, our hosting provider estimates your approximate area from your IP address. We send that approximate location to Google to prioritize nearby suggestions, without requesting GPS access or storing these coordinates. This estimate may be inaccurate, especially with VPNs or mobile networks; you can still search for addresses elsewhere.</p>

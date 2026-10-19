@@ -1,5 +1,7 @@
 'use client';
 
+import { useBotCheck } from '@/hooks/useBotCheck';
+
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
@@ -74,15 +76,18 @@ type LookupStatus = 'existing_rsvp' | 'existing_rsvp_token_required' | 'househol
 
 // Event display names and order
 const EVENT_INFO: Record<string, { name: string; date: string; order: number }> = {
-  rehearsal_dinner: { name: 'Rehearsal Dinner', date: 'October 30, 2027', order: 1 },
+  welcome_party: { name: 'Welcome Party', date: 'See your private invitation', order: 0 },
+  after_party: { name: 'After Party', date: 'See your private invitation', order: 7 },
+  rehearsal_dinner: { name: 'Rehearsal Dinner', date: 'See your private invitation', order: 1 },
   ceremony: { name: 'Wedding Ceremony', date: 'October 31, 2027', order: 2 },
   cocktail: { name: 'Cocktail Hour', date: 'October 31, 2027', order: 3 },
   reception: { name: 'Reception', date: 'October 31, 2027', order: 4 },
   sendoff: { name: 'Send-off', date: 'October 31, 2027', order: 5 },
-  sunday_brunch: { name: 'Sunday Brunch', date: 'November 1, 2027', order: 6 },
+  sunday_brunch: { name: 'Sunday Brunch', date: 'See your private invitation', order: 6 },
 };
 
 export default function RSVPPage() {
+  const { protectedFetch, botCheck } = useBotCheck('rsvp');
   // Wizard state
   const [step, setStep] = useState<WizardStep>('email');
   const [formState, setFormState] = useState<FormState>({ status: 'idle' });
@@ -321,7 +326,7 @@ export default function RSVPPage() {
     setEditLinkRequestMessage(null);
 
     try {
-      const response = await fetch('/api/rsvp/edit-link', {
+      const response = await protectedFetch('/api/rsvp/edit-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedEmail }),
@@ -396,7 +401,7 @@ export default function RSVPPage() {
     setFormState({ status: 'loading' });
 
     try {
-      const response = await fetch('/api/rsvp', {
+      const response = await protectedFetch('/api/rsvp', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -565,7 +570,7 @@ export default function RSVPPage() {
         payload.eventResponses = eventResponses;
       }
 
-      const response = await fetch('/api/rsvp', {
+      const response = await protectedFetch('/api/rsvp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -757,6 +762,7 @@ export default function RSVPPage() {
 
   return (
     <div className="section-padding bg-charcoal relative overflow-hidden">
+      {botCheck}
       <PageEffects variant="subtle" showRings={false} />
       <CelebrationAnimation isActive={showCelebration} />
 

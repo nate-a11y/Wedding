@@ -1,5 +1,6 @@
 'use client';
 
+import { GuestSignIn } from '@/components/GuestSignIn';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -52,6 +53,8 @@ export function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  if (!isAdminLogin) return <main className="min-h-screen bg-charcoal px-5 py-24 text-cream"><div className="mx-auto max-w-md rounded-2xl border border-olive-700 bg-black/50 p-7"><GuestSignIn /></div></main>;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-charcoal px-4 relative overflow-hidden">

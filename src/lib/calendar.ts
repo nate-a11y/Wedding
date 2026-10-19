@@ -14,13 +14,6 @@ const SITE_NOTE = 'Details at nateandblake.me';
 
 export const weddingSchedule: WeddingCalendarEvent[] = [
   {
-    name: 'Rehearsal Dinner',
-    description: `Wedding party and immediate family only. ${SITE_NOTE}`,
-    location: VENUE,
-    start: '2027-10-30T17:00:00-05:00',
-    end: '2027-10-30T20:00:00-05:00',
-  },
-  {
     name: 'Ceremony',
     description: `Please be seated by 3:45 PM. ${SITE_NOTE}`,
     location: VENUE,

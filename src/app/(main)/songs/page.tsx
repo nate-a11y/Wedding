@@ -1,5 +1,7 @@
 'use client';
 
+import { useBotCheck } from '@/hooks/useBotCheck';
+
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
@@ -15,6 +17,7 @@ interface Song {
 }
 
 export default function SongsPage() {
+  const { protectedFetch, botCheck } = useBotCheck('songs');
   const [songs, setSongs] = useState<Song[]>([]);
   const [userVotes, setUserVotes] = useState<string[]>([]);
   const [email, setEmail] = useState('');
@@ -28,6 +31,7 @@ export default function SongsPage() {
   const [submitName, setSubmitName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
 
   // Load email from localStorage
   useEffect(() => {
@@ -68,16 +72,18 @@ export default function SongsPage() {
   const handleVote = async (songId: string) => {
     if (!isEmailSet) return;
     setVoting(songId);
+    setSubmissionError('');
 
     const hasVoted = userVotes.includes(songId);
 
     try {
-      const response = await fetch('/api/songs/vote', {
+      const response = await protectedFetch('/api/songs/vote', {
         method: hasVoted ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ song_id: songId, voter_email: email }),
       });
 
+      if (!response.ok) throw new Error((await response.json()).error || 'Please try again.');
       if (response.ok) {
         const data = await response.json();
         // Update song in list
@@ -92,7 +98,7 @@ export default function SongsPage() {
         }
       }
     } catch (error) {
-      console.error('Vote failed:', error);
+      setSubmissionError(error instanceof Error ? error.message : 'Could not save your vote.');
     } finally {
       setVoting(null);
     }
@@ -101,9 +107,10 @@ export default function SongsPage() {
   const handleSubmitSong = async () => {
     if (!newSongTitle.trim()) return;
     setSubmitting(true);
+    setSubmissionError('');
 
     try {
-      const response = await fetch('/api/songs', {
+      const response = await protectedFetch('/api/songs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -114,6 +121,7 @@ export default function SongsPage() {
         }),
       });
 
+      if (!response.ok) throw new Error((await response.json()).error || 'Please try again.');
       if (response.ok) {
         setNewSongTitle('');
         setNewSongArtist('');
@@ -123,7 +131,7 @@ export default function SongsPage() {
         setTimeout(() => setSubmitSuccess(false), 3000);
       }
     } catch (error) {
-      console.error('Submit failed:', error);
+      setSubmissionError(error instanceof Error ? error.message : 'Could not submit your song.');
     } finally {
       setSubmitting(false);
     }
@@ -141,6 +149,8 @@ export default function SongsPage() {
 
   return (
     <div className="min-h-screen bg-charcoal relative overflow-hidden">
+      {botCheck}
+      {submissionError && <p role="alert" className="container-wedding text-red-300">{submissionError}</p>}
       <PageEffects variant="subtle" />
       <div className="container-wedding py-12 relative z-10">
         <AnimatedHeader

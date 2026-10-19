@@ -156,6 +156,7 @@ export const siteConfig = {
       href: '/events',
       children: [
         { name: 'Events', href: '/events' },
+        { name: 'My Invitations', href: '/events#personal-invitations' },
         { name: 'Dress Code', href: '/dress-code' },
         { name: 'Travel', href: '/travel' },
         { name: 'Live Feed', href: '/live' },

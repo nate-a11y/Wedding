@@ -1,8 +1,11 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendRSVPConfirmation } from '@/lib/email';
 import { rsvpJoinHouseholdSchema, rsvpSubmissionSchema } from '@/lib/validation';
+import { getVerifiedGuestEmail } from '@/lib/guest-access';
+import { CORE_RSVP_EVENTS } from '@/lib/rsvp-token';
 import { badRequest, validationErrorResponse } from '@/lib/api-response';
 import {
   attachRsvpEditTokenToRsvp,
@@ -27,6 +30,8 @@ function getRawEditToken(payload: unknown): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'rsvp');
+  if (botError) return botError;
   // Check if Supabase is configured
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
@@ -80,6 +85,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.eventResponses && typeof body.eventResponses === 'object') {
+      const hasPrivateResponse = Object.keys(body.eventResponses).some(slug => !([...CORE_RSVP_EVENTS] as string[]).includes(slug));
+      if (hasPrivateResponse && !tokenContext && await getVerifiedGuestEmail(request) !== email) {
+        return NextResponse.json({ error: 'Please sign in with your email link to respond to private events.' }, { status: 403 });
+      }
       const invitedEvents = await getInvitedRsvpEvents(supabase, email);
       const uninvitedResponses = Object.entries(body.eventResponses)
         .filter(([, value]) => typeof value === 'boolean')
@@ -319,6 +328,8 @@ export async function POST(request: NextRequest) {
 
 // Handle joining a household RSVP (adding as additional guest)
 export async function PATCH(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'rsvp');
+  if (botError) return botError;
   // Check if Supabase is configured
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(

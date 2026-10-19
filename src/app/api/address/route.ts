@@ -2,36 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendAddressConfirmation } from '@/lib/email';
+import { verifyTurnstile } from '@/lib/turnstile';
 import { badRequest } from '@/lib/api-response';
 import { addressSubmissionSchema, parseJsonRequest } from '@/lib/validation';
-
-const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
-
-// Verify Turnstile captcha token
-async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
-  if (!TURNSTILE_SECRET_KEY) {
-    // If Turnstile is not configured, skip verification
-    return true;
-  }
-
-  try {
-    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        secret: TURNSTILE_SECRET_KEY,
-        response: token,
-        remoteip: ip,
-      }),
-    });
-
-    const result = await response.json();
-    return result.success === true;
-  } catch (error) {
-    console.error('Turnstile verification error:', error);
-    return false;
-  }
-}
 
 export async function POST(request: NextRequest) {
   // Check if Supabase is configured
@@ -59,17 +32,8 @@ export async function POST(request: NextRequest) {
 
     const body = parsed.data;
 
-    // Verify Turnstile captcha if configured
-    if (TURNSTILE_SECRET_KEY) {
-      const turnstileToken = body.turnstileToken;
-      if (!turnstileToken) {
-        return badRequest('Captcha verification required');
-      }
-
-      const isValidCaptcha = await verifyTurnstile(turnstileToken, ip);
-      if (!isValidCaptcha) {
-        return badRequest('Captcha verification failed. Please try again.');
-      }
+    if (!await verifyTurnstile(body.turnstileToken, ip.split(',')[0].trim(), request.nextUrl.hostname, 'address')) {
+      return badRequest('Captcha verification failed. Please try again.');
     }
 
     const country = body.country;

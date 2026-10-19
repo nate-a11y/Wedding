@@ -1,3 +1,4 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -35,6 +36,8 @@ function isFile(value: FormDataEntryValue | null): value is File {
 }
 
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'guestbook');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return jsonError('Guest book media storage is not configured', 503);
   }
@@ -112,6 +115,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'guestbook');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return jsonError('Guest book media storage is not configured', 503);
   }

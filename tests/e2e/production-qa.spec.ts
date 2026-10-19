@@ -1,15 +1,10 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
-const sitePassword = process.env.SITE_PASSWORD;
 const adminPassword = process.env.ADMIN_PASSWORD;
 
 async function loginAsGuest(page: Page) {
   await page.goto('/');
-  if (/\/login/.test(page.url())) {
-    await page.getByLabel(/password/i).fill(sitePassword!);
-    await page.getByRole('button', { name: /enter|sign in|login|enter site/i }).click();
-    await expect(page).toHaveURL(/\/$/);
-  }
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 async function loginAsAdmin(page: Page) {
@@ -103,7 +98,6 @@ async function expectElementContrast(locator: Locator, minimumRatio: number) {
 }
 
 test.describe('production QA guest smoke coverage', () => {
-  test.skip(!sitePassword, 'SITE_PASSWORD is required for authenticated guest production QA coverage');
 
   test('live hub keeps QR-friendly CTAs readable on desktop and mobile', async ({ page }) => {
     await page.route('**/api/live', async (route) => {

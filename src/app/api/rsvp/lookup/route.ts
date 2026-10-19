@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { getVerifiedGuestEmail } from '@/lib/guest-access';
 import { badRequest } from '@/lib/api-response';
 import {
   buildRsvpEditUrl,
@@ -164,7 +165,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get invited events for this guest
-    const invitedEvents = hasToken ? await getInvitedRsvpEvents(supabase, email) : [...CORE_RSVP_EVENTS];
+    const verifiedEmail = await getVerifiedGuestEmail(request);
+    const invitedEvents = hasToken || verifiedEmail === email ? await getInvitedRsvpEvents(supabase, email) : [...CORE_RSVP_EVENTS];
 
     // If guest has existing RSVP, only tokenized links can return editable data.
     if (existingRsvp) {

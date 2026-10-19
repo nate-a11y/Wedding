@@ -1,17 +1,10 @@
 import { expect, test } from '@playwright/test';
 
-const sitePassword = process.env.SITE_PASSWORD;
 
 // Keep mocked gallery responses in the page routing layer, not the PWA worker.
 test.use({ serviceWorkers: 'block' });
 
 test.describe('guest design polish', () => {
-  test.skip(!sitePassword, 'SITE_PASSWORD is required for guest design checks');
-  test.beforeEach(async ({ page }) => {
-    const response = await page.request.post('/api/auth', { data: { type: 'guest', password: sitePassword } });
-    expect(response.ok()).toBe(true);
-  });
-
   test('hero names and primary actions fit narrow phones and desktop', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-18T12:00:00'));
     for (const width of [320, 390, 1440]) {
@@ -107,10 +100,7 @@ test('reduced motion removes recurring decorations without hiding content', asyn
 });
 
 test.describe('uncropped guest galleries', () => {
-  test.skip(!sitePassword, 'SITE_PASSWORD is required for gallery checks');
   test('portrait, landscape and transparent art retain natural proportions in both galleries', async ({ page }) => {
-    const response = await page.request.post('/api/auth', { data: { type: 'guest', password: sitePassword } });
-    expect(response.ok()).toBe(true);
     const shapes = [{ name: 'Portrait', width: 400, height: 800 }, { name: 'Landscape', width: 1200, height: 600 }, { name: 'Transparent logo', width: 600, height: 600 }];
     await page.route('**/qa-image-*', route => {
       const shape = shapes.find(item => route.request().url().includes(item.name.split(' ')[0]))!;

@@ -1,3 +1,4 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { validationErrorResponse } from '@/lib/api-response';
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get all approved songs
     const { data: songs, error } = await supabase
       .from('song_requests')
-      .select('*')
+      .select('id, title, artist, submitted_by_name, votes, status, created_at')
       .eq('status', 'approved')
       .order('votes', { ascending: false });
 
@@ -54,6 +55,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/songs - Submit new song request (if enabled)
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'songs');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

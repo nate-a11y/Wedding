@@ -1,3 +1,4 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -154,6 +155,8 @@ export async function GET() {
 
 // POST - Upload a new photo
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'photos');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Photo storage is not configured' },

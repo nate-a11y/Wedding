@@ -101,7 +101,7 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   await expect(page.locator('video')).toHaveAttribute('poster', '/welcome/welcome-v4-poster.jpg?v=engagement-kiss-20261019');
   await expect(page.locator('video source')).toHaveAttribute('src', '/welcome/welcome-v4.mp4?v=engagement-kiss-20261019');
   const protectedRoute = await request.get('/welcome/private', { maxRedirects: 0 });
-  expect(protectedRoute.status()).toBe(307);
+  expect(protectedRoute.status()).toBe(404);
 });
 
 test('personalized player waits for Play, handles mobile block, then starts the complete film without exposing its poster', async ({ page }) => {

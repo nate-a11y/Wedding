@@ -1,3 +1,4 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
@@ -101,7 +102,7 @@ export async function GET() {
   try {
     const { data, error } = await db
       .from('guestbook')
-      .select('*')
+      .select('id, name, message, media_type, media_duration, media_path, media_url, created_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -134,6 +135,8 @@ export async function GET() {
 
 // POST - Add a new guest book entry
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'guestbook');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Guest book is not configured' },

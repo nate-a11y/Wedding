@@ -1,5 +1,7 @@
 'use client';
 
+import { useBotCheck } from '@/hooks/useBotCheck';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,6 +62,7 @@ function formatTimestamp(dateString: string): string {
 }
 
 export default function PhotosPage() {
+  const { protectedFetch, botCheck } = useBotCheck('photos');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -284,7 +287,7 @@ export default function PhotosPage() {
           formData.append('caption', caption);
         }
 
-        const response = await fetch('/api/photos', {
+        const response = await protectedFetch('/api/photos', {
           method: 'POST',
           body: formData,
         });
@@ -356,6 +359,7 @@ export default function PhotosPage() {
 
   return (
     <div className="section-padding bg-charcoal relative overflow-hidden">
+      {botCheck}
       {/* Animated background effects */}
       <PageEffects variant="minimal" showGradient={true} />
 

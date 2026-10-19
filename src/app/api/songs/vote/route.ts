@@ -1,9 +1,12 @@
+import { requireBotCheck } from '@/lib/turnstile';
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { parseJsonRequest, songVoteSchema } from '@/lib/validation';
 
 // POST /api/songs/vote - Cast vote for a song
 export async function POST(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'songs');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },
@@ -82,6 +85,8 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/songs/vote - Remove vote
 export async function DELETE(request: NextRequest) {
+  const botError = await requireBotCheck(request, 'songs');
+  if (botError) return botError;
   if (!isSupabaseConfigured() || !supabase) {
     return NextResponse.json(
       { error: 'Database not configured' },

@@ -132,8 +132,8 @@ const REQUIRED_ENV_CHECKS: Array<Omit<EnvCheck, 'present'>> = [
   { name: 'VAPID_PRIVATE_KEY', category: 'push', requiredFor: 'server push send', secret: true },
   { name: 'VAPID_SUBJECT', category: 'push', requiredFor: 'optional VAPID contact subject override', secret: false },
   { name: 'NEXT_PUBLIC_SITE_URL', category: 'runtime', requiredFor: 'absolute callback/webhook URLs', secret: false },
-  { name: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY', category: 'runtime', requiredFor: 'public address form bot check', secret: false },
-  { name: 'TURNSTILE_SECRET_KEY', category: 'runtime', requiredFor: 'server address form bot check', secret: true },
+  { name: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY', category: 'runtime', requiredFor: 'public submission form bot checks', secret: false },
+  { name: 'TURNSTILE_SECRET_KEY', category: 'runtime', requiredFor: 'server public submission bot checks', secret: true },
   { name: 'GOOGLE_ADDRESS_VALIDATION_API_KEY', category: 'runtime', requiredFor: 'Google address validation', secret: true },
 ];
 

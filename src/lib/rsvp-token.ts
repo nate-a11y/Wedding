@@ -71,6 +71,7 @@ export async function getRsvpEditTokenContext(
     .from('rsvp_edit_tokens')
     .select('id, rsvp_id, email, expires_at, revoked_at')
     .eq('token_hash', tokenHash)
+    .neq('created_by', 'guest_sign_in')
     .is('revoked_at', null)
     .maybeSingle();
 

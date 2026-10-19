@@ -1,30 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-const sitePassword = process.env.SITE_PASSWORD;
 const adminPassword = process.env.ADMIN_PASSWORD;
 
 test.describe('wedding app smoke', () => {
-  test.describe('guest password flow', () => {
-    test.skip(!sitePassword, 'SITE_PASSWORD is required for guest password smoke test');
-
-    test('guest can log in and access core public pages', async ({ page }) => {
-      await page.goto('/');
-      await expect(page).toHaveURL(/\/login/);
-
-      await page.getByLabel(/password/i).fill(sitePassword!);
-      await page.getByRole('button', { name: /enter|sign in|login/i }).click();
-
-      await expect(page).toHaveURL(/\/$/);
-      await expect(page.getByRole('link', { name: /rsvp/i }).first()).toBeVisible();
-
-      await page.goto('/rsvp');
-      await expect(page).toHaveURL(/\/rsvp/);
-      await expect(page.getByText(/rsvp/i).first()).toBeVisible();
-
-      await page.goto('/guestbook');
-      await expect(page).toHaveURL(/\/guestbook/);
-      await expect(page.getByText(/guest/i).first()).toBeVisible();
-    });
+  test('general wedding pages are public without a password', async ({ page }) => {
+    for (const path of ['/', '/rsvp', '/guestbook', '/photos', '/wedding-party']) {
+      await page.goto(path);
+      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    }
   });
 
   test('admin APIs reject unauthenticated requests', async ({ request }) => {

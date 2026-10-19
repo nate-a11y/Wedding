@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
     const role: AuthSessionRole = body?.type === 'admin' ? 'admin' : 'guest';
+    if (role === 'guest') return NextResponse.json({ error: 'Guest passwords have been replaced with emailed sign-in links.' }, { status: 410 });
     const password = typeof body?.password === 'string' ? body.password : '';
     const correctPassword = role === 'admin' ? ADMIN_PASSWORD : SITE_PASSWORD;
 

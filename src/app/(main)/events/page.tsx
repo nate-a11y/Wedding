@@ -1,5 +1,6 @@
 'use client';
 
+import { GuestInvitations } from '@/components/GuestInvitations';
 import { motion } from 'framer-motion';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
 import { weddingSchedule, getGoogleCalendarUrl, downloadIcs } from '@/lib/calendar';
@@ -7,19 +8,6 @@ import { weddingSchedule, getGoogleCalendarUrl, downloadIcs } from '@/lib/calend
 const calendarEventsByName = new Map(weddingSchedule.map((event) => [event.name, event]));
 
 const events = [
-  {
-    name: 'Rehearsal Dinner',
-    time: '5:00 PM',
-    date: 'October 30, 2027',
-    location: 'The Callaway Jewel',
-    address: '4910 County Rd 105, Fulton, MO 65251',
-    description: 'Wedding party and immediate family only. Join us the night before for dinner and celebration!',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
   {
     name: 'Ceremony',
     time: '4:00 PM',
@@ -86,6 +74,8 @@ export default function EventsPage() {
           description="October 31, 2027 — Mark your calendars! Here's what to expect on our special day."
         />
 
+        <GuestInvitations />
+
         {/* Add to Calendar */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -100,7 +90,7 @@ export default function EventsPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Add Full Schedule to Calendar
+            Add Wedding-Day Schedule to Calendar
           </button>
           <p className="text-olive-400 text-xs sm:ml-2">
             Downloads every event below — works with Apple, Google, and Outlook
@@ -131,14 +121,6 @@ export default function EventsPage() {
                 <div className="p-6 md:p-8 flex-1">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      {'date' in event && event.date && (
-                        <div className="flex items-center gap-2 text-gold-400 mb-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className="font-medium">{event.date}</span>
-                        </div>
-                      )}
                       <div className="flex items-center gap-2 text-olive-300 mb-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
