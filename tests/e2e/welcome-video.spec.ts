@@ -4,6 +4,9 @@ import { getWelcomeVideoUrl, readWelcomeVideoToken, generateWelcomeAudio, WELCOM
 import { POST } from '../../src/app/api/welcome/audio/route';
 import { NextRequest } from 'next/server';
 
+// Keep native media throttling observable instead of routing it through the PWA worker.
+test.use({ serviceWorkers: 'block' });
+
 const TEST_SECRET = 'test-only-welcome-video-secret-32-characters';
 const originalSecret = process.env.WELCOME_VIDEO_TOKEN_SECRET;
 const originalKey = process.env.ELEVENLABS_API_KEY;
@@ -56,7 +59,7 @@ test('audio uses only the fixed Chris voice and model, natural speed and bounded
     globalThis.fetch = async (input, init) => {
       calls++;
       expect(String(input)).toContain(`/text-to-speech/${WELCOME_VIDEO_VOICE}?output_format=mp3_44100_128`);
-      expect(JSON.parse(String(init?.body))).toEqual({ text: "Michael, we're so glad you're here.", model_id: WELCOME_VIDEO_MODEL });
+      expect(JSON.parse(String(init?.body))).toEqual({ text: "Michael, a little hello from us.", model_id: WELCOME_VIDEO_MODEL });
       expect(init?.signal).toBeTruthy();
       return new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'audio/mpeg' } });
     };
@@ -99,7 +102,7 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   expect(protectedRoute.status()).toBe(307);
 });
 
-test('personalized player waits for Play, handles mobile block, then continues film at 2.45 seconds', async ({ page }) => {
+test('personalized player waits for Play, handles mobile block, then starts the complete film without exposing its poster', async ({ page }) => {
   test.skip(!originalSecret || originalSecret.length < 32, 'Requires a synthetic WELCOME_VIDEO_TOKEN_SECRET on the test server.');
   let audioRequests = 0;
   await page.addInitScript(() => {
@@ -113,13 +116,13 @@ test('personalized player waits for Play, handles mobile block, then continues f
   });
   await page.route('**/api/welcome/audio', route => { audioRequests++; return route.fulfill({ contentType: 'audio/mpeg', path: 'tests/fixtures/welcome-silence.mp3' }); });
   await page.goto(`/welcome?token=${tokenFor('Michael Brandt')}`);
-  await expect(page.getByText('Michael, we’re so glad you’re here.')).toBeVisible();
+  await expect(page.getByText('Michael, a little hello from us.')).toBeVisible();
   expect(audioRequests).toBe(0);
   await page.getByRole('button', { name: 'Play our welcome film' }).click();
   await page.getByRole('button', { name: 'Play your greeting' }).click();
   await page.locator('audio').evaluate(el => el.dispatchEvent(new Event('ended')));
   await page.getByRole('button', { name: 'Continue film' }).click();
-  expect(await page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBe(2.45);
+  expect(await page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBe(0);
   expect(audioRequests).toBe(1);
 });
 
@@ -148,8 +151,40 @@ test('skipping a pending greeting cannot restore its overlay after audio play re
   await page.route('**/api/welcome/audio', route => route.fulfill({ contentType: 'audio/mpeg', path: 'tests/fixtures/welcome-silence.mp3' }));
   await page.goto(`/welcome?token=${tokenFor('Michael Brandt')}`);
   await page.getByRole('button', { name: 'Play our welcome film' }).click();
-  await expect(page.getByText('A little hello from us…')).toBeVisible();
+  await expect(page.getByText('With love, Nate & Blake')).toBeVisible();
   await page.getByRole('button', { name: 'Watch without the personalized greeting' }).click();
   await expect(page.locator('video')).toHaveJSProperty('controls', true);
   await expect(page.getByRole('button', { name: 'Play your greeting' })).toBeHidden();
+});
+
+test('slow native video stays covered until playback, starts at zero, and ignores late greeting events', async ({ page }) => {
+  test.skip(!originalSecret || originalSecret.length < 32, 'Requires a synthetic WELCOME_VIDEO_TOKEN_SECRET on the test server.');
+  let releaseVideo!: () => void;
+  const videoReady = new Promise<void>(resolve => { releaseVideo = resolve; });
+  await page.route('**/welcome/welcome-v4.mp4', async route => {
+    await videoReady;
+    await route.continue();
+  });
+  await page.route('**/api/welcome/audio', route => route.fulfill({ contentType: 'audio/mpeg', path: 'tests/fixtures/welcome-silence.mp3' }));
+  await page.goto(`/welcome?token=${tokenFor('Michael Brandt')}`);
+  await page.locator('video').evaluate((el: HTMLVideoElement) => {
+    el.addEventListener('playing', () => { el.dataset.playStartedAt = String(el.currentTime); }, { once: true });
+  });
+  try {
+    await page.getByRole('button', { name: 'Play our welcome film' }).click();
+    await expect(page.getByText('Starting your film…')).toBeVisible();
+    await expect(page.getByText('Michael, a little hello from us.')).toBeVisible();
+    await expect(page.locator('video')).toHaveJSProperty('controls', false);
+    expect(await page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBe(0);
+    releaseVideo();
+    await expect(page.locator('video')).toHaveJSProperty('controls', true);
+    const start = Number(await page.locator('video').getAttribute('data-play-started-at'));
+    expect(start).toBeLessThan(0.2);
+    await expect.poll(() => page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBeGreaterThan(0.5);
+    expect(await page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBeLessThan(2);
+    await page.locator('video').evaluate((el: HTMLVideoElement) => { el.pause(); el.currentTime = 10; });
+    await page.locator('audio').evaluate(el => { el.dispatchEvent(new Event('error')); el.dispatchEvent(new Event('ended')); });
+    await expect(page.locator('video')).toHaveJSProperty('controls', true);
+    expect(await page.locator('video').evaluate((el: HTMLVideoElement) => el.currentTime)).toBe(10);
+  } finally { releaseVideo(); }
 });

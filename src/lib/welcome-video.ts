@@ -57,7 +57,7 @@ export async function generateWelcomeAudio(firstName: string): Promise<string> {
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${WELCOME_VIDEO_VOICE}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-      body: JSON.stringify({ text: `${firstName}, we're so glad you're here.`, model_id: WELCOME_VIDEO_MODEL }),
+      body: JSON.stringify({ text: `${firstName}, a little hello from us.`, model_id: WELCOME_VIDEO_MODEL }),
       signal: AbortSignal.timeout(20_000),
       cache: 'no-store',
     });
@@ -86,4 +86,4 @@ export async function generateWelcomeAudio(firstName: string): Promise<string> {
   }
 }
 
-export const getCachedWelcomeAudio = unstable_cache(generateWelcomeAudio, ['wedding-welcome-v1', WELCOME_VIDEO_VOICE, WELCOME_VIDEO_MODEL], { revalidate: false });
+export const getCachedWelcomeAudio = unstable_cache(generateWelcomeAudio, ['wedding-welcome-greeting-v2', WELCOME_VIDEO_VOICE, WELCOME_VIDEO_MODEL], { revalidate: false });

@@ -9,9 +9,9 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
   const audio = useRef<HTMLAudioElement>(null);
   const audioUrl = useRef<string | null>(null);
   const controller = useRef<AbortController | null>(null);
-  const filmStart = useRef(0);
+  const greetingActive = useRef(false);
   const playbackVersion = useRef(0);
-  const [phase, setPhase] = useState<'ready' | 'loading' | 'greeting' | 'audio-ready' | 'film' | 'continue'>('ready');
+  const [phase, setPhase] = useState<'ready' | 'loading' | 'greeting' | 'audio-ready' | 'buffering' | 'film' | 'continue'>('ready');
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -19,6 +19,7 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
     const videoElement = video.current;
     return () => {
       playbackVersion.current++;
+      greetingActive.current = false;
       controller.current?.abort();
       audioElement?.pause();
       videoElement?.pause();
@@ -26,16 +27,18 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
     };
   }, []);
 
-  async function startFilm(start: number) {
+  async function startFilm() {
     const version = ++playbackVersion.current;
     controller.current?.abort();
+    greetingActive.current = false;
     audio.current?.pause();
-    filmStart.current = start;
-    setPhase('film');
+    setPhase('buffering');
+    setNotice('');
     if (!video.current) return;
-    video.current.currentTime = start;
+    video.current.currentTime = 0;
     try {
       await video.current.play();
+      if (version === playbackVersion.current) setPhase('film');
     } catch {
       if (version !== playbackVersion.current) return;
       setPhase('continue');
@@ -45,6 +48,8 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
 
   async function playGreeting() {
     const version = playbackVersion.current;
+    greetingActive.current = true;
+    setNotice('');
     setPhase('greeting');
     try {
       await audio.current?.play();
@@ -57,7 +62,9 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
 
   async function play() {
     setNotice('');
-    if (!token) return startFilm(0);
+    if (!token) return startFilm();
+    // Load the opening under the greeting card, never expose the poster during handoff.
+    if (video.current) { video.current.preload = 'auto'; video.current.load(); }
     const version = ++playbackVersion.current;
     setPhase('loading');
     controller.current = new AbortController();
@@ -77,8 +84,8 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
       await playGreeting();
     } catch {
       if (version !== playbackVersion.current) return;
+      await startFilm();
       setNotice('Your personalized greeting is unavailable, but our film is ready for you.');
-      await startFilm(0);
     } finally {
       clearTimeout(timeout);
     }
@@ -87,25 +94,26 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
   return (
     <section aria-label="Welcome film">
       <div className="relative overflow-hidden rounded-2xl border border-[#d4af37]/40 bg-white shadow-lg">
-        <video ref={video} controls={phase === 'film' || phase === 'continue'} playsInline preload="none" poster="/welcome/welcome-v4-poster.jpg" className="aspect-video w-full" aria-label="Nate and Blake’s welcome film" onError={() => setNotice('The film could not load. Please try again later.')}>
+        <video ref={video} controls={phase === 'film'} playsInline preload="none" poster="/welcome/welcome-v4-poster.jpg" className="aspect-video w-full" aria-label="Nate and Blake’s welcome film" onError={() => { setNotice('The film could not load. Please try again later.'); setPhase('continue'); }}>
           <source src="/welcome/welcome-v4.mp4" type="video/mp4" />
           <track kind="captions" src="/welcome/welcome-v4.en.vtt" srcLang="en" label="English" default />
           Your browser does not support video playback.
         </video>
-        {phase !== 'film' && phase !== 'continue' && (
+        {phase !== 'film' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#faf9f6] p-4 sm:p-8">
-            <p className="font-[family-name:var(--font-heading)] text-2xl leading-snug sm:text-4xl">{firstName ? `${firstName}, we’re so glad you’re here.` : 'We’re so glad you’re here.'}</p>
+            <p className="font-[family-name:var(--font-heading)] text-2xl leading-snug sm:text-4xl">{firstName ? `${firstName}, a little hello from us.` : 'We’re so glad you’re here.'}</p>
             {(phase === 'ready' || phase === 'loading') && <button type="button" className={buttonClass} disabled={phase === 'loading'} onClick={play}>{phase === 'loading' ? 'Preparing your greeting…' : 'Play our welcome film'}</button>}
             {phase === 'audio-ready' && <button type="button" className={buttonClass} onClick={playGreeting}>Play your greeting</button>}
-            {phase === 'greeting' && <p className="text-sm">A little hello from us…</p>}
+            {phase === 'greeting' && <p className="text-sm">With love, Nate &amp; Blake</p>}
+            {phase === 'buffering' && <p role="status" className="text-sm">Starting your film…</p>}
+            {phase === 'continue' && <button type="button" className={buttonClass} onClick={startFilm}>Continue film</button>}
           </div>
         )}
       </div>
       {/* The visible opening-card text is also the transcript for this short audio. */}
-      <audio ref={audio} preload="none" onEnded={() => startFilm(2.45)} onError={() => { setNotice('Please enjoy the original film.'); void startFilm(0); }} />
+      <audio ref={audio} preload="none" onEnded={() => { if (greetingActive.current) void startFilm(); }} onError={() => { if (greetingActive.current) { void startFilm(); setNotice('Please enjoy the original film.'); } }} />
       <p aria-live="polite" className="mt-4 text-sm">{notice || (phase === 'loading' ? 'Preparing your personalized greeting.' : '')}</p>
-      {phase === 'continue' && <button type="button" className={buttonClass} onClick={() => startFilm(filmStart.current)}>Continue film</button>}
-      {token && phase !== 'film' && phase !== 'continue' && phase !== 'loading' && <button type="button" className="mt-4 text-sm underline underline-offset-4 focus-visible:outline-2" onClick={() => startFilm(0)}>Watch without the personalized greeting</button>}
+      {token && phase !== 'film' && phase !== 'continue' && phase !== 'loading' && phase !== 'buffering' && <button type="button" className="mt-4 text-sm underline underline-offset-4 focus-visible:outline-2" onClick={startFilm}>Watch without the personalized greeting</button>}
     </section>
   );
 }
