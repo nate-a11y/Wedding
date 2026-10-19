@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation } from '@/components/ui';
+import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { AddressValidationNotice } from '@/components/ui/AddressValidationNotice';
+import { FULL_NAME_ERROR, FULL_NAME_PATTERN } from '@/lib/name-validation';
 import { PageEffects, AnimatedHeader } from '@/components/ui/PageEffects';
 import type { FormState } from '@/types';
 
@@ -360,6 +362,11 @@ export default function AddressPage() {
                     <Input
                       label="Full Name"
                       name="name"
+                      autoComplete="name"
+                      maxLength={120}
+                      pattern={FULL_NAME_PATTERN}
+                      title={FULL_NAME_ERROR}
+                      helperText="Please include your first and last name."
                       value={formData.name}
                       onChange={handleChange}
                       required
@@ -390,13 +397,17 @@ export default function AddressPage() {
                 <div>
                   <h3 className="text-lg font-medium text-gold-400 mb-4">Mailing Address</h3>
                   <div className="space-y-4">
-                    <Input
-                      label="Street Address"
+                    <AddressAutocomplete
                       name="streetAddress"
                       value={formData.streetAddress}
-                      onChange={handleChange}
-                      required
-                      placeholder="123 Main Street"
+                      country={formData.country}
+                      onChange={streetAddress => setFormData(prev => ({ ...prev, streetAddress }))}
+                      onSelect={address => setFormData(prev => ({
+                        ...prev,
+                        streetAddress: address.street_address,
+                        streetAddress2: address.street_address_2 || prev.streetAddress2,
+                        city: address.city, state: address.state, postalCode: address.postal_code,
+                      }))}
                     />
                     <Input
                       label="Apartment, Suite, etc. (Optional)"

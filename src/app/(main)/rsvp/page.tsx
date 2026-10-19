@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
+import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { AddressValidationNotice } from '@/components/ui/AddressValidationNotice';
+import { FULL_NAME_ERROR, FULL_NAME_PATTERN, fullNameSchema } from '@/lib/name-validation';
 import type { MealChoice, FormState } from '@/types';
 
 // Helper to convert VAPID key for push subscription
@@ -1038,6 +1040,11 @@ export default function RSVPPage() {
                         <Input
                           label="Full Name"
                           name="name"
+                          autoComplete="name"
+                          maxLength={120}
+                          pattern={FULL_NAME_PATTERN}
+                          title={FULL_NAME_ERROR}
+                          helperText="Please include your first and last name."
                           value={formData.name}
                           onChange={handleChange}
                           required
@@ -1059,13 +1066,15 @@ export default function RSVPPage() {
                     <div>
                       <h4 className="text-sm font-medium text-gold-400 mb-4">Mailing Address</h4>
                       <div className="space-y-4">
-                        <Input
-                          label="Street Address"
+                        <AddressAutocomplete
                           name="street_address"
                           value={addressData.street_address}
-                          onChange={handleAddressChange}
-                          required
-                          placeholder="123 Main Street"
+                          country={addressData.country}
+                          onChange={street_address => setAddressData(prev => ({ ...prev, street_address }))}
+                          onSelect={address => setAddressData(prev => ({
+                            ...prev, ...address,
+                            street_address_2: address.street_address_2 || prev.street_address_2,
+                          }))}
                         />
                         <Input
                           label="Apartment, Suite, etc. (Optional)"
@@ -1260,11 +1269,16 @@ export default function RSVPPage() {
                         <Input
                           label="Full Name"
                           name="name"
+                          autoComplete="name"
+                          maxLength={120}
+                          pattern={FULL_NAME_PATTERN}
+                          title={FULL_NAME_ERROR}
+                          helperText="Please include your first and last name."
                           value={formData.name}
                           onChange={handleChange}
                           required
                           placeholder="Enter your full name"
-                          disabled={lookupStatus === 'existing_rsvp'}
+                          disabled={lookupStatus === 'existing_rsvp' && fullNameSchema.safeParse(existingRsvp?.name).success}
                         />
 
                         {/* Show email as read-only */}

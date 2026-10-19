@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { badRequest, validationErrorResponse } from '@/lib/api-response';
+import { fullNameSchema } from '@/lib/name-validation';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'] as const;
@@ -56,7 +57,7 @@ const eventResponsesSchema = z
   .refine((responses) => Object.keys(responses).length <= 25, 'Too many event responses');
 
 export const rsvpSubmissionSchema = z.object({
-  name: requiredString(120, 'Name'),
+  name: fullNameSchema,
   email: emailSchema,
   attending: z.union([z.boolean(), z.enum(['yes', 'no'])], { error: 'Attending status is required' }),
   mealChoice: optionalString(100, 'Meal choice'),
@@ -104,9 +105,14 @@ export const addressValidationSchema = z.object({
   postal_code: z.string().trim().regex(/^\d{5}(-\d{4})?$/, 'Use a valid ZIP code'),
 });
 
+export const addressAutocompleteSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('suggest'), input: requiredString(200, 'Address search').min(3), sessionToken: z.uuid() }),
+  z.object({ action: z.literal('resolve'), placeId: requiredString(256, 'Place ID').regex(/^[A-Za-z0-9_-]+$/), sessionToken: z.uuid() }),
+]);
+
 export const addressSubmissionSchema = z
   .object({
-    name: requiredString(120, 'Name'),
+    name: fullNameSchema,
     email: emailSchema,
     phone: requiredString(50, 'Phone'),
     streetAddress: requiredString(150, 'Street address'),

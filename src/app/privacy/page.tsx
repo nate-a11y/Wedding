@@ -7,6 +7,7 @@ export default function PrivacyPage() {
         <h1 className="font-heading text-3xl text-gold-400">Privacy &amp; terms</h1>
         <p>We use the information you submit to organize Nate &amp; Blake’s wedding, manage RSVPs, and send wedding communications and invitations. Please submit only information you are authorized to share.</p>
         <h2 className="text-xl">Address validation</h2>
+        <p>As you type into a US street-address field, your partial address search is sent to Google Places for suggestions. Choosing a suggestion fills editable address fields. You can also enter an address manually. Suggestions are not proof of postal deliverability; we still validate the completed US address before saving.</p>
         <p>When you validate a US mailing address, its street, apartment/unit, city, state, and ZIP code are sent to Google Maps Address Validation. We do not include your name, email, or phone number in this request. Google may use USPS services to validate the address. Do not submit fabricated addresses.</p>
         <p>Address suggestions can be incorrect. Review them before choosing “Use Suggested Address.” We save the address you confirm for wedding mailings; we do not save Google’s raw response, coordinates, or validation metadata.</p>
         <h2 className="text-xl">Google Maps terms</h2>

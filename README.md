@@ -139,11 +139,15 @@ Set these in your Vercel dashboard:
 - `SITE_PASSWORD` - Password for guest access
 - `RESEND_API_KEY` - API key from Resend for email notifications
 - `RESEND_WEBHOOK_SECRET` - Webhook secret for Resend email events
-- `GOOGLE_ADDRESS_VALIDATION_API_KEY` - Server-only key restricted to the Google Address Validation API; never prefix with `NEXT_PUBLIC_`
+- `GOOGLE_ADDRESS_VALIDATION_API_KEY` - Server-only wedding key restricted to Google Address Validation and Places API (New); never prefix with `NEXT_PUBLIC_`
 
 US addresses in `/address` and `/rsvp` are validated through Google Address Validation with USPS CASS enabled. Guests confirm suggested corrections before saving. Validation failures are shown explicitly, with an option to continue using the original address. `/privacy` documents the data sharing and Google terms. Raw Google responses and validation metadata are not stored.
 
+Primary full-name fields on address and RSVP submissions require at least two whitespace-separated parts containing letters, enforced in the browser and server schemas. Middle names, Unicode letters, hyphens, and apostrophes are supported. This checks format, not identity; additional-guest/household names and existing records are not rewritten. Legacy RSVP names that fail the new format remain editable when using the existing RSVP flow.
+
 Use a dedicated API-restricted wedding key, not a shared Google Workspace service-account key. The API must be enabled with billing attached; Google's recurring free allowance is shared at the billing-account level and is not a spending cap. The endpoint uses the existing shared rate limiter (five attempts per IP per minute); configure Google quotas separately if a hard provider-side usage ceiling is needed, without unexpectedly limiting other apps in a shared project.
+
+US street fields also offer Google Places (New) autocomplete after three characters and a 300ms typing pause. Selecting a suggestion fills editable street/city/state/ZIP fields and preserves manually entered apartment/unit data. A session token groups predictions and terminates in an address-components-only Place Details request; final CASS validation remains separate. `/api/address/autocomplete` validates inputs and limits requests to 30/IP/minute. Enable `places.googleapis.com` and allow it on the wedding key. Autocomplete/Place Details have separate Google billing SKUs and free allowances; manual entry remains available during an outage or for non-US addresses.
 
 ## Supabase Setup
 
