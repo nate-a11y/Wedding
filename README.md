@@ -207,3 +207,5 @@ Made with love for Nate & Blake's wedding 10.31.27
 ### Welcome film imagery
 
 The live welcome film and address-confirmation thumbnail use the engagement-day kissing photo, replacing the withdrawn hand-heart water photo. Public media URLs remain stable; `?v=engagement-kiss-20261019` refreshes browser/email image caches for new sends. The 45-second timing, original audio, captions, script wordmark, and full-opening personalized handoff are unchanged. Do not restore the withdrawn photo in active assets.
+
+Admin-only address listings include `welcome_video_url`, generated server-side for the guest’s first name. This lets approved manual resends reuse personalized links without exporting the production signing secret; it does not send emails or update guest records.

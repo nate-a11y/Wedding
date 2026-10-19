@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { getWelcomeVideoUrl } from '@/lib/welcome-video';
 
 export async function GET() {
   const authError = await requireAdminAuth();
@@ -30,7 +31,7 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ addresses: data || [] });
+    return NextResponse.json({ addresses: (data || []).map(address => ({ ...address, welcome_video_url: getWelcomeVideoUrl(address.name) })) });
   } catch (error) {
     console.error('Admin addresses fetch error:', error);
     return NextResponse.json(
