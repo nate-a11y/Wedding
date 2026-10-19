@@ -335,7 +335,7 @@ export async function sendAddressConfirmation(data: AddressEmailData): Promise<b
 
       <div style="text-align: center; margin-bottom: 30px;">
         <a href="${welcomeVideoUrl}" style="display: block; text-decoration: none;" aria-label="Watch your welcome video from Nate and Blake">
-          <img src="https://www.nateandblake.me/welcome/welcome-v4-poster.jpg?v=engagement-20261019" alt="Play your welcome from Nate &amp; Blake — 45 seconds" width="520" style="display: block; width: 100%; max-width: 520px; height: auto; border: 0; border-radius: 8px; margin: 0 auto;" />
+          <img src="https://www.nateandblake.me/welcome/welcome-v4-poster.jpg?v=engagement-kiss-20261019" alt="Play your welcome from Nate &amp; Blake — 45 seconds" width="520" style="display: block; width: 100%; max-width: 520px; height: auto; border: 0; border-radius: 8px; margin: 0 auto;" />
         </a>
         <p style="margin: 18px 0 0;">
           <a href="${welcomeVideoUrl}" style="display: inline-block; background: #536537; color: #faf9f6; border: 1px solid #d4af37; border-radius: 6px; padding: 14px 22px; font-size: 18px; text-decoration: none;">Watch your welcome video &rarr;</a>

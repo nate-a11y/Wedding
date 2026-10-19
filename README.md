@@ -206,4 +206,4 @@ Made with love for Nate & Blake's wedding 10.31.27
 
 ### Welcome film imagery
 
-The live welcome film and address-confirmation thumbnail use the engagement-day photo, replacing the withdrawn hand-heart water photo. Public media URLs remain stable; `?v=engagement-20261019` refreshes browser/email image caches for new sends. The 45-second timing, original audio, captions, script wordmark, and full-opening personalized handoff are unchanged. Do not restore the withdrawn photo in active assets.
+The live welcome film and address-confirmation thumbnail use the engagement-day kissing photo, replacing the withdrawn hand-heart water photo. Public media URLs remain stable; `?v=engagement-kiss-20261019` refreshes browser/email image caches for new sends. The 45-second timing, original audio, captions, script wordmark, and full-opening personalized handoff are unchanged. Do not restore the withdrawn photo in active assets.

@@ -98,8 +98,8 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   expect(audioRequests).toBe(0);
   await expect(page.locator('video')).toHaveAttribute('preload', 'none');
-  await expect(page.locator('video')).toHaveAttribute('poster', '/welcome/welcome-v4-poster.jpg?v=engagement-20261019');
-  await expect(page.locator('video source')).toHaveAttribute('src', '/welcome/welcome-v4.mp4?v=engagement-20261019');
+  await expect(page.locator('video')).toHaveAttribute('poster', '/welcome/welcome-v4-poster.jpg?v=engagement-kiss-20261019');
+  await expect(page.locator('video source')).toHaveAttribute('src', '/welcome/welcome-v4.mp4?v=engagement-kiss-20261019');
   const protectedRoute = await request.get('/welcome/private', { maxRedirects: 0 });
   expect(protectedRoute.status()).toBe(307);
 });

@@ -94,8 +94,8 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
   return (
     <section aria-label="Welcome film">
       <div className="relative overflow-hidden rounded-2xl border border-[#d4af37]/40 bg-white shadow-lg">
-        <video ref={video} controls={phase === 'film'} playsInline preload="none" poster="/welcome/welcome-v4-poster.jpg?v=engagement-20261019" className="aspect-video w-full" aria-label="Nate and Blake’s welcome film" onError={() => { setNotice('The film could not load. Please try again later.'); setPhase('continue'); }}>
-          <source src="/welcome/welcome-v4.mp4?v=engagement-20261019" type="video/mp4" />
+        <video ref={video} controls={phase === 'film'} playsInline preload="none" poster="/welcome/welcome-v4-poster.jpg?v=engagement-kiss-20261019" className="aspect-video w-full" aria-label="Nate and Blake’s welcome film" onError={() => { setNotice('The film could not load. Please try again later.'); setPhase('continue'); }}>
+          <source src="/welcome/welcome-v4.mp4?v=engagement-kiss-20261019" type="video/mp4" />
           <track kind="captions" src="/welcome/welcome-v4.en.vtt" srcLang="en" label="English" default />
           Your browser does not support video playback.
         </video>
