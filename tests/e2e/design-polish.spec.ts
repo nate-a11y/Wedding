@@ -5,6 +5,32 @@ import { expect, test } from '@playwright/test';
 test.use({ serviceWorkers: 'block' });
 
 test.describe('guest design polish', () => {
+  test('script subtitles contain the complete glyphs on mobile and desktop', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const width of [320, 390, 440, 1440]) {
+      await page.setViewportSize({ width, height: 956 });
+      for (const path of ['/address', '/events', '/photos']) {
+        await page.goto(path);
+        await page.evaluate(() => document.fonts.load('16px Rockybilly'));
+        const subtitle = page.getByRole('heading', { level: 1 }).locator('..').locator('p.font-accent');
+        await expect(subtitle).toHaveCSS('line-height', 'normal');
+        const bounds = await subtitle.evaluate(element => {
+          const style = getComputedStyle(element);
+          const context = document.createElement('canvas').getContext('2d')!;
+          context.font = `${style.fontSize} ${style.fontFamily}`;
+          const text = context.measureText(element.textContent || '');
+          const rect = element.getBoundingClientRect();
+          const heading = element.parentElement!.querySelector('h1')!.getBoundingClientRect();
+          return { height: rect.height, inkHeight: text.actualBoundingBoxAscent + text.actualBoundingBoxDescent, top: rect.top, bottom: rect.bottom, headingTop: heading.top };
+        });
+        expect(bounds.height, `${path} at ${width}px must fit Rockybilly's tall glyphs`).toBeGreaterThanOrEqual(bounds.inkHeight);
+        expect(bounds.top).toBeGreaterThanOrEqual(0);
+        expect(bounds.headingTop).toBeGreaterThanOrEqual(bounds.bottom);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      }
+    }
+  });
+
   test('hero names and primary actions fit narrow phones and desktop', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-10-18T12:00:00'));
     for (const width of [320, 390, 1440]) {

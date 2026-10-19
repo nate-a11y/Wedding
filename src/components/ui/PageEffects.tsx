@@ -280,7 +280,7 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
       )}
 
       <motion.p
-        className="font-accent relative mx-auto mb-3 max-w-[min(42rem,92vw)] px-2 text-[clamp(1.65rem,8vw,2.6rem)] leading-[1.15] tracking-[0.02em] text-gold-400 drop-shadow-[0_2px_14px_rgba(212,175,55,0.18)] [overflow-wrap:anywhere] sm:text-[clamp(2rem,5vw,3.4rem)]"
+        className="font-accent relative mx-auto mb-3 max-w-[min(42rem,92vw)] px-2 text-[clamp(1.65rem,8vw,2.6rem)] leading-[normal] tracking-[0.02em] text-gold-400 drop-shadow-[0_2px_14px_rgba(212,175,55,0.18)] [overflow-wrap:anywhere] sm:text-[clamp(2rem,5vw,3.4rem)]"
         animate={reduceMotion ? { opacity: 1 } : { opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
