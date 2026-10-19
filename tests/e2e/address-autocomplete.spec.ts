@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { addressAutocompleteSchema } from '../../src/lib/validation';
 import { parsePlaceAddress, resolveAddress, suggestAddresses } from '../../src/lib/address-autocomplete';
 
-const token = '51b14d08-5864-420a-b32f-331eeb47b242';
+const token = '00000000-0000-4000-8000-000000000001';
 const suggestion = { placeId: 'public-place-id', text: '1600 Pennsylvania Avenue NW, Washington, DC, USA' };
 const address = { street_address: '1600 Pennsylvania Avenue NW', street_address_2: '', city: 'Washington', state: 'DC', postal_code: '20500' };
 const place = { addressComponents: [
