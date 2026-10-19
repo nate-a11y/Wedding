@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 
@@ -115,6 +115,7 @@ export function PageEffects({
   showRings = false,
   showGradient = true,
 }: PageEffectsProps) {
+  const reduceMotion = useReducedMotion();
   // Configure based on variant
   const config = useMemo(() => {
     switch (variant) {
@@ -171,6 +172,7 @@ export function PageEffects({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(212,175,55,0.08),transparent_32rem),linear-gradient(180deg,rgba(0,0,0,0.12),rgba(0,0,0,0.42))]" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
       <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(83,101,55,0.10)_0%,transparent_38%,rgba(212,175,55,0.04)_100%)]" />
+      {!reduceMotion && <>
       {/* Animated gradient background */}
       {showGradient && (
         <>
@@ -218,6 +220,7 @@ export function PageEffects({
       {sparkles.map((s) => (
         <Sparkle key={s.id} style={s.style} delay={s.delay} repeatDelay={s.repeatDelay} />
       ))}
+      </>}
     </div>
   );
 }
@@ -230,6 +233,7 @@ interface GlowEffectProps {
 }
 
 export function GlowEffect({ className = '', color = 'gold', intensity = 'medium' }: GlowEffectProps) {
+  const reduceMotion = useReducedMotion();
   const colorValue = color === 'gold' ? '212, 175, 55' : '83, 101, 55';
   const opacityMap = { low: 0.08, medium: 0.12, high: 0.18 };
   const opacity = opacityMap[intensity];
@@ -241,7 +245,7 @@ export function GlowEffect({ className = '', color = 'gold', intensity = 'medium
         background: `radial-gradient(ellipse, rgba(${colorValue}, ${opacity}) 0%, transparent 70%)`,
         filter: 'blur(40px)',
       }}
-      animate={{
+      animate={reduceMotion ? undefined : {
         opacity: [0.5, 0.8, 0.5],
         scale: [1, 1.1, 1],
       }}
@@ -259,6 +263,7 @@ interface AnimatedHeaderProps {
 }
 
 export function AnimatedHeader({ subtitle, title, description, showGlow = true }: AnimatedHeaderProps) {
+  const reduceMotion = useReducedMotion();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -276,7 +281,7 @@ export function AnimatedHeader({ subtitle, title, description, showGlow = true }
 
       <motion.p
         className="font-accent relative mx-auto mb-3 max-w-[min(42rem,92vw)] px-2 text-[clamp(1.65rem,8vw,2.6rem)] leading-[1.15] tracking-[0.02em] text-gold-400 drop-shadow-[0_2px_14px_rgba(212,175,55,0.18)] [overflow-wrap:anywhere] sm:text-[clamp(2rem,5vw,3.4rem)]"
-        animate={{ opacity: [0.8, 1, 0.8] }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity }}
       >
         {subtitle}
@@ -323,6 +328,7 @@ interface AnimatedGoldLineProps {
 }
 
 export function AnimatedGoldLine({ className = 'mb-8', delay = 0 }: AnimatedGoldLineProps) {
+  const reduceMotion = useReducedMotion();
   return (
     <div className={`relative flex justify-center ${className}`}>
       <motion.div
@@ -337,11 +343,11 @@ export function AnimatedGoldLine({ className = 'mb-8', delay = 0 }: AnimatedGold
         animate={{ scale: [0, 1.5, 1] }}
         transition={{ duration: 0.5, delay: delay + 0.5 }}
       />
-      <motion.div
+      {!reduceMotion && <motion.div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gold-500"
         animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
         transition={{ duration: 2, repeat: Infinity, delay: delay + 1 }}
-      />
+      />}
     </div>
   );
 }

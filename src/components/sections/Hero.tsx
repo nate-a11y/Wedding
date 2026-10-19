@@ -1,10 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useState, useMemo } from 'react';
 import { Countdown } from './Countdown';
 import { siteConfig } from '@/config/site';
-import { Button } from '@/components/ui';
 import Link from 'next/link';
 
 // Floating particle component
@@ -114,6 +113,13 @@ function AnimatedText({ text, className }: { text: string; className?: string; d
 
 export function Hero() {
   const [mounted, setMounted] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const now = mounted ? new Date() : null;
+  const rsvpOpen = now && now >= new Date('2027-04-01T00:00:00') && now <= new Date('2027-09-01T23:59:59');
+  const rsvpClosed = now && now > new Date('2027-09-01T23:59:59');
+  const primaryAction = rsvpOpen ? { href: '/rsvp', label: 'RSVP' }
+    : rsvpClosed ? { href: '/events', label: 'View Wedding Details' }
+    : { href: '/address', label: 'Share Your Mailing Address' };
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true));
@@ -154,7 +160,8 @@ export function Hero() {
   );
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-x-hidden bg-charcoal">
+    <section className="relative min-h-[calc(100svh-5rem)] flex items-center justify-center overflow-x-hidden bg-charcoal">
+      {!reduceMotion && <>
       {/* Animated gradient background */}
       <motion.div
         className="absolute inset-0"
@@ -182,6 +189,7 @@ export function Hero() {
         transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
       />
 
+      </>}
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div
@@ -194,27 +202,27 @@ export function Hero() {
       </div>
 
       {/* Floating particles */}
-      {mounted && particles.map((p) => (
+      {mounted && !reduceMotion && particles.map((p) => (
         <FloatingParticle key={p.id} {...p} />
       ))}
 
       {/* Sparkle effects */}
-      {mounted && sparkles.map((s) => (
+      {mounted && !reduceMotion && sparkles.map((s) => (
         <Sparkle key={s.id} style={s.style} delay={s.delay} repeatDelay={s.repeatDelay} />
       ))}
 
       {/* Content */}
-      <div className="container-wedding relative z-10 py-12 md:py-20">
+      <div className="container-wedding relative z-10 pt-12 pb-20 md:py-16">
         <div className="max-w-3xl mx-auto text-center relative">
           {/* Animated rings behind content */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {!reduceMotion && <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <AnimatedRing size={300} delay={0} duration={4} />
             <AnimatedRing size={400} delay={1} duration={5} />
             <AnimatedRing size={500} delay={2} duration={6} />
-          </div>
+          </div>}
 
           {/* Glow effect behind names */}
-          <motion.div
+          {!reduceMotion && <motion.div
             className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 w-96 h-32 rounded-full pointer-events-none"
             style={{
               background: 'radial-gradient(ellipse, rgba(212, 175, 55, 0.15) 0%, transparent 70%)',
@@ -225,13 +233,13 @@ export function Hero() {
               scale: [1, 1.1, 1],
             }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          />
+          />}
 
           {/* Decorative Top Element */}
           <div className="mb-6 md:mb-8 relative">
             <motion.span
               className="text-olive-400 text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] font-medium inline-block"
-              animate={{ opacity: [0.7, 1, 0.7] }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: [0.7, 1, 0.7] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
               We&apos;re Getting Married
@@ -240,7 +248,7 @@ export function Hero() {
 
           {/* Names with letter animation */}
           <div className="mb-4 md:mb-6 relative">
-            <h1 className="font-accent text-8xl sm:text-9xl md:text-[10rem] lg:text-[12rem] mb-4 md:mb-6">
+            <h1 className="font-accent hero-names whitespace-nowrap mb-4 md:mb-6" aria-label="Nate and Blake">
               <AnimatedText
                 text={siteConfig.couple.person1.firstName}
                 className="text-gold-500"
@@ -282,7 +290,7 @@ export function Hero() {
           >
             <motion.p
               className="font-heading text-3xl md:text-4xl text-cream tracking-wide"
-              animate={{ textShadow: ['0 0 20px rgba(212, 175, 55, 0)', '0 0 20px rgba(212, 175, 55, 0.3)', '0 0 20px rgba(212, 175, 55, 0)'] }}
+              animate={reduceMotion ? undefined : { textShadow: ['0 0 20px rgba(212, 175, 55, 0)', '0 0 20px rgba(212, 175, 55, 0.3)', '0 0 20px rgba(212, 175, 55, 0)'] }}
               transition={{ duration: 3, repeat: Infinity }}
             >
               {siteConfig.wedding.displayDate}
@@ -307,21 +315,13 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.7 }}
-            className="flex flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4"
           >
-            <Link href="/our-story">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="primary" size="lg">
-                  Our Story
-                </Button>
-              </motion.div>
+            <Link href={primaryAction.href} className="inline-flex min-h-14 items-center justify-center rounded-lg bg-gold-500 px-6 py-3 text-base font-semibold sm:text-lg" style={{ color: '#000' }}>
+              {primaryAction.label}
             </Link>
-            <Link href="/rsvp">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="outline" size="lg">
-                  RSVP
-                </Button>
-              </motion.div>
+            <Link href="/our-story" className="inline-flex min-h-14 items-center justify-center rounded-lg border-2 border-gold-500 px-6 py-3 text-base font-medium sm:text-lg">
+              Our Story
             </Link>
           </motion.div>
         </div>
@@ -334,7 +334,7 @@ export function Hero() {
           className="absolute bottom-2 sm:bottom-8 left-1/2 -translate-x-1/2"
         >
           <motion.div
-            animate={{ y: [0, 8, 0] }}
+            animate={reduceMotion ? undefined : { y: [0, 8, 0] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
             className="text-gold-500"
           >
@@ -343,7 +343,7 @@ export function Hero() {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              animate={{ opacity: [0.5, 1, 0.5] }}
+              animate={reduceMotion ? undefined : { opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
             >
               <path

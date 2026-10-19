@@ -189,6 +189,21 @@ p {
   font-size: 0.7em;
 }
 
+/* Rockybilly's tall glyphs need a smaller scale than the serif headings. */
+.hero-names {
+  font-size: clamp(1.125rem, 5.5vw, 3.25rem);
+  line-height: 2.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Link Styles */
 a {
   color: var(--nb-gold);

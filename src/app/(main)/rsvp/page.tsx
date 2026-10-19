@@ -1423,7 +1423,7 @@ export default function RSVPPage() {
                                         onChange={(e) => updateGuest(guest.id, 'name', e.target.value)}
                                         placeholder="Guest name (required)"
                                         required
-                                        className={`flex h-10 flex-1 rounded-md border bg-charcoal text-cream px-3 py-2 text-sm transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 ${
+                                        className={`flex h-11 flex-1 rounded-md border bg-charcoal text-cream px-3 py-2 text-base transition-colors placeholder:text-olive-300 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 ${
                                           guest.name.trim() === '' ? 'border-red-500/50' : 'border-olive-600'
                                         }`}
                                       />
@@ -1466,7 +1466,7 @@ export default function RSVPPage() {
                         value={formData.message}
                         onChange={handleChange}
                         rows={4}
-                        className="flex w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-3 text-base transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                        className="flex w-full rounded-md border border-olive-600 bg-charcoal text-cream px-4 py-3 text-base transition-colors placeholder:text-olive-300 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                         placeholder="Share a message with Nate & Blake..."
                       />
                     </div>

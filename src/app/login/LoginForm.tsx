@@ -126,7 +126,7 @@ export function LoginForm() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal px-4 py-2 text-base text-cream transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
+                className="flex h-11 w-full rounded-md border border-olive-600 bg-charcoal px-4 py-2 text-base text-cream transition-colors placeholder:text-olive-300 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20"
                 placeholder="Enter password"
                 required
                 autoFocus

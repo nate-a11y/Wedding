@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { PWAManifest } from '@/components/PWAManifest';
+import { MotionPreferences } from '@/components/ui/MotionPreferences';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <PWAManifest />
-        {children}
+        <MotionPreferences>{children}</MotionPreferences>
         <Analytics />
       </body>
     </html>

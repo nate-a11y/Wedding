@@ -25,6 +25,22 @@ export function Header() {
   const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
   const pathname = usePathname();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setOpenDropdown(null);
+        setIsMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    };
+  }, []);
 
   // Check if on admin subdomain (required for SSR hydration safety)
   useEffect(() => {
@@ -134,6 +150,13 @@ export function Header() {
 
   return (
     <header
+      ref={headerRef}
+      onKeyDown={event => {
+        if (event.key === 'Escape' && isMobileMenuOpen) {
+          setIsMobileMenuOpen(false);
+          menuButtonRef.current?.focus();
+        }
+      }}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         isScrolled
@@ -141,7 +164,9 @@ export function Header() {
           : 'bg-charcoal/95 backdrop-blur-md py-5'
       )}
     >
-      <nav className="container-wedding">
+      <nav className="container-wedding" aria-label="Main navigation" onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsMobileMenuOpen(false);
+      }}>
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="relative z-10">
@@ -171,9 +196,27 @@ export function Header() {
                     key={item.name}
                     className="relative"
                     onMouseEnter={() => handleMouseEnter(item.name)}
-                    onMouseLeave={handleMouseLeave}
+                    onMouseLeave={event => {
+                      if (!event.currentTarget.contains(document.activeElement)) handleMouseLeave();
+                    }}
+                    onBlur={event => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) setOpenDropdown(null);
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === 'Escape') {
+                        setOpenDropdown(null);
+                        event.currentTarget.querySelector('button')?.focus();
+                      }
+                    }}
                   >
                     <button
+                      type="button"
+                      aria-expanded={openDropdown === item.name}
+                      aria-controls={`desktop-nav-${item.href.slice(1)}`}
+                      onClick={() => {
+                        if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+                        setOpenDropdown(openDropdown === item.name ? null : item.name);
+                      }}
                       className={cn(
                         'flex items-center gap-1 px-4 py-2 text-sm uppercase tracking-wider font-medium transition-colors rounded-lg',
                         isActive
@@ -198,6 +241,7 @@ export function Header() {
                     <AnimatePresence>
                       {openDropdown === item.name && (
                         <motion.div
+                          id={`desktop-nav-${item.href.slice(1)}`}
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
@@ -247,8 +291,11 @@ export function Header() {
 
           {/* Mobile Menu Button */}
           <button
+            ref={menuButtonRef}
+            type="button"
+            aria-controls="mobile-navigation"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden relative z-10 p-2"
+            className="lg:hidden relative z-10 flex h-11 w-11 items-center justify-center"
             aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMobileMenuOpen}
           >
@@ -273,13 +320,14 @@ export function Header() {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
+              id="mobile-navigation"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
               className="lg:hidden overflow-hidden"
             >
-              <div className="py-6 flex flex-col gap-2 bg-charcoal">
+              <div className="max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-contain py-6 flex flex-col gap-2 bg-charcoal">
                 {siteConfig.navigation.map((item, index) => {
                   const hasDropdown = hasChildren(item);
                   const highlighted = isHighlighted(item);
@@ -294,6 +342,9 @@ export function Header() {
                         transition={{ delay: index * 0.05 }}
                       >
                         <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-controls={`mobile-nav-${item.href.slice(1)}`}
                           onClick={() => setExpandedMobileItem(isExpanded ? null : item.name)}
                           className={cn(
                             'w-full flex items-center justify-between px-4 py-3 text-lg font-heading transition-colors rounded-lg',
@@ -318,6 +369,7 @@ export function Header() {
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
+                              id={`mobile-nav-${item.href.slice(1)}`}
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
@@ -329,7 +381,7 @@ export function Header() {
                                     key={child.href}
                                     href={child.href}
                                     className={cn(
-                                      'block px-4 py-2 text-base transition-colors rounded-lg',
+                                      'block min-h-11 px-4 py-2 text-base transition-colors rounded-lg',
                                       pathname === child.href
                                         ? 'text-gold-400 bg-olive-800/30'
                                         : 'text-olive-300 hover:text-gold-400'

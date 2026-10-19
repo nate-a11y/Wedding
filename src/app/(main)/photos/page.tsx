@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
 import { compressImage, formatFileSize, needsCompression } from '@/lib/image-utils';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface Photo {
   id: string;
@@ -65,6 +66,9 @@ export default function PhotosPage() {
   const [success, setSuccess] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const photoDialogRef = useRef<HTMLDivElement>(null);
+  const closePhoto = useCallback(() => setSelectedPhoto(null), []);
+  useDialogFocus(photoDialogRef, selectedPhoto !== null, closePhoto);
   const [userPhotoCount, setUserPhotoCount] = useState(0);
 
   // Multi-upload state
@@ -638,25 +642,28 @@ export default function PhotosPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="columns-1 min-[400px]:columns-2 md:columns-3 lg:columns-4 gap-4">
               {photos.map((photo, index) => (
-                <motion.div
+                <motion.button
                   key={photo.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.3, delay: index * 0.03 }}
-                  className={`relative group cursor-pointer aspect-square ${
+                  type="button"
+                  aria-label={`View photo by ${photo.guest_name}`}
+                  className={`relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-lg bg-cream group cursor-pointer focus-visible:ring-2 focus-visible:ring-gold-500 ${
                     photo.source === 'camera' ? 'retro-photo' : ''
                   }`}
                   onClick={() => setSelectedPhoto(photo)}
                 >
                   <Image
-                    src={photo.thumbnail_url || photo.display_url || photo.url}
+                    src={photo.display_url || photo.url}
                     alt={`Photo by ${photo.guest_name}`}
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-                    className="object-cover rounded-lg"
+                    width={1200}
+                    height={900}
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 400px) 50vw, 100vw"
+                    className="block h-auto w-full"
                     unoptimized
                   />
                   {/* Disposable camera style timestamp - only for camera photos */}
@@ -673,7 +680,7 @@ export default function PhotosPage() {
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           )}
@@ -683,6 +690,10 @@ export default function PhotosPage() {
         <AnimatePresence>
           {selectedPhoto && (
             <motion.div
+              ref={photoDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Photo viewer"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -698,13 +709,14 @@ export default function PhotosPage() {
               >
                 <button
                   onClick={() => setSelectedPhoto(null)}
+                  aria-label="Close photo viewer"
                   className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
                 >
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <div className={`rounded-lg overflow-hidden ${selectedPhoto.source === 'camera' ? 'retro-photo' : ''}`}>
+                <div className={`rounded-lg overflow-hidden bg-cream ${selectedPhoto.source === 'camera' ? 'retro-photo' : ''}`}>
                   <Image
                     src={selectedPhoto.full_url || selectedPhoto.display_url || selectedPhoto.url}
                     alt={`Photo by ${selectedPhoto.guest_name}`}

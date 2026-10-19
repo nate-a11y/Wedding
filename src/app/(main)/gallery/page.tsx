@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageEffects, AnimatedHeader } from '@/components/ui';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 interface GalleryPhoto {
   id: string;
@@ -59,6 +60,8 @@ export default function GalleryPage() {
   );
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, lightboxIndex !== null, closeLightbox);
 
   const stepLightbox = useCallback((delta: number) => {
     setLightboxIndex((current) => {
@@ -71,16 +74,13 @@ export default function GalleryPage() {
     if (lightboxIndex === null) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
       if (e.key === 'ArrowLeft') stepLightbox(-1);
       if (e.key === 'ArrowRight') stepLightbox(1);
     };
 
     document.addEventListener('keydown', onKeyDown);
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = '';
     };
   }, [lightboxIndex, closeLightbox, stepLightbox]);
 
@@ -137,7 +137,7 @@ export default function GalleryPage() {
             ))}
           </div>
         ) : filteredPhotos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
             <AnimatePresence mode="popLayout">
               {filteredPhotos.map((photo, index) => (
                 <motion.button
@@ -148,15 +148,16 @@ export default function GalleryPage() {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.3, delay: index * 0.04 }}
                   onClick={() => setLightboxIndex(index)}
-                  className="group relative aspect-[4/5] bg-black/50 border border-olive-700 rounded-lg shadow-elegant overflow-hidden cursor-pointer focus:outline-none focus:ring-2 focus:ring-gold-500/60"
+                  className="group relative mb-6 block w-full break-inside-avoid bg-cream border border-olive-700 rounded-lg shadow-elegant overflow-hidden cursor-pointer focus-visible:ring-2 focus-visible:ring-gold-500"
                   aria-label={photo.caption || `${formatCategory(photo.category)} photo`}
                 >
                   <Image
                     src={photo.display_url}
                     alt={photo.caption || `${formatCategory(photo.category)} photo of Nate and Blake`}
-                    fill
+                    width={photo.width || 1200}
+                    height={photo.height || 900}
                     sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="block h-auto w-full"
                     unoptimized
                   />
 
@@ -215,6 +216,7 @@ export default function GalleryPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             onClick={closeLightbox}
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Photo viewer"
@@ -258,16 +260,16 @@ export default function GalleryPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.25 }}
-              className="relative max-h-[85vh] max-w-5xl w-full"
+              className="relative max-h-[90dvh] max-w-5xl w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative w-full" style={{ height: 'min(80vh, 75vw)' }}>
+              <div className="relative w-full" style={{ height: 'min(80dvh, 50rem)' }}>
                 <Image
                   src={lightboxPhoto.full_url}
                   alt={lightboxPhoto.caption || `${formatCategory(lightboxPhoto.category)} photo of Nate and Blake`}
                   fill
                   sizes="100vw"
-                  className="object-contain"
+                  className="object-contain bg-cream rounded-lg"
                   unoptimized
                   priority
                 />

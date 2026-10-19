@@ -452,7 +452,7 @@ export default function GuestBookPage() {
                     required
                     maxLength={500}
                     rows={4}
-                    className="flex w-full resize-none rounded-xl border border-olive-700/80 bg-black/40 px-4 py-3 text-base text-cream transition-colors placeholder:text-olive-500 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full resize-none rounded-xl border border-olive-700/80 bg-black/40 px-4 py-3 text-base text-cream transition-colors placeholder:text-olive-300 focus:border-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <p className="mt-1.5 text-sm text-olive-300/80">
                     {formData.message.length}/500 characters
