@@ -137,8 +137,7 @@ const REQUIRED_ENV_CHECKS: Array<Omit<EnvCheck, 'present'>> = [
   { name: 'NEXT_PUBLIC_SITE_URL', category: 'runtime', requiredFor: 'absolute callback/webhook URLs', secret: false },
   { name: 'NEXT_PUBLIC_TURNSTILE_SITE_KEY', category: 'runtime', requiredFor: 'public address form bot check', secret: false },
   { name: 'TURNSTILE_SECRET_KEY', category: 'runtime', requiredFor: 'server address form bot check', secret: true },
-  { name: 'USPS_CONSUMER_KEY', category: 'runtime', requiredFor: 'USPS address validation', secret: true },
-  { name: 'USPS_CONSUMER_SECRET', category: 'runtime', requiredFor: 'USPS address validation', secret: true },
+  { name: 'GOOGLE_ADDRESS_VALIDATION_API_KEY', category: 'runtime', requiredFor: 'Google address validation', secret: true },
 ];
 
 const TABLE_CHECKS: Array<{ name: string; required: boolean }> = [

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation, PageEffects, AnimatedHeader, AnimatedGoldLine } from '@/components/ui';
+import { AddressValidationNotice } from '@/components/ui/AddressValidationNotice';
 import type { MealChoice, FormState } from '@/types';
 
 // Helper to convert VAPID key for push subscription
@@ -137,6 +138,7 @@ export default function RSVPPage() {
   } | null>(null);
   const [showAddressConfirm, setShowAddressConfirm] = useState(false);
   const [addressValidating, setAddressValidating] = useState(false);
+  const [addressValidationUnavailable, setAddressValidationUnavailable] = useState(false);
 
   // Push notification state
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
@@ -430,7 +432,7 @@ export default function RSVPPage() {
     setFormState({ status: 'idle' });
   };
 
-  // Handle info step (new guests) - validates address with USPS
+  // Handle info step (new guests) - validates address with Google Maps
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -441,6 +443,7 @@ export default function RSVPPage() {
     }
 
     setAddressValidating(true);
+    setAddressValidationUnavailable(false);
     try {
       const response = await fetch('/api/address/validate', {
         method: 'POST',
@@ -455,6 +458,7 @@ export default function RSVPPage() {
       });
 
       const result = await response.json();
+      if (!response.ok) throw new Error('Address validation unavailable');
 
       if (!result.is_valid) {
         // Address couldn't be validated - show warning but allow continue
@@ -474,16 +478,14 @@ export default function RSVPPage() {
         // Address is valid and unchanged - proceed
         setStep('rsvp');
       }
-    } catch (error) {
-      console.error('Address validation error:', error);
-      // If validation fails, allow user to continue
-      setStep('rsvp');
+    } catch {
+      setAddressValidationUnavailable(true);
     } finally {
       setAddressValidating(false);
     }
   };
 
-  // Accept the USPS-standardized address
+  // Accept the confirmed suggested address
   const acceptStandardizedAddress = () => {
     if (validatedAddress) {
       setAddressData(prev => ({
@@ -501,6 +503,7 @@ export default function RSVPPage() {
 
   // Keep the original address as entered
   const keepOriginalAddress = () => {
+    setAddressValidationUnavailable(false);
     setShowAddressConfirm(false);
     setStep('rsvp');
   };
@@ -1126,6 +1129,11 @@ export default function RSVPPage() {
                       </div>
                     </div>
 
+                    <AddressValidationNotice
+                      unavailable={addressValidationUnavailable}
+                      onContinue={keepOriginalAddress}
+                    />
+
                     <div className="flex gap-3">
                       <Button
                         type="button"
@@ -1175,7 +1183,7 @@ export default function RSVPPage() {
                         </div>
 
                         <p className="text-olive-300 text-sm mb-4">
-                          USPS suggests this standardized format for your address. Would you like to use it?
+                          Google Maps suggests this standardized format. Review it before confirming your mailing address.
                         </p>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1192,7 +1200,7 @@ export default function RSVPPage() {
 
                           {/* Standardized Address */}
                           <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-3">
-                            <p className="text-xs text-gold-400 uppercase tracking-wide mb-2">USPS Standard</p>
+                            <p className="text-xs text-gold-400 uppercase tracking-wide mb-2">Google Maps Suggestion</p>
                             <p className="text-cream text-sm">
                               {validatedAddress.street_address}
                               {validatedAddress.street_address_2 && <><br />{validatedAddress.street_address_2}</>}
@@ -1217,7 +1225,7 @@ export default function RSVPPage() {
                             onClick={acceptStandardizedAddress}
                             className="flex-1"
                           >
-                            Use USPS Format
+                            Use Suggested Address
                           </Button>
                         </div>
                       </motion.div>

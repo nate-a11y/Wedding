@@ -96,6 +96,14 @@ export const guestbookSubmissionSchema = z
     { message: 'Please provide either a message or media', path: ['message'] }
   );
 
+export const addressValidationSchema = z.object({
+  street_address: requiredString(150, 'Street address'),
+  street_address_2: optionalString(150, 'Street address 2').default(''),
+  city: requiredString(100, 'City'),
+  state: z.string().trim().regex(/^[A-Za-z]{2}$/, 'Use a two-letter state code'),
+  postal_code: z.string().trim().regex(/^\d{5}(-\d{4})?$/, 'Use a valid ZIP code'),
+});
+
 export const addressSubmissionSchema = z
   .object({
     name: requiredString(120, 'Name'),

@@ -5,6 +5,7 @@ import { AUTH_COOKIE_NAMES, getAuthSessionSecret, verifyAuthSession } from '@/li
 const PUBLIC_EXACT_ROUTES = new Set([
   '/login',
   '/address',
+  '/privacy',
   '/api/auth',
   '/api/health',
 ]);

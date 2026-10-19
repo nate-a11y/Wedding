@@ -139,6 +139,11 @@ Set these in your Vercel dashboard:
 - `SITE_PASSWORD` - Password for guest access
 - `RESEND_API_KEY` - API key from Resend for email notifications
 - `RESEND_WEBHOOK_SECRET` - Webhook secret for Resend email events
+- `GOOGLE_ADDRESS_VALIDATION_API_KEY` - Server-only key restricted to the Google Address Validation API; never prefix with `NEXT_PUBLIC_`
+
+US addresses in `/address` and `/rsvp` are validated through Google Address Validation with USPS CASS enabled. Guests confirm suggested corrections before saving. Validation failures are shown explicitly, with an option to continue using the original address. `/privacy` documents the data sharing and Google terms. Raw Google responses and validation metadata are not stored.
+
+Use a dedicated API-restricted wedding key, not a shared Google Workspace service-account key. The API must be enabled with billing attached; Google's recurring free allowance is shared at the billing-account level and is not a spending cap. The endpoint uses the existing shared rate limiter (five attempts per IP per minute); configure Google quotas separately if a hard provider-side usage ceiling is needed, without unexpectedly limiting other apps in a shared project.
 
 ## Supabase Setup
 

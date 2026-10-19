@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input, CelebrationAnimation } from '@/components/ui';
+import { AddressValidationNotice } from '@/components/ui/AddressValidationNotice';
 import { PageEffects, AnimatedHeader } from '@/components/ui/PageEffects';
 import type { FormState } from '@/types';
 
@@ -129,6 +130,7 @@ export default function AddressPage() {
   } | null>(null);
   const [showAddressConfirm, setShowAddressConfirm] = useState(false);
   const [addressValidating, setAddressValidating] = useState(false);
+  const [addressValidationUnavailable, setAddressValidationUnavailable] = useState(false);
 
   // Submit the address to the API
   const submitAddress = async (addressToSubmit: typeof formData) => {
@@ -188,8 +190,9 @@ export default function AddressPage() {
       return;
     }
 
-    // Validate address with USPS
+    // Validate address with Google Maps
     setAddressValidating(true);
+    setAddressValidationUnavailable(false);
     try {
       const validateResponse = await fetch('/api/address/validate', {
         method: 'POST',
@@ -204,6 +207,7 @@ export default function AddressPage() {
       });
 
       const validateResult = await validateResponse.json();
+      if (!validateResponse.ok) throw new Error('Address validation unavailable');
 
       if (!validateResult.is_valid) {
         // Address couldn't be validated - show warning but allow continue
@@ -223,25 +227,21 @@ export default function AddressPage() {
         setFormState({ status: 'idle' });
       } else {
         // Address is valid and unchanged - proceed with submission
-        await submitAddress(formData);
+        try {
+          await submitAddress(formData);
+        } catch (error) {
+          setFormState({ status: 'error', message: error instanceof Error ? error.message : 'Failed to save address.' });
+        }
       }
-    } catch (error) {
-      console.error('Address validation error:', error);
-      // If validation fails, try to submit anyway
-      try {
-        await submitAddress(formData);
-      } catch (submitError) {
-        setFormState({
-          status: 'error',
-          message: submitError instanceof Error ? submitError.message : 'Something went wrong. Please try again.',
-        });
-      }
+    } catch {
+      setAddressValidationUnavailable(true);
+      setFormState({ status: 'idle' });
     } finally {
       setAddressValidating(false);
     }
   };
 
-  // Accept the USPS-standardized address and submit
+  // Accept the confirmed suggested address and submit
   const acceptStandardizedAddress = async () => {
     if (!validatedAddress) return;
 
@@ -270,6 +270,7 @@ export default function AddressPage() {
 
   // Keep the original address and submit
   const keepOriginalAddress = async () => {
+    setAddressValidationUnavailable(false);
     setShowAddressConfirm(false);
     setFormState({ status: 'loading' });
 
@@ -507,6 +508,11 @@ export default function AddressPage() {
                   </div>
                 </div>
 
+                <AddressValidationNotice
+                  unavailable={addressValidationUnavailable}
+                  onContinue={keepOriginalAddress}
+                />
+
                 {/* Turnstile Captcha */}
                 {turnstileSiteKey && (
                   <div className="flex justify-center pt-4">
@@ -561,7 +567,7 @@ export default function AddressPage() {
                   </div>
 
                   <p className="text-olive-300 text-sm mb-4">
-                    USPS suggests this standardized format for your address. Would you like to use it?
+                    Google Maps suggests this standardized format. Review it before confirming your mailing address.
                   </p>
 
                   <div className="grid gap-4 mb-6 sm:grid-cols-2">
@@ -578,7 +584,7 @@ export default function AddressPage() {
 
                     {/* Standardized Address */}
                     <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg p-3">
-                      <p className="text-xs text-gold-400 uppercase tracking-wide mb-2">USPS Standard</p>
+                      <p className="text-xs text-gold-400 uppercase tracking-wide mb-2">Google Maps Suggestion</p>
                       <p className="text-cream text-sm">
                         {validatedAddress.street_address}
                         {validatedAddress.street_address_2 && <><br />{validatedAddress.street_address_2}</>}
@@ -603,7 +609,7 @@ export default function AddressPage() {
                       onClick={acceptStandardizedAddress}
                       className="flex-1"
                     >
-                      Use USPS Format
+                      Use Suggested Address
                     </Button>
                   </div>
                 </motion.div>
