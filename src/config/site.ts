@@ -62,7 +62,7 @@ export const siteConfig = {
         role: 'Best Man',
         relation: 'Friend',
         bio: 'A great friend who will stand by Nate on this special day.',
-        photo: '/images/party/michael-brandt.svg',
+        photo: '/images/party/michael-brandt.webp',
       },
       {
         name: 'Dawson Brandt',
@@ -83,7 +83,7 @@ export const siteConfig = {
         role: 'Groomswoman',
         relation: 'Sister',
         bio: "Nate's sister and a cherished member of the wedding party.",
-        photo: '/images/party/tiffany-bullock.svg',
+        photo: '/images/party/tiffany-bullock.webp',
       },
     ],
     // Blake's side
