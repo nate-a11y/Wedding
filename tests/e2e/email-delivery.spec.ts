@@ -112,7 +112,7 @@ test('logged website sends record Resend IDs and preserve failure status', async
     expect(logs[1]).toMatchObject({ resend_id: 'logged-resend-id', status: 'sent', email_type: 'address_confirmation' });
     const confirmationHtml = String(sentBodies[1].html);
     expect(confirmationHtml).toContain('https://www.nateandblake.me/welcome');
-    expect(confirmationHtml).toContain('/welcome/welcome-v4-poster.jpg');
+    expect(confirmationHtml).toContain('/welcome/welcome-v4-poster.jpg?v=engagement-20261019');
     expect(confirmationHtml).toContain('/welcome/nate-and-blake-wordmark.png');
     expect(confirmationHtml).toContain('alt="Nate &amp; Blake"');
     expect(confirmationHtml).toContain('Watch your welcome video');

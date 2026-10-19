@@ -98,6 +98,8 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   expect(audioRequests).toBe(0);
   await expect(page.locator('video')).toHaveAttribute('preload', 'none');
+  await expect(page.locator('video')).toHaveAttribute('poster', '/welcome/welcome-v4-poster.jpg?v=engagement-20261019');
+  await expect(page.locator('video source')).toHaveAttribute('src', '/welcome/welcome-v4.mp4?v=engagement-20261019');
   const protectedRoute = await request.get('/welcome/private', { maxRedirects: 0 });
   expect(protectedRoute.status()).toBe(307);
 });
@@ -161,7 +163,7 @@ test('slow native video stays covered until playback, starts at zero, and ignore
   test.skip(!originalSecret || originalSecret.length < 32, 'Requires a synthetic WELCOME_VIDEO_TOKEN_SECRET on the test server.');
   let releaseVideo!: () => void;
   const videoReady = new Promise<void>(resolve => { releaseVideo = resolve; });
-  await page.route('**/welcome/welcome-v4.mp4', async route => {
+  await page.route('**/welcome/welcome-v4.mp4*', async route => {
     await videoReady;
     await route.continue();
   });

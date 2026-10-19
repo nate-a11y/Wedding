@@ -202,3 +202,8 @@ Made with love for Nate & Blake's wedding 10.31.27
 - Motion respects the OS preference via MotionConfig; recurring hero/page decorations are omitted for reduced motion. Input placeholders use the lighter existing olive tone.
 - `/photos` and `/gallery` use natural-proportion, responsive column layouts. Tiles use uncropped display images, not already-square thumbnail variants; full-image viewers support keyboard close, contained focus, and focus return. Cream backgrounds keep transparent artwork legible. Originals, stored media, upload processing, and wedding-party portraits are unchanged.
 - Design regressions are covered in `tests/e2e/design-polish.spec.ts` (included in the smoke gate). Real-device and screen-reader acceptance remain separate from Chromium checks.
+
+
+### Welcome film imagery
+
+The live welcome film and address-confirmation thumbnail use the engagement-day photo, replacing the withdrawn hand-heart water photo. Public media URLs remain stable; `?v=engagement-20261019` refreshes browser/email image caches for new sends. The 45-second timing, original audio, captions, script wordmark, and full-opening personalized handoff are unchanged. Do not restore the withdrawn photo in active assets.
