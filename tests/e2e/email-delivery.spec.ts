@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { NextRequest } from 'next/server';
+import { createRequire } from 'node:module';
 import { isEmailConfigured, sendEmail, sendBatchEmails } from '../../src/lib/email-provider';
 import { mergeEmailSendHistory, type EmailSendHistoryEntry } from '../../src/lib/email-send-history';
+
+// Node 22 dynamic imports bypass Playwright's CommonJS path-alias resolver.
+const requireModule = createRequire(__filename);
 
 test.describe('Resend wedding delivery', () => {
   test.describe.configure({ mode: 'serial' });
@@ -99,7 +103,7 @@ test('logged website sends record Resend IDs and preserve failure status', async
       logs.push(JSON.parse(String(init?.body)));
       return new Response(null, { status: 201 });
     };
-    const { sendLoggedEmail, sendAddressConfirmation } = await import('../../src/lib/email');
+    const { sendLoggedEmail, sendAddressConfirmation } = requireModule('../../src/lib/email') as typeof import('../../src/lib/email');
     expect(await sendLoggedEmail({ to: ['guest@example.test'], subject: 'Campaign', html: '<p>Test</p>', emailType: 'campaign', relatedId: 'campaign-id' })).toMatchObject({ id: 'logged-resend-id', provider: 'resend' });
     expect(logs[0]).toMatchObject({ resend_id: 'logged-resend-id', direction: 'outbound', to_address: 'guest@example.test', status: 'sent', email_type: 'campaign', related_id: 'campaign-id' });
     expect(await sendAddressConfirmation({ to: 'guest@example.test', name: 'Test Guest', isUpdate: false, address: { street: 'Test only', city: 'Test City', state: 'MO', postalCode: '00000', country: 'United States' } })).toBe(true);
@@ -125,7 +129,7 @@ test('Resend webhooks reject unsigned events, update delivery status, and retry 
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://database.example.test';
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-only-service-key';
     process.env.RESEND_WEBHOOK_SECRET = `whsec_${Buffer.from('test-only-signature-key').toString('base64')}`;
-    const { POST } = await import('../../src/app/api/webhooks/resend/route');
+    const { POST } = requireModule('../../src/app/api/webhooks/resend/route') as typeof import('../../src/app/api/webhooks/resend/route');
     const payload = JSON.stringify({ type: 'email.delivered', created_at: new Date().toISOString(), data: { email_id: 'resend-test-id', from: 'wedding@nateandblake.me', to: ['guest@example.test'], subject: 'Test' } });
     const timestamp = String(Math.floor(Date.now() / 1000));
     const signature = createHmac('sha256', 'test-only-signature-key').update(`test-event.${timestamp}.${payload}`).digest('base64');
