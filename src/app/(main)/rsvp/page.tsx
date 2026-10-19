@@ -1215,7 +1215,7 @@ export default function RSVPPage() {
                             type="button"
                             variant="outline"
                             onClick={keepOriginalAddress}
-                            className="flex-1"
+                            className="flex-1 h-auto min-h-11 px-3 py-2"
                           >
                             Keep Original
                           </Button>
@@ -1223,7 +1223,7 @@ export default function RSVPPage() {
                             type="button"
                             variant="primary"
                             onClick={acceptStandardizedAddress}
-                            className="flex-1"
+                            className="flex-1 h-auto min-h-11 px-3 py-2"
                           >
                             Use Suggested Address
                           </Button>

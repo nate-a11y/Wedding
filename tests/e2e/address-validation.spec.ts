@@ -72,6 +72,7 @@ test('public validation rejects malformed input and privacy is accessible', asyn
 });
 
 test('address form offers corrections and explicit unverified fallback without saving', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.route('**/api/address/validate', route => route.fulfill({ json: parseGoogleAddress(fixture(), input) }));
   await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js**', route => route.fulfill({
     contentType: 'application/javascript',
@@ -89,7 +90,9 @@ test('address form offers corrections and explicit unverified fallback without s
   let saved = false;
   await page.route('**/api/address', route => { saved = true; return route.abort(); });
   await submit.click();
-  await expect(page.getByRole('button', { name: 'Use Suggested Address' })).toBeVisible();
+  const accept = page.getByRole('button', { name: 'Use Suggested Address' });
+  await expect(accept).toBeVisible();
+  expect(await accept.evaluate(el => el.scrollHeight <= el.clientHeight)).toBe(true);
   await page.keyboard.press('Escape');
   // Close existing modal via its backdrop, without accepting or submitting.
   await page.locator('.fixed.inset-0').last().click({ position: { x: 2, y: 2 } });

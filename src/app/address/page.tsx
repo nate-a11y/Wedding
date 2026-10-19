@@ -554,7 +554,7 @@ export default function AddressPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="w-full max-w-md rounded-3xl border border-olive-700/80 bg-black/70 p-5 shadow-elegant backdrop-blur-sm md:p-6"
+                  className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl border border-olive-700/80 bg-black/70 p-5 shadow-elegant backdrop-blur-sm md:p-6"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-3 mb-4">
@@ -599,7 +599,7 @@ export default function AddressPage() {
                       type="button"
                       variant="outline"
                       onClick={keepOriginalAddress}
-                      className="flex-1"
+                      className="flex-1 h-auto min-h-11 px-3 py-2"
                     >
                       Keep Original
                     </Button>
@@ -607,7 +607,7 @@ export default function AddressPage() {
                       type="button"
                       variant="primary"
                       onClick={acceptStandardizedAddress}
-                      className="flex-1"
+                      className="flex-1 h-auto min-h-11 px-3 py-2"
                     >
                       Use Suggested Address
                     </Button>
