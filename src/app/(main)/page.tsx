@@ -1,7 +1,14 @@
+import { socialMetadata } from '@/lib/social-metadata';
 import Image from 'next/image';
 import { Hero, GuestCount, RSVPCard } from '@/components/sections';
 import { AnimatedGoldLine } from '@/components/ui';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+
+export const metadata = socialMetadata({
+  title: 'Nate & Blake Say I Do | October 31, 2027',
+  description: 'Join us in celebrating our wedding on October 31, 2027 at The Callaway Jewel in Fulton, Missouri.',
+  path: '/',
+});
 
 export default function HomePage() {
   return (

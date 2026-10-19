@@ -218,3 +218,10 @@ Admin-only address listings include `welcome_video_url`, generated server-side f
 - `guest_events` remains the admin-managed source of truth. Private event cards and their calendar files are returned only for the verified cookie's email; public calendar exports contain only wedding-day events. Existing RSVP edit links continue to work.
 - Existing `rsvp_edit_tokens` stores hashed sign-in tokens distinguished by `created_by=guest_sign_in`; no schema migration or new auth provider is needed. Keep `AUTH_SESSION_SECRET` (or existing guest signing fallback) configured even though guest password login is disabled.
 - Cloudflare Turnstile is required server-side for address, photo upload, guestbook/media, song requests/votes, RSVP submission/edit-link, and guest sign-in email requests. Missing keys fail closed. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` must remain configured. Each mutation gets a fresh token bound to its form action and hostname; existing rate limits remain, with additional sign-in IP/email throttles. Browsing does not require a challenge.
+
+
+### Link previews
+
+Open Graph and large-image Twitter Card defaults apply site-wide; all public navigation pages plus address, welcome, and guest sign-in pages have purpose-specific public metadata. Preview metadata never includes guest names, email addresses, sign-in/welcome tokens, or invitation-only details. Admin auth remains unchanged.
+
+Static 1200×630 PNGs live in `public/social/` and use the existing Rockybilly wordmark, Cormorant Garamond, Montserrat, and wedding colors. Regenerate them with `node scripts/generate-social-images.mjs`; bundled fonts and OFL licenses are in `scripts/fonts/`. Bump image filenames when changing artwork so external preview caches can refresh. Slack independently caches fetched URLs for around 30 minutes; existing messages are not guaranteed to refresh. No Slack integration or message sending is needed.

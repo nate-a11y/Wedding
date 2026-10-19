@@ -1,10 +1,11 @@
+import { socialMetadata } from '@/lib/social-metadata';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { readWelcomeVideoToken } from '@/lib/welcome-video';
 import { WelcomePlayer } from './welcome-player';
 
 export const metadata: Metadata = {
-  title: 'A little hello from Nate & Blake',
+  ...socialMetadata({ title: 'A little hello from Nate & Blake', description: 'A welcome video from us to you. Thank you for being part of our wedding story.', path: '/welcome' }),
   robots: { index: false, follow: false },
   referrer: 'no-referrer',
 };
