@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addressAutocompleteSchema, parseJsonRequest } from '@/lib/validation';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { resolveAddress, suggestAddresses } from '@/lib/address-autocomplete';
+import { addressLocationBias, resolveAddress, suggestAddresses } from '@/lib/address-autocomplete';
 
 export async function POST(request: NextRequest) {
   const parsed = await parseJsonRequest(request, addressAutocompleteSchema);
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = parsed.data;
     const result = body.action === 'suggest'
-      ? { suggestions: await suggestAddresses(body.input, body.sessionToken) }
+      ? { suggestions: await suggestAddresses(body.input, body.sessionToken, addressLocationBias(request.headers)) }
       : { address: await resolveAddress(body.placeId, body.sessionToken) };
     return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } });
   } catch {

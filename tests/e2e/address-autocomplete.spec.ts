@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { addressAutocompleteSchema } from '../../src/lib/validation';
-import { parsePlaceAddress, resolveAddress, suggestAddresses } from '../../src/lib/address-autocomplete';
+import { addressLocationBias, parsePlaceAddress, resolveAddress, suggestAddresses } from '../../src/lib/address-autocomplete';
 
 const token = '00000000-0000-4000-8000-000000000001';
 const suggestion = { placeId: 'public-place-id', text: '1600 Pennsylvania Avenue NW, Washington, DC, USA' };
@@ -24,21 +24,36 @@ test('autocomplete validates action, minimum query, session and place ID', () =>
   expect(() => parsePlaceAddress({ addressComponents: [] })).toThrow();
 });
 
-test('Places requests keep keys server-side, restrict US and request only address components', async () => {
+test('IP-based location bias validates coordinates without requesting device location', () => {
+  const headers = (lat: string, lng: string) => new Headers({ 'x-vercel-ip-latitude': lat, 'x-vercel-ip-longitude': lng });
+  expect(addressLocationBias(headers('38.9', '-77.0'))).toEqual({ circle: { center: { latitude: 38.9, longitude: -77 }, radius: 50000 } });
+  expect(addressLocationBias(headers('0', '0'))?.circle.center).toEqual({ latitude: 0, longitude: 0 });
+  expect(addressLocationBias(new Headers())).toBeUndefined();
+  expect(addressLocationBias(new Headers({ 'x-vercel-ip-latitude': '38.9' }))).toBeUndefined();
+  for (const [lat, lng] of [['', '0'], [' ', '0'], ['NaN', '0'], ['0', 'Infinity'], ['91', '0'], ['-91', '0'], ['0', '181'], ['0', '-181']]) {
+    expect(addressLocationBias(headers(lat, lng))).toBeUndefined();
+  }
+});
+
+test('Places requests keep keys server-side, bias nearby without restricting location, and request only address components', async () => {
   const originalFetch = globalThis.fetch, originalKey = process.env.GOOGLE_ADDRESS_VALIDATION_API_KEY;
   process.env.GOOGLE_ADDRESS_VALIDATION_API_KEY = 'test-placeholder';
+  const bias = addressLocationBias(new Headers({ 'x-vercel-ip-latitude': '38.9', 'x-vercel-ip-longitude': '-77' }));
+  let predictions = 0;
   try {
     globalThis.fetch = async (url, init) => {
       expect(String(url)).not.toContain('test-placeholder');
       expect(init?.headers).toMatchObject({ 'X-Goog-Api-Key': 'test-placeholder' });
       if (String(url).includes('autocomplete')) {
-        expect(JSON.parse(String(init?.body))).toMatchObject({ includedRegionCodes: ['us'], sessionToken: token });
+        const body = JSON.parse(String(init?.body));
+        expect(body).toEqual({ input: '1600 Penn', includedRegionCodes: ['us'], sessionToken: token, languageCode: 'en', ...(predictions++ === 0 ? { locationBias: bias } : {}) });
         return Response.json({ suggestions: [{ placePrediction: { placeId: suggestion.placeId, text: { text: suggestion.text } } }] });
       }
       expect(String(url)).toContain(`sessionToken=${token}`);
       expect(init?.headers).toMatchObject({ 'X-Goog-FieldMask': 'addressComponents' });
       return Response.json(place);
     };
+    expect(await suggestAddresses('1600 Penn', token, bias)).toEqual([suggestion]);
     expect(await suggestAddresses('1600 Penn', token)).toEqual([suggestion]);
     expect(await resolveAddress(suggestion.placeId, token)).toEqual(address);
     globalThis.fetch = async () => new Response('', { status: 403 });

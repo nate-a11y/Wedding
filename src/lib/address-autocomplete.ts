@@ -23,9 +23,18 @@ async function googlePlaces(path: string, fieldMask: string, body?: object) {
   return response.json();
 }
 
-export async function suggestAddresses(input: string, sessionToken: string): Promise<AddressSuggestion[]> {
+export function addressLocationBias(headers: Headers) {
+  const lat = headers.get('x-vercel-ip-latitude');
+  const lng = headers.get('x-vercel-ip-longitude');
+  if (!lat?.trim() || !lng?.trim()) return undefined;
+  const latitude = Number(lat), longitude = Number(lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return undefined;
+  return { circle: { center: { latitude, longitude }, radius: 50000 } };
+}
+
+export async function suggestAddresses(input: string, sessionToken: string, locationBias?: ReturnType<typeof addressLocationBias>): Promise<AddressSuggestion[]> {
   const data = await googlePlaces('places:autocomplete', 'suggestions.placePrediction.placeId,suggestions.placePrediction.text.text', {
-    input, sessionToken, includedRegionCodes: ['us'], languageCode: 'en',
+    input, sessionToken, includedRegionCodes: ['us'], languageCode: 'en', locationBias,
   });
   const parsed = z.object({ suggestions: z.array(z.object({ placePrediction: z.object({
     placeId: z.string(), text: z.object({ text: z.string() }),
