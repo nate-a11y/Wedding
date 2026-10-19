@@ -427,7 +427,7 @@ interface Campaign {
 
 interface EmailSend {
   id: string;
-  campaign_id: string;
+  campaign_id: string | null;
   email: string;
   guest_name: string | null;
   status: string;

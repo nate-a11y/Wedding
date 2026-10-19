@@ -130,6 +130,8 @@ src/
 3. Add environment variables in Vercel dashboard
 4. Deploy
 
+All website emails (confirmations, edit links, guestbook thanks, announcements, campaigns, reminders, and Ops tests) are sent through Resend as `wedding@nateandblake.me`, with `Reply-To: nateandblakesayido@outlook.com`. Microsoft remains connected for inbox/task sync, not outgoing website delivery. There is no automatic Outlook fallback. Sends appear in Email History and Send History; the enabled Resend webhook at `https://www.nateandblake.me/api/webhooks/resend` updates delivery/bounce status. Resend delivery does not mean inbox placement, and Resend messages are not copied into Outlook Sent Items.
+
 ### Environment Variables for Production
 
 Set these in your Vercel dashboard:

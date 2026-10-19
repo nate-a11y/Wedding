@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
 import { requireAdminAuth } from '@/lib/admin-auth';
+import { mergeEmailSendHistory } from '@/lib/email-send-history';
 
 // GET /api/admin/email-sends - Get recent email sends
 export async function GET() {
@@ -15,16 +16,19 @@ export async function GET() {
   }
 
   try {
-    const { data: sends, error } = await supabase
-      .from('email_sends')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) throw error;
+    const [campaignSends, emails] = await Promise.all([
+      supabase.from('email_sends').select('*')
+        .order('created_at', { ascending: false }).limit(100),
+      supabase.from('emails')
+        .select('id, related_id, to_address, status, sent_at, created_at')
+        .eq('direction', 'outbound')
+        .order('created_at', { ascending: false }).limit(100),
+    ]);
+    if (campaignSends.error) throw campaignSends.error;
+    if (emails.error) throw emails.error;
 
     return NextResponse.json({
-      sends: sends || [],
+      sends: mergeEmailSendHistory(campaignSends.data || [], emails.data || []),
     });
   } catch (error) {
     console.error('Email sends fetch error:', error);

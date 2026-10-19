@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
-import { sendEmail } from '@/lib/microsoft-graph';
-import { cookies } from 'next/headers';
+import { isEmailConfigured, sendLoggedEmail } from '@/lib/email';
 import { requireAdminAuth } from '@/lib/admin-auth';
 
 // Email template for RSVP reminders
@@ -84,15 +83,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { testMode, testEmail } = body;
 
-    // Get Microsoft tokens
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('microsoft_access_token')?.value;
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Microsoft account not connected. Please connect your Outlook account first.' },
-        { status: 401 }
-      );
+    if (!isEmailConfigured()) {
+      return NextResponse.json({ error: 'Resend email is not configured' }, { status: 503 });
     }
 
     // Get reminder settings
@@ -112,11 +104,13 @@ export async function POST(request: NextRequest) {
     if (testMode && testEmail) {
       const html = getReminderEmailHtml('Test Guest', daysRemaining);
 
-      await sendEmail(accessToken, {
+      const result = await sendLoggedEmail({
+        emailType: 'reminder_test',
         to: [testEmail],
         subject: '[TEST] RSVP Reminder: Nate & Blake\'s Wedding',
         html,
       });
+      if (result.error) throw new Error(result.error);
 
       return NextResponse.json({
         success: true,
@@ -191,11 +185,15 @@ export async function POST(request: NextRequest) {
       try {
         const html = getReminderEmailHtml(guest.name, daysRemaining);
 
-        await sendEmail(accessToken, {
+        const result = await sendLoggedEmail({
+          emailType: 'rsvp_reminder',
+          relatedId: campaign?.id,
           to: [guest.email],
           subject: 'RSVP Reminder: Nate & Blake\'s Wedding',
           html,
         });
+
+        if (result.error) throw new Error(result.error);
 
         // Log the reminder
         await supabase

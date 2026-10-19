@@ -1,127 +1,10 @@
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
-import {
-  refreshAccessToken,
-  sendEmail as sendMicrosoftEmail,
-} from '@/lib/microsoft-graph';
+import { isEmailConfigured, sendEmail, sendBatchEmails } from '@/lib/email-provider';
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-/**
- * Get valid Microsoft access token for sending emails
- * Returns null if Microsoft is not connected
- */
-async function getMicrosoftToken(): Promise<string | null> {
-  if (!isSupabaseConfigured() || !supabase) return null;
-
-  try {
-    const { data: auth, error } = await supabase
-      .from('microsoft_auth')
-      .select('access_token, refresh_token, expires_at')
-      .single();
-
-    if (error || !auth) return null;
-
-    const expiresAt = new Date(auth.expires_at);
-
-    // If token expires in less than 5 minutes, refresh it
-    if (expiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
-      try {
-        const newTokens = await refreshAccessToken(auth.refresh_token);
-
-        await supabase
-          .from('microsoft_auth')
-          .update({
-            access_token: newTokens.access_token,
-            refresh_token: newTokens.refresh_token,
-            expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
-          })
-          .eq('access_token', auth.access_token);
-
-        return newTokens.access_token;
-      } catch {
-        console.error('Failed to refresh Microsoft token for email');
-        return null;
-      }
-    }
-
-    return auth.access_token;
-  } catch {
-    return null;
-  }
-}
-
-export function isEmailConfigured(): boolean {
-  // Email is configured if either Resend or Microsoft is available
-  // We check Microsoft dynamically when sending
-  return !!RESEND_API_KEY;
-}
+export { isEmailConfigured } from '@/lib/email-provider';
 
 export async function isEmailFullyConfigured(): Promise<boolean> {
-  // Check if either Resend or Microsoft is available
-  if (RESEND_API_KEY) return true;
-  const msToken = await getMicrosoftToken();
-  return !!msToken;
-}
-
-// Send email - tries Microsoft Graph first, falls back to Resend
-async function sendEmail(options: {
-  from: string;
-  to: string[];
-  subject: string;
-  html: string;
-  replyTo?: string;
-}): Promise<{ id?: string; error?: string; provider?: 'microsoft' | 'resend' }> {
-  // Try Microsoft Graph first (emails sent from nateandblakesayido@outlook.com)
-  const msToken = await getMicrosoftToken();
-  if (msToken) {
-    try {
-      await sendMicrosoftEmail(msToken, {
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        // No replyTo needed - replies go to the Outlook account
-      });
-      console.log('Email sent via Microsoft Graph to:', options.to.join(', '));
-      return { id: `ms-${Date.now()}`, provider: 'microsoft' };
-    } catch (error) {
-      console.error('Microsoft Graph email failed, falling back to Resend:', error);
-      // Fall through to Resend
-    }
-  }
-
-  // Fall back to Resend
-  if (!RESEND_API_KEY) {
-    return { error: 'No email provider configured (Microsoft not connected, Resend API key missing)' };
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: options.from,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        reply_to: options.replyTo || 'nateandblakesayido@outlook.com',
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend API error:', data);
-      return { error: data.message || 'Failed to send email' };
-    }
-
-    return { id: data.id, provider: 'resend' };
-  } catch (error) {
-    console.error('Fetch error sending email:', error);
-    return { error: error instanceof Error ? error.message : 'Network error' };
-  }
+  return isEmailConfigured();
 }
 
 // Log email to database
@@ -141,7 +24,7 @@ async function logEmail(data: {
   }
 
   try {
-    await supabase.from('emails').insert({
+    const { error } = await supabase.from('emails').insert({
       resend_id: data.resendId || null,
       direction: data.direction,
       from_address: data.from,
@@ -151,9 +34,31 @@ async function logEmail(data: {
       email_type: data.emailType || null,
       related_id: data.relatedId || null,
     });
+    if (error) console.error('Failed to log email:', error.message);
   } catch (error) {
     console.error('Failed to log email:', error);
   }
+}
+
+// Campaigns, reminders, and Ops tests share the confirmation email log.
+export async function sendLoggedEmail(options: Parameters<typeof sendEmail>[0] & {
+  emailType: string;
+  relatedId?: string;
+}) {
+  const result = await sendEmail(options);
+  for (const to of options.to) {
+    await logEmail({
+      resendId: result.id,
+      direction: 'outbound',
+      from: options.from || 'Nate & Blake Say I Do <wedding@nateandblake.me>',
+      to,
+      subject: options.subject,
+      status: result.error ? 'failed' : 'sent',
+      emailType: options.emailType,
+      relatedId: options.relatedId,
+    });
+  }
+  return result;
 }
 
 interface AdditionalGuest {
@@ -674,48 +579,6 @@ function generateBrandedEmailHtml(recipient: BulkEmailRecipient, htmlContent: st
   `;
 }
 
-// Send batch emails using Resend's batch API (up to 100 per request)
-async function sendBatchEmails(emails: Array<{
-  from: string;
-  to: string[];
-  subject: string;
-  html: string;
-  reply_to?: string;
-}>): Promise<{ data?: Array<{ id: string }>; error?: string }> {
-  if (!RESEND_API_KEY) {
-    return { error: 'API key not configured' };
-  }
-
-  // Add reply_to to all emails if not specified
-  const emailsWithReplyTo = emails.map(email => ({
-    ...email,
-    reply_to: email.reply_to || 'nateandblakesayido@outlook.com',
-  }));
-
-  try {
-    const response = await fetch('https://api.resend.com/emails/batch', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailsWithReplyTo),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend batch API error:', data);
-      return { error: data.message || 'Failed to send batch emails' };
-    }
-
-    return { data: data.data };
-  } catch (error) {
-    console.error('Fetch error sending batch emails:', error);
-    return { error: error instanceof Error ? error.message : 'Network error' };
-  }
-}
-
 export async function sendBulkEmail(data: {
   recipients: BulkEmailRecipient[];
   subject: string;
@@ -727,59 +590,8 @@ export async function sendBulkEmail(data: {
   let successCount = 0;
   let failCount = 0;
 
-  // Try Microsoft Graph first
-  const msToken = await getMicrosoftToken();
-  if (msToken) {
-    console.log(`Sending ${recipients.length} emails via Microsoft Graph...`);
-
-    for (const recipient of recipients) {
-      try {
-        const personalizedSubject = processTemplateVariables(subject, recipient);
-        const personalizedHtml = generateBrandedEmailHtml(recipient, htmlContent);
-
-        await sendMicrosoftEmail(msToken, {
-          to: [recipient.email],
-          subject: personalizedSubject,
-          html: personalizedHtml,
-        });
-
-        results.push({ email: recipient.email, success: true });
-        successCount++;
-
-        await logEmail({
-          resendId: `ms-${Date.now()}`,
-          direction: 'outbound',
-          from: 'nateandblakesayido@outlook.com',
-          to: recipient.email,
-          subject: personalizedSubject,
-          status: 'sent',
-          emailType: 'bulk_announcement',
-        });
-
-        // Small delay to avoid throttling
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        results.push({ email: recipient.email, success: false, error: String(error) });
-        failCount++;
-
-        await logEmail({
-          direction: 'outbound',
-          from: 'nateandblakesayido@outlook.com',
-          to: recipient.email,
-          subject,
-          status: 'failed',
-          emailType: 'bulk_announcement',
-        });
-      }
-    }
-
-    console.log(`Bulk email via Microsoft complete: ${successCount} sent, ${failCount} failed`);
-    return { results, successCount, failCount, provider: 'microsoft' };
-  }
-
-  // Fall back to Resend
-  if (!RESEND_API_KEY) {
-    console.log('No email provider configured, skipping bulk email');
+  if (!isEmailConfigured()) {
+    console.log('Resend not configured, skipping bulk email');
     return { results: [], successCount: 0, failCount: recipients.length };
   }
 

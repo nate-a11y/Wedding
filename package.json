@@ -11,7 +11,7 @@
     "test": "npm run test:e2e:smoke",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.ts tests/e2e/address-validation.spec.ts tests/e2e/name-validation.spec.ts tests/e2e/address-autocomplete.spec.ts tests/e2e/design-polish.spec.ts",
+    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.ts tests/e2e/address-validation.spec.ts tests/e2e/name-validation.spec.ts tests/e2e/address-autocomplete.spec.ts tests/e2e/design-polish.spec.ts tests/e2e/email-delivery.spec.ts",
     "audit": "npm audit --omit=dev --audit-level=moderate",
     "verify": "npm run typecheck && npm run lint && npm run build && npm run test:e2e:smoke && npm run audit"
   },

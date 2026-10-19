@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import webpush from 'web-push';
 import { supabase, isSupabaseConfigured, isSupabaseServiceRoleConfigured } from '@/lib/supabase-server';
-import {
-  refreshAccessToken,
-  sendEmail as sendMicrosoftEmail,
-} from '@/lib/microsoft-graph';
+import { sendLoggedEmail } from '@/lib/email';
 
 export type ReadinessStatus = 'ok' | 'degraded';
 
@@ -126,7 +123,7 @@ const REQUIRED_ENV_CHECKS: Array<Omit<EnvCheck, 'present'>> = [
   { name: 'NEXT_PUBLIC_SUPABASE_URL', category: 'supabase', requiredFor: 'Supabase client', secret: false },
   { name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', category: 'supabase', requiredFor: 'public Supabase client', secret: false },
   { name: 'SUPABASE_SERVICE_ROLE_KEY', category: 'supabase', requiredFor: 'server/admin Supabase access', secret: true },
-  { name: 'RESEND_API_KEY', category: 'email', requiredFor: 'Resend fallback email', secret: true },
+  { name: 'RESEND_API_KEY', category: 'email', requiredFor: 'Wedding email delivery via Resend', secret: true },
   { name: 'RESEND_WEBHOOK_SECRET', category: 'webhook', requiredFor: 'Resend webhook verification', secret: true },
   { name: 'MICROSOFT_CLIENT_ID', category: 'email', requiredFor: 'Microsoft Graph OAuth', secret: false },
   { name: 'MICROSOFT_CLIENT_SECRET', category: 'email', requiredFor: 'Microsoft Graph OAuth refresh', secret: true },
@@ -212,7 +209,7 @@ function getEnvReadiness() {
     sitePassword: present('SITE_PASSWORD') || present('GUEST_PASSWORD'),
     authSessionSecret: present('AUTH_SESSION_SECRET') || present('WEDDING_AUTH_SESSION_SECRET'),
     supabase: present('NEXT_PUBLIC_SUPABASE_URL') && present('NEXT_PUBLIC_SUPABASE_ANON_KEY') && present('SUPABASE_SERVICE_ROLE_KEY'),
-    emailProvider: present('RESEND_API_KEY') || (present('MICROSOFT_CLIENT_ID') && present('MICROSOFT_CLIENT_SECRET')),
+    emailProvider: present('RESEND_API_KEY'),
     push: present('NEXT_PUBLIC_VAPID_PUBLIC_KEY') && present('VAPID_PRIVATE_KEY'),
   };
 
@@ -223,7 +220,7 @@ function getEnvReadiness() {
     ...(!present('NEXT_PUBLIC_SUPABASE_URL') ? ['NEXT_PUBLIC_SUPABASE_URL'] : []),
     ...(!present('NEXT_PUBLIC_SUPABASE_ANON_KEY') ? ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] : []),
     ...(!present('SUPABASE_SERVICE_ROLE_KEY') ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ...(!groupedRequirements.emailProvider ? ['RESEND_API_KEY or Microsoft OAuth env'] : []),
+    ...(!groupedRequirements.emailProvider ? ['RESEND_API_KEY'] : []),
     ...(!groupedRequirements.push ? ['NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY'] : []),
   ];
 
@@ -371,7 +368,7 @@ async function getEmailReadiness(): Promise<EmailReadiness> {
     microsoft.ok = microsoft.oauthEnvPresent && microsoft.tokenStatus !== 'expired';
   }
 
-  const preferredProvider = microsoft.ok ? 'microsoft' : resend.ok ? 'resend' : null;
+  const preferredProvider = resend.ok ? 'resend' : null;
 
   return {
     ok: Boolean(preferredProvider),
@@ -473,37 +470,6 @@ export async function getAdminOperationsReadiness(): Promise<AdminOperationsRead
   };
 }
 
-async function getMicrosoftAccessTokenForSend(): Promise<string | null> {
-  const { row } = await getMicrosoftAuthRow();
-  if (!row) return null;
-
-  const expiresAt = new Date(row.expires_at);
-  if (expiresAt.getTime() - Date.now() >= 5 * 60 * 1000) {
-    return row.access_token;
-  }
-
-  if (!present('MICROSOFT_CLIENT_ID') || !present('MICROSOFT_CLIENT_SECRET')) {
-    return null;
-  }
-
-  try {
-    const newTokens = await refreshAccessToken(row.refresh_token);
-    await supabase
-      ?.from('microsoft_auth')
-      .update({
-        access_token: newTokens.access_token,
-        refresh_token: newTokens.refresh_token,
-        expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
-      })
-      .eq('access_token', row.access_token);
-
-    return newTokens.access_token;
-  } catch (error) {
-    console.error('Admin test email Microsoft token refresh failed:', safeError(error));
-    return null;
-  }
-}
-
 function testEmailHtml(): string {
   return `
     <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: #faf9f6; padding: 32px;">
@@ -518,45 +484,12 @@ export async function sendAdminTestEmail(to: string): Promise<{ ok: boolean; pro
   const subject = '[TEST] Nate & Blake Wedding Ops Email';
   const html = testEmailHtml();
 
-  const microsoftToken = await getMicrosoftAccessTokenForSend();
-  if (microsoftToken) {
-    try {
-      await sendMicrosoftEmail(microsoftToken, { to: [to], subject, html });
-      return { ok: true, provider: 'microsoft', id: `ms-${Date.now()}` };
-    } catch (error) {
-      console.error('Admin test email via Microsoft failed:', safeError(error));
-    }
-  }
-
   if (!present('RESEND_API_KEY')) {
-    return { ok: false, provider: null, error: 'No email provider is configured' };
+    return { ok: false, provider: null, error: 'Resend API key is not configured' };
   }
 
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Nate & Blake Say I Do <wedding@nateandblake.me>',
-        to: [to],
-        subject,
-        html,
-        reply_to: 'nateandblakesayido@outlook.com',
-      }),
-    });
-
-    const data = await response.json().catch(() => ({})) as { id?: string; message?: string; error?: string };
-    if (!response.ok) {
-      return { ok: false, provider: 'resend', error: data.message || data.error || `Resend responded with ${response.status}` };
-    }
-
-    return { ok: true, provider: 'resend', id: data.id };
-  } catch (error) {
-    return { ok: false, provider: 'resend', error: safeError(error) };
-  }
+  const result = await sendLoggedEmail({ to: [to], subject, html, emailType: 'admin_test' });
+  return { ...result, ok: !result.error, provider: 'resend' };
 }
 
 function configureWebPush(): { ok: boolean; error?: string } {

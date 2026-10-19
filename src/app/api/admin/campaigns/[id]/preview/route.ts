@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-server';
-import { sendEmail } from '@/lib/microsoft-graph';
-import { cookies } from 'next/headers';
+import { isEmailConfigured, sendLoggedEmail } from '@/lib/email';
 import { requireAdminAuth } from '@/lib/admin-auth';
 
 // POST /api/admin/campaigns/[id]/preview - Send preview to admin email
@@ -45,15 +44,8 @@ export async function POST(
       );
     }
 
-    // Get Microsoft tokens
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('microsoft_access_token')?.value;
-
-    if (!accessToken) {
-      return NextResponse.json(
-        { error: 'Microsoft account not connected. Please connect your Outlook account first.' },
-        { status: 401 }
-      );
+    if (!isEmailConfigured()) {
+      return NextResponse.json({ error: 'Resend email is not configured' }, { status: 503 });
     }
 
     // Personalize with sample data
@@ -62,7 +54,8 @@ export async function POST(
       .replace(/\{\{email\}\}/g, previewEmail);
 
     // Send preview email
-    await sendEmail(accessToken, {
+    const result = await sendLoggedEmail({
+      emailType: 'campaign_preview',
       to: [previewEmail],
       subject: `[PREVIEW] ${campaign.subject}`,
       html: `
@@ -72,6 +65,7 @@ export async function POST(
         ${personalizedHtml}
       `,
     });
+    if (result.error) throw new Error(result.error);
 
     return NextResponse.json({
       success: true,

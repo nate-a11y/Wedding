@@ -5,7 +5,7 @@ import crypto from 'crypto';
 const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
 
 // Resend webhook event types
-type OutboundEventType = 'email.sent' | 'email.delivered' | 'email.delivery_delayed' | 'email.complained' | 'email.bounced' | 'email.opened' | 'email.clicked';
+type OutboundEventType = 'email.sent' | 'email.failed' | 'email.delivered' | 'email.delivery_delayed' | 'email.complained' | 'email.bounced' | 'email.opened' | 'email.clicked';
 type InboundEventType = 'email.received';
 
 interface OutboundWebhookEvent {
@@ -39,8 +39,8 @@ type ResendWebhookEvent = OutboundWebhookEvent | InboundWebhookEvent;
 // Verify webhook signature from Resend (uses Svix)
 function verifySignature(payload: string, headers: Headers): boolean {
   if (!WEBHOOK_SECRET) {
-    console.warn('RESEND_WEBHOOK_SECRET not configured, skipping verification');
-    return true; // Allow in dev without secret
+    console.warn('RESEND_WEBHOOK_SECRET not configured');
+    return process.env.NODE_ENV !== 'production';
   }
 
   const svixId = headers.get('svix-id');
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     // Handle inbound emails (received)
     if (event.type === 'email.received') {
       const inboundEvent = event as InboundWebhookEvent;
-      await supabase
+      const { error } = await supabase
         .from('emails')
         .insert({
           resend_id: inboundEvent.data.email_id,
@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
           created_at: inboundEvent.data.created_at,
         });
 
+      if (error) throw error;
       console.log('Inbound email received from:', inboundEvent.data.from);
       return NextResponse.json({ received: true });
     }
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
     // Map Resend event types to our status
     const statusMap: Record<string, string> = {
       'email.sent': 'sent',
+      'email.failed': 'failed',
       'email.delivered': 'delivered',
       'email.delivery_delayed': 'delayed',
       'email.complained': 'complained',
@@ -144,13 +146,14 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing email status
-      await supabase
+      const { error } = await supabase
         .from('emails')
         .update({ status })
         .eq('resend_id', resendId);
+      if (error) throw error;
     } else {
       // Insert new email record (for emails sent outside our system or missed)
-      await supabase
+      const { error } = await supabase
         .from('emails')
         .insert({
           resend_id: resendId,
@@ -161,6 +164,7 @@ export async function POST(request: NextRequest) {
           status: status,
           created_at: outboundEvent.data.created_at,
         });
+      if (error) throw error;
     }
 
     return NextResponse.json({ received: true });
