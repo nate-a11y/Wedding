@@ -76,7 +76,7 @@ export const siteConfig = {
         role: 'Groomsman',
         relation: 'Friend',
         bio: 'A great friend who will celebrate this special occasion.',
-        photo: '/images/party/jasey-brandt.svg',
+        photo: '/images/party/jasey-brandt.webp',
       },
       {
         name: 'Tiffany Bullock',
