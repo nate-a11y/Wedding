@@ -69,7 +69,7 @@ export const siteConfig = {
         role: 'Groomsman',
         relation: 'Friend',
         bio: 'A good friend who has been there through thick and thin.',
-        photo: '/images/party/dawson-brandt.svg',
+        photo: '/images/party/dawson-brandt.webp',
       },
       {
         name: 'Jasey Brandt',
