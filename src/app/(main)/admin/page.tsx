@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminErrorState, AdminLoadingState } from '@/components/admin/AdminLoadState';
+import { AddressEditor } from '@/components/admin/AddressEditor';
+import type { GuestAddress } from '@/types/guest-address';
 import { AdminOverviewSummary } from '@/components/admin/AdminOverviewSummary';
 import { RichTextEditor } from '@/components/ui';
 import { useAdminRetry } from '@/hooks/admin/useAdminRetry';
@@ -141,27 +143,6 @@ interface GuestImportPreview {
   inserted: number;
   summary: { total: number; ready: number; duplicate: number; invalid: number };
   rows: GuestImportPreviewRow[];
-}
-
-interface GuestAddress {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  street_address: string;
-  street_address_2: string | null;
-  city: string;
-  state: string | null;
-  postal_code: string;
-  country: string;
-  linked_rsvp_id: string | null;
-  rsvps: {
-    id: string;
-    name: string;
-    attending: boolean;
-    created_at: string;
-  } | null;
-  created_at: string;
 }
 
 // Couple Dashboard Types
@@ -1529,8 +1510,8 @@ function AdminPageContent() {
         body: JSON.stringify({ id }),
       });
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      setAddresses(addresses.filter(a => a.id !== id));
+      if (!response.ok || data.error) throw new Error(data.error || 'Failed to delete address.');
+      setAddresses(current => current.filter(a => a.id !== id));
     } catch (err) {
       console.error('Failed to delete address:', err);
       alert('Failed to delete address. Please try again.');
@@ -2529,6 +2510,9 @@ function AdminPageContent() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
+              {!loading && !error && <div className="mb-4">
+                <AddressEditor onSaved={address => setAddresses(current => [address, ...current])} />
+              </div>}
               {loading ? (
                 <AdminLoadingState />
               ) : error ? (
@@ -2901,7 +2885,9 @@ function AdminPageContent() {
                             )}
                           </td>
                           <td className="p-3">
+                            <AddressEditor address={addr} onSaved={address => setAddresses(current => current.map(item => item.id === address.id ? address : item))} />
                             <button
+                              aria-label={`Delete address for ${addr.name}`}
                               onClick={() => deleteAddress(addr.id)}
                               className="text-red-400 hover:text-red-300 p-1"
                               title="Delete Address"

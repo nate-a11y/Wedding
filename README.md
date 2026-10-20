@@ -210,6 +210,8 @@ The live welcome film and address-confirmation thumbnail use the engagement-day 
 
 Admin-only address listings include `welcome_video_url`, generated server-side for the guest’s first name. This lets approved manual resends reuse personalized links without exporting the production signing secret; it does not send emails or update guest records.
 
+Admin → Addresses supports adding, editing, listing/exporting, and confirmed deletion. Admin saves are manual contact/mailing corrections: they do not send confirmation emails, call Google, change RSVP records, transfer tags, or assign private-event invitations. Changing an email does not transfer the old email's tags/invitations. Duplicate emails are rejected rather than overwritten. Edits use the fetched `updated_at` value to reject stale changes; refresh the page if someone else updated/deleted the record. All mutations require admin authentication, validate allowed fields, and write best-effort audit entries without contact details. No schema migration is required.
+
 
 ### Public browsing and private invitations
 

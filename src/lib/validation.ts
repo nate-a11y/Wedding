@@ -134,6 +134,32 @@ export const addressSubmissionSchema = z
     }
   });
 
+const adminAddressFields = {
+  name: fullNameSchema,
+  email: emailSchema,
+  phone: optionalString(50, 'Phone'),
+  street_address: requiredString(150, 'Street address'),
+  street_address_2: optionalString(150, 'Street address 2'),
+  city: requiredString(100, 'City'),
+  state: optionalString(80, 'State / province'),
+  postal_code: requiredString(20, 'Postal code'),
+  country: requiredString(100, 'Country'),
+};
+
+function requireAddressState(body: { country: string; state?: string }, ctx: z.RefinementCtx) {
+  if (['united states', 'canada'].includes(body.country.toLowerCase()) && !body.state) {
+    ctx.addIssue({ code: 'custom', path: ['state'], message: 'State / province is required' });
+  }
+}
+
+export const adminAddressCreateSchema = z.object(adminAddressFields).strict().superRefine(requireAddressState);
+export const adminAddressUpdateSchema = z.object({
+  ...adminAddressFields,
+  id: z.uuid(),
+  updated_at: z.iso.datetime({ offset: true }).nullable(),
+}).strict().superRefine(requireAddressState);
+export const adminAddressDeleteSchema = z.object({ id: z.uuid() }).strict();
+
 const isFileLike = (value: unknown): value is File =>
   typeof File !== 'undefined' && value instanceof File;
 
