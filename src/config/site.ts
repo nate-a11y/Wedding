@@ -113,6 +113,13 @@ export const siteConfig = {
     // Special roles
     special: [
       {
+        name: 'Bella Stufflebean',
+        role: 'Flower Girl',
+        relation: "Blake's Niece",
+        bio: '',
+        photo: '/images/party/female-placeholder.svg',
+      },
+      {
         name: 'Honey',
         role: 'Honorary Flower Girl',
         relation: 'The Goodest Girl',
