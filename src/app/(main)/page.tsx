@@ -89,7 +89,7 @@ export default function HomePage() {
             <h3 className="font-heading text-2xl text-cream mb-2">Honey</h3>
             <p className="text-gold-400 uppercase tracking-wider text-sm mb-4">Honorary Flower Girl</p>
             <p className="text-olive-300">
-              She won&apos;t be there in person, but our goodest girl is still a special part of our day.
+              She’ll be celebrating from the couch—probably asleep. Flower duties are honorary; treat inspections are mandatory.
             </p>
           </div>
         </div>

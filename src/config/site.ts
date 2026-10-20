@@ -116,7 +116,7 @@ export const siteConfig = {
         name: 'Honey',
         role: 'Honorary Flower Girl',
         relation: 'The Goodest Girl',
-        bio: "She won't be there in person, but our goodest girl is still a special part of our day.",
+        bio: "She’ll be celebrating from the couch—probably asleep. Flower duties are honorary; treat inspections are mandatory.",
         photo: '/20250119_000105.jpg',
         isHuman: false,
       },
