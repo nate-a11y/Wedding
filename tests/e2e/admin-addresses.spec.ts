@@ -130,6 +130,17 @@ test('address admin supports create from empty list, edit, errors, cancel and co
   await expect(dialog).not.toBeVisible();
   const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: fields.email, exact: true }) });
   await expect(row).toContainText(fields.street_address);
+  for (const width of [390, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const actions = row.getByRole('cell').last();
+    await actions.scrollIntoViewIfNeeded();
+    const edit = await actions.getByRole('button', { name: 'Edit address for Test Guest' }).boundingBox();
+    const remove = await actions.getByRole('button', { name: 'Delete address for Test Guest' }).boundingBox();
+    expect(Math.abs(edit!.y - remove!.y)).toBeLessThan(2);
+    expect(remove!.x).toBeGreaterThanOrEqual(edit!.x + edit!.width);
+    expect(remove!.height).toBe(edit!.height);
+    await actions.screenshot({ path: testInfo.outputPath(`address-actions-${width}.png`) });
+  }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await row.getByRole('button', { name: 'Edit address for Test Guest' }).click();
   await dialog.screenshot({ path: testInfo.outputPath('desktop-address-editor.png') });
