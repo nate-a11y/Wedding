@@ -19,7 +19,7 @@ export function AddressValidationNotice({ unavailable, onContinue }: {
       )}
       <p className="text-xs">
         Address suggestions and validation by <span className="font-normal text-cream">Google Maps</span>.{' '}
-        US address search text and mailing details are shared with Google.{' '}
+        US and Canadian address searches, plus US mailing details for validation, are shared with Google.{' '}
         <Link href="/privacy" className="underline">Privacy &amp; terms</Link>.
       </p>
     </div>

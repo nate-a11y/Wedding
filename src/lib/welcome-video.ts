@@ -17,12 +17,19 @@ function validFirstName(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 60 && NAME_PATTERN.test(value);
 }
 
-/** Full names are reduced to the first word; hyphenated first names stay intact. */
+function validGreetingName(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const names = value.split(' & ');
+  return names.length <= 2 && names.every(validFirstName);
+}
+
+/** Keep each person's first name when a couple is explicitly joined by & or and. */
 export function getWelcomeVideoUrl(name: string): string {
   const key = tokenKey();
   if (!key || name.length > 200 || /[\p{Cc}\p{Cf}]/u.test(name) || Date.now() >= TOKEN_EXPIRY) return WELCOME_VIDEO_URL;
-  const firstName = name.normalize('NFC').trim().split(/\s+/u)[0];
-  if (!validFirstName(firstName)) return WELCOME_VIDEO_URL;
+  const firstName = name.normalize('NFC').trim().split(/\s*&\s*|\s+and\s+/iu)
+    .map(person => person.trim().split(/\s+/u)[0]).join(' & ');
+  if (!validGreetingName(firstName)) return WELCOME_VIDEO_URL;
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   cipher.setAAD(Buffer.from('wedding-welcome-v1'));
@@ -43,7 +50,7 @@ export function readWelcomeVideoToken(token: unknown): string | null {
     const payload: unknown = JSON.parse(Buffer.concat([decipher.update(data.subarray(28)), decipher.final()]).toString('utf8'));
     if (!payload || typeof payload !== 'object') return null;
     const { firstName, expiresAt } = payload as Record<string, unknown>;
-    return validFirstName(firstName) && typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > Date.now() && expiresAt <= TOKEN_EXPIRY ? firstName : null;
+    return validGreetingName(firstName) && typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > Date.now() && expiresAt <= TOKEN_EXPIRY ? firstName : null;
   } catch {
     return null;
   }
@@ -52,12 +59,12 @@ export function readWelcomeVideoToken(token: unknown): string | null {
 /** Only called after a verified token and an explicit guest Play action. */
 export async function generateWelcomeAudio(firstName: string): Promise<string> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey || !validFirstName(firstName)) throw new Error('Welcome audio unavailable');
+  if (!apiKey || !validGreetingName(firstName)) throw new Error('Welcome audio unavailable');
   try {
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${WELCOME_VIDEO_VOICE}?output_format=mp3_44100_128`, {
       method: 'POST',
       headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-      body: JSON.stringify({ text: `${firstName}, a little hello from us.`, model_id: WELCOME_VIDEO_MODEL }),
+      body: JSON.stringify({ text: `${firstName.replace(' & ', ' and ')}, a little hello from us.`, model_id: WELCOME_VIDEO_MODEL }),
       signal: AbortSignal.timeout(20_000),
       cache: 'no-store',
     });

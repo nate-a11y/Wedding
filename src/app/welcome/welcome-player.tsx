@@ -18,7 +18,7 @@ export function WelcomePlayer({ firstName, token }: { firstName: string | null; 
     const audioElement = audio.current;
     const videoElement = video.current;
     return () => {
-      playbackVersion.current++;
+      playbackVersion.current += 1;
       greetingActive.current = false;
       controller.current?.abort();
       audioElement?.pause();

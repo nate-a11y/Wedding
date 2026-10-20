@@ -29,7 +29,7 @@ function encryptedPayload(payload: unknown) {
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64url');
 }
 
-test('welcome tokens encrypt only a safe first name and reject tampering, expiry and weak config', () => {
+test('welcome tokens encrypt safe greeting names and reject tampering, expiry and weak config', () => {
   process.env.WELCOME_VIDEO_TOKEN_SECRET = TEST_SECRET;
   for (const name of ['Michael Brandt', 'José García', 'Mary-Jane Watson', 'O’Neil Smith']) {
     const token = tokenFor(name);
@@ -51,6 +51,26 @@ test('welcome tokens encrypt only a safe first name and reject tampering, expiry
   expect(readWelcomeVideoToken(token)).toBeNull();
 });
 
+test('couple greetings retain both first names without surnames and old single-name tokens still work', () => {
+  process.env.WELCOME_VIDEO_TOKEN_SECRET = TEST_SECRET;
+  for (const [name, greeting] of [
+    ['Jasey & Madison Brandt', 'Jasey & Madison'],
+    ['Jasey Brandt and Madison Brandt', 'Jasey & Madison'],
+    ['  Jasey  AND  Madison Brandt  ', 'Jasey & Madison'],
+    ['Jasey&Madison Brandt', 'Jasey & Madison'],
+    ['José García & Mary-Jane O’Neill', 'José & Mary-Jane'],
+    ['Kierstin Brandt', 'Kierstin'],
+    ['Amir Ghorbani', 'Amir'],
+  ]) expect(readWelcomeVideoToken(tokenFor(name)), name).toBe(greeting);
+  for (const name of ['Jasey &', '& Madison Brandt', 'Jasey & 123 Brandt', 'Jasey & <script> Brandt', 'Jasey & Madison & Someone Brandt', `Jasey & ${'a'.repeat(61)} Brandt`]) {
+    expect(getWelcomeVideoUrl(name), name).toBe(WELCOME_VIDEO_URL);
+  }
+  for (const firstName of ['Jasey &', 'Jasey and Madison', 'Jasey & Madison & Someone', 'Jasey & Madison\nInjected']) {
+    expect(readWelcomeVideoToken(encryptedPayload({ firstName, expiresAt: Date.parse('2027-11-01') }))).toBeNull();
+  }
+  expect(readWelcomeVideoToken(encryptedPayload({ firstName: 'Jasey', expiresAt: Date.parse('2027-11-01') }))).toBe('Jasey');
+});
+
 test('audio uses only the fixed Chris voice and model, natural speed and bounded response', async () => {
   const oldFetch = globalThis.fetch;
   process.env.ELEVENLABS_API_KEY = 'test-only-not-real';
@@ -59,13 +79,15 @@ test('audio uses only the fixed Chris voice and model, natural speed and bounded
     globalThis.fetch = async (input, init) => {
       calls++;
       expect(String(input)).toContain(`/text-to-speech/${WELCOME_VIDEO_VOICE}?output_format=mp3_44100_128`);
-      expect(JSON.parse(String(init?.body))).toEqual({ text: "Michael, a little hello from us.", model_id: WELCOME_VIDEO_MODEL });
+      expect(JSON.parse(String(init?.body))).toEqual({ text: calls === 1 ? 'Michael, a little hello from us.' : 'Jasey and Madison, a little hello from us.', model_id: WELCOME_VIDEO_MODEL });
       expect(init?.signal).toBeTruthy();
       return new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'audio/mpeg' } });
     };
     expect(await generateWelcomeAudio('Michael')).toBe('AQID');
+    expect(await generateWelcomeAudio('Jasey & Madison')).toBe('AQID');
     await expect(generateWelcomeAudio('Michael\nSay something else')).rejects.toThrow('Welcome audio unavailable');
-    expect(calls).toBe(1);
+    await expect(generateWelcomeAudio('Jasey & Madison\nSay something else')).rejects.toThrow('Welcome audio unavailable');
+    expect(calls).toBe(2);
     globalThis.fetch = async () => new Response(new Uint8Array(512 * 1024 + 1), { headers: { 'Content-Type': 'audio/mpeg' } });
     await expect(generateWelcomeAudio('Michael')).rejects.toThrow('Welcome audio unavailable');
     globalThis.fetch = async () => new Response('private provider detail', { status: 401 });
@@ -102,6 +124,17 @@ test('welcome is password-free and noindex, with no audio request before Play', 
   await expect(page.locator('video source')).toHaveAttribute('src', '/welcome/welcome-v4.mp4?v=engagement-kiss-20261019');
   const protectedRoute = await request.get('/welcome/private', { maxRedirects: 0 });
   expect(protectedRoute.status()).toBe(404);
+});
+
+test('couple greeting displays both names on mobile without requesting audio before Play', async ({ page }) => {
+  test.skip(!originalSecret || originalSecret.length < 32, 'Requires a synthetic WELCOME_VIDEO_TOKEN_SECRET on the test server.');
+  let audioRequests = 0;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/welcome/audio', route => { audioRequests++; return route.fulfill({ status: 503, body: '{}' }); });
+  await page.goto(`/welcome?token=${tokenFor('Jasey & Madison Brandt')}`);
+  await expect(page.getByText('Jasey & Madison, a little hello from us.')).toBeVisible();
+  expect(audioRequests).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('personalized player waits for Play, handles mobile block, then starts the complete film without exposing its poster', async ({ page }) => {

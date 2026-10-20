@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = parsed.data;
     const result = body.action === 'suggest'
-      ? { suggestions: await suggestAddresses(body.input, body.sessionToken, addressLocationBias(request.headers)) }
-      : { address: await resolveAddress(body.placeId, body.sessionToken) };
+      ? { suggestions: await suggestAddresses(body.input, body.sessionToken, body.country, addressLocationBias(request.headers)) }
+      : { address: await resolveAddress(body.placeId, body.sessionToken, body.country) };
     return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     // Never log search text or Google's response containing guest address data.

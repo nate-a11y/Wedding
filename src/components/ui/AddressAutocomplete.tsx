@@ -21,15 +21,23 @@ export function AddressAutocomplete({ value, country, name, onChange, onSelect }
   const selected = useRef('');
   const version = useRef(0);
   const detailsRequest = useRef<AbortController | null>(null);
+  const countryCode = country === 'United States' ? 'US' : country === 'Canada' ? 'CA' : null;
 
   useEffect(() => () => detailsRequest.current?.abort(), []);
+
+  useEffect(() => {
+    ++version.current;
+    selected.current = '';
+    session.current = '';
+    detailsRequest.current?.abort();
+  }, [country]);
 
   useEffect(() => {
     const current = ++version.current;
     setSuggestions([]);
     setActive(-1);
     setStatus('');
-    if (!focused || country !== 'United States' || value.trim().length < 3 || value === selected.current) return;
+    if (!focused || !countryCode || value.trim().length < 3 || value === selected.current) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       session.current ||= crypto.randomUUID();
@@ -37,7 +45,7 @@ export function AddressAutocomplete({ value, country, name, onChange, onSelect }
       try {
         const response = await fetch('/api/address/autocomplete', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-          body: JSON.stringify({ action: 'suggest', input: value.trim(), sessionToken: session.current }),
+          body: JSON.stringify({ action: 'suggest', input: value.trim(), sessionToken: session.current, country: countryCode }),
         });
         if (!response.ok) throw new Error('Suggestions unavailable');
         const data: { suggestions: AddressSuggestion[] } = await response.json();
@@ -49,7 +57,7 @@ export function AddressAutocomplete({ value, country, name, onChange, onSelect }
       }
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [value, country, focused]);
+  }, [value, countryCode, focused]);
 
   useEffect(() => {
     if (active >= 0) document.getElementById(`${id}-option-${active}`)?.scrollIntoView({ block: 'nearest' });
@@ -68,7 +76,7 @@ export function AddressAutocomplete({ value, country, name, onChange, onSelect }
       const response = await fetch('/api/address/autocomplete', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
-        body: JSON.stringify({ action: 'resolve', placeId: suggestion.placeId, sessionToken: session.current }),
+        body: JSON.stringify({ action: 'resolve', placeId: suggestion.placeId, sessionToken: session.current, country: countryCode }),
       });
       if (!response.ok) throw new Error('Address unavailable');
       const data: { address: SuggestedAddress } = await response.json();
@@ -88,7 +96,7 @@ export function AddressAutocomplete({ value, country, name, onChange, onSelect }
     <div className="relative">
       <Input
         id={`${id}-input`} label="Street Address" name={name} value={value} required
-        autoComplete="off" placeholder={country === 'United States' ? 'Start typing your street address' : 'Street address'}
+        autoComplete="off" placeholder={countryCode ? 'Start typing your street address' : 'Street address'}
         role="combobox" aria-autocomplete="list" aria-expanded={focused && suggestions.length > 0}
         aria-controls={focused && suggestions.length > 0 ? `${id}-list` : undefined}
         aria-activedescendant={focused && active >= 0 ? `${id}-option-${active}` : undefined}

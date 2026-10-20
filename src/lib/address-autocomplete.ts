@@ -32,9 +32,9 @@ export function addressLocationBias(headers: Headers) {
   return { circle: { center: { latitude, longitude }, radius: 50000 } };
 }
 
-export async function suggestAddresses(input: string, sessionToken: string, locationBias?: ReturnType<typeof addressLocationBias>): Promise<AddressSuggestion[]> {
+export async function suggestAddresses(input: string, sessionToken: string, country: 'US' | 'CA' = 'US', locationBias?: ReturnType<typeof addressLocationBias>): Promise<AddressSuggestion[]> {
   const data = await googlePlaces('places:autocomplete', 'suggestions.placePrediction.placeId,suggestions.placePrediction.text.text', {
-    input, sessionToken, includedRegionCodes: ['us'], languageCode: 'en', locationBias,
+    input, sessionToken, includedRegionCodes: [country.toLowerCase()], languageCode: 'en', locationBias,
   });
   const parsed = z.object({ suggestions: z.array(z.object({ placePrediction: z.object({
     placeId: z.string(), text: z.object({ text: z.string() }),
@@ -43,7 +43,7 @@ export async function suggestAddresses(input: string, sessionToken: string, loca
     ? [{ placeId: item.placePrediction.placeId, text: item.placePrediction.text.text }] : []).slice(0, 5);
 }
 
-export function parsePlaceAddress(data: unknown): SuggestedAddress {
+export function parsePlaceAddress(data: unknown, country: 'US' | 'CA' = 'US'): SuggestedAddress {
   const { addressComponents } = z.object({ addressComponents: z.array(z.object({
     longText: z.string().optional(), shortText: z.string().optional(), types: z.array(z.string()),
   })) }).parse(data);
@@ -51,18 +51,18 @@ export function parsePlaceAddress(data: unknown): SuggestedAddress {
     const value = addressComponents.find(component => component.types.includes(type));
     return (short ? value?.shortText : value?.longText) || value?.longText || '';
   };
-  if (part('country', true) !== 'US') throw new Error('Address is outside the US');
+  if (part('country', true) !== country) throw new Error('Address does not match the selected country');
   if (!part('street_number') || !part('route')) throw new Error('Choose a full street address or enter it manually');
   return {
     street_address: [part('street_number'), part('route')].filter(Boolean).join(' '),
     street_address_2: part('subpremise'),
     city: part('locality') || part('postal_town') || part('sublocality_level_1'),
     state: part('administrative_area_level_1', true),
-    postal_code: [part('postal_code'), part('postal_code_suffix')].filter(Boolean).join('-'),
+    postal_code: country === 'US' ? [part('postal_code'), part('postal_code_suffix')].filter(Boolean).join('-') : part('postal_code'),
   };
 }
 
-export async function resolveAddress(placeId: string, sessionToken: string) {
+export async function resolveAddress(placeId: string, sessionToken: string, country: 'US' | 'CA' = 'US') {
   const params = new URLSearchParams({ sessionToken, languageCode: 'en' });
-  return parsePlaceAddress(await googlePlaces(`places/${encodeURIComponent(placeId)}?${params}`, 'addressComponents'));
+  return parsePlaceAddress(await googlePlaces(`places/${encodeURIComponent(placeId)}?${params}`, 'addressComponents'), country);
 }

@@ -105,9 +105,10 @@ export const addressValidationSchema = z.object({
   postal_code: z.string().trim().regex(/^\d{5}(-\d{4})?$/, 'Use a valid ZIP code'),
 });
 
+const autocompleteCountrySchema = z.enum(['US', 'CA']).default('US');
 export const addressAutocompleteSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('suggest'), input: requiredString(200, 'Address search').min(3), sessionToken: z.uuid() }),
-  z.object({ action: z.literal('resolve'), placeId: requiredString(256, 'Place ID').regex(/^[A-Za-z0-9_-]+$/), sessionToken: z.uuid() }),
+  z.object({ action: z.literal('suggest'), input: requiredString(200, 'Address search').min(3), sessionToken: z.uuid(), country: autocompleteCountrySchema }),
+  z.object({ action: z.literal('resolve'), placeId: requiredString(256, 'Place ID').regex(/^[A-Za-z0-9_-]+$/), sessionToken: z.uuid(), country: autocompleteCountrySchema }),
 ]);
 
 export const addressSubmissionSchema = z
